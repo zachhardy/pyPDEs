@@ -1,0 +1,306 @@
+import os
+import sys
+
+import matplotlib.pyplot as plt
+import numpy as np
+from numpy.linalg import norm
+from scipy.sparse.linalg import spsolve
+
+from numpy import ndarray
+from scipy.sparse import csr_matrix
+
+from typing import List
+
+from modules.diffusion.keigenvalue_solver import KEigenvalueSolver
+
+
+class TransientSolver(KEigenvalueSolver):
+    """
+    Transient solver for multi-group diffusion problems.
+    """
+
+    from .assemble_fv import fv_assemble_mass_matrix
+    from .assemble_fv import fv_set_transient_source
+    from .assemble_fv import fv_update_precursors
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.initial_conditions: list = None
+
+        self.t_final: float = 0.25
+        self.dt: float = 5.0e-3
+        self.stepping_method: str = "CRANK_NICHOLSON"
+
+        self.output_dir: str = None
+
+        self.lag_precursors: bool = False
+
+        self.phi_old: ndarray = None
+        self.precursors_old: ndarray = None
+
+        self.b_old: ndarray = None
+        self.M: List[csr_matrix] = None
+        self.A: List[List[csr_matrix]] = None
+
+        self.output_fluxes: List[ndarray] = None
+        self.output_power: List[float] = None
+        self.output_times: List[float] = None
+
+    def initialize(self) -> None:
+        """
+        Initialize the transient multi-group diffusion solver.
+        """
+        super(KEigenvalueSolver, self).initialize()
+
+        self.b_old = np.copy(self.b)
+        self.phi_old = np.copy(self.phi)
+        if self.use_precursors:
+            self.precursors_old = np.copy(self.precursors)
+
+        self.M = []
+        for g in range(self.num_groups):
+            self.M.append(self.fv_assemble_mass_matrix(g))
+
+        self.assemble_evolution_matrices()
+        self.compute_initial_values()
+
+    def execute(self) -> None:
+        """
+        Execute the transient multi-group diffusion solver.
+        """
+        print("\n***** Executing the multi-group diffusion "
+              "transient solver. *****\n")
+
+        # ======================================== Start time stepping
+        time, n_steps = 0.0, 0
+        while time < self.t_final - sys.float_info.epsilon:
+
+            # ============================== Force end time
+            if time + self.dt > self.t_final:
+                self.dt = self.t_final - time
+                self.assemble_evolution_matrices()
+
+            # ============================== Solve time step
+            self.solve_time_step()
+
+            # ============================== Book-keeping
+            time += self.dt
+            n_steps += 1
+
+            # ============================== Reset vectors
+            self.phi_old[:] = self.phi
+            if self.use_precursors:
+                self.precursors_old[:] = self.precursors
+
+            print(f"*** Time Step: {n_steps}\t "
+                  f"Time: [{time - self.dt:.3e}, {time:.3e}] ***")
+
+    def solve_time_step(self) -> None:
+        """
+        Solve a full time step.
+        """
+        # ======================================== First step of time step
+        self.solve_system(step=0)
+
+        # ======================================== Compute precursors
+        if self.use_precursors:
+            self.fv_update_precursors(step=0)
+
+        # ======================================== Post-process results
+        if self.stepping_method in ["CRANK_NICHOLSON", "TBDF2"]:
+            self.phi = 2.0 * self.phi - self.phi_old
+            if self.use_precursors:
+                self.precursors = 2.0 * self.precursors - self.precursors_old
+
+            # ============================== Second step of time step
+            if self.stepping_method == "TBDF2":
+                self.solve_system(step=1)
+
+                # ========================= Compute precursors
+                if self.use_precursors:
+                    self.fv_update_precursors(step=1)
+
+    def solve_system(self, step: int = 0) -> None:
+        """
+        Solve the system for a n'th step of the time step.
+
+        Parameters
+        ----------
+        step : int, default 0
+            The step of the time step.
+        """
+        n_grps = self.num_groups
+        phi_ell = np.copy(self.phi)
+        b_old = self.set_old_transient_source(step)
+
+        # ======================================== Start iterating
+        converged = False
+        for nit in range(self.max_iterations):
+
+            # =================================== Solve group-wise
+            self.b[:] = b_old
+            for g in range(n_grps):
+                self.fv_set_transient_source(g, self.phi, step)
+                self.phi[g::n_grps] = spsolve(self.A[g][step],
+                                              self.b[g::n_grps])
+
+            # =================================== Check convergence
+            phi_change = norm(self.phi - phi_ell)
+            phi_ell[:] = self.phi
+            if phi_change <= self.tolerance:
+                converged = True
+                break
+
+        if not converged:
+            print(f"!!!!! WARNING: Solver did not converge. !!!!!")
+
+    def set_old_transient_source(self, step: int = 0) -> ndarray:
+        """
+        Assemble the previous time step contributions to the right-hand side.
+
+        Parameters
+        ----------
+        step : int, default 0
+            The step of the time step.
+
+        Returns
+        -------
+        ndarray
+        """
+        b = np.zeros(self.b.shape)
+        n_grps = self.num_groups
+
+        for g in range(self.num_groups):
+            phi_old = self.phi_old[g::self.num_groups]
+
+            if self.stepping_method == "BACKWARD_EULER":
+                b[g::n_grps] = self.M[g] / self.dt @ phi_old
+            elif self.stepping_method == "CRANK_NICHOLSON":
+                b[g::n_grps] = 2.0 * self.M[g] / self.dt @ phi_old
+            elif self.stepping_method == "TBDF2" and step == 0:
+                b[g::n_grps] = 4.0 * self.M[g] / self.dt @ phi_old
+            elif self.stepping_method == "TBDF2" and step == 1:
+                phi = self.phi[g::self.num_groups]
+                b[g::n_grps] = self.M[g] / self.dt @ (4.0 * phi - phi_old)
+        return b
+
+    def assemble_evolution_matrices(self) -> csr_matrix:
+        """
+        Assemble the list of matrices used for evolving the
+        solution one time step.
+
+        Returns
+        -------
+        csr_matrix
+        """
+        try:
+            methods = ["BACKWARD_EULER", "CRANK_NICHOLSON", "TBDF2"]
+            if self.stepping_method not in methods:
+                raise NotImplementedError(
+                    f"{self.stepping_method} is not implemented.")
+        except NotImplementedError as err:
+            print(f"\n***** ERROR:\t{err.args[0]}\n")
+            sys.exit()
+
+        self.A = []
+        for g in range(self.num_groups):
+            if self.stepping_method == "BACKWARD_EULER":
+                matrices = [self.L[g] + self.M[g] / self.dt]
+            elif self.stepping_method == "CRANK_NICHOLSON":
+                matrices = [self.L[g] + 2.0 * self.M[g] / self.dt]
+            else:
+                matrices = [self.L[g] + 4.0 * self.M[g] / self.dt,
+                            self.L[g] + 3.0 * self.M[g] / self.dt]
+            self.A.append(matrices)
+
+    def effective_dt(self, step: int = 0) -> float:
+        """
+        Compute the effective time step size for the specified
+        step of a time step.
+
+        Parameters
+        ----------
+        step : int
+            The step of the time step.
+
+        Returns
+        -------
+        float
+        """
+        try:
+            if self.stepping_method == "BACKWARD_EULER":
+                return self.dt
+            elif self.stepping_method == "CRANK_NICHOLSON":
+                return self.dt / 2.0
+            elif self.stepping_method == "TBDF2" and step == 0:
+                return self.dt / 4.0
+            elif self.stepping_method == "TBDF2" and step == 1:
+                return self.dt / 3.0
+            else:
+                raise NotImplementedError(
+                    f"{self.stepping_method} is not implemented.")
+        except NotImplementedError as err:
+            print(f"\n***** ERROR:\t{err.args[0]}\n")
+            sys.exit()
+
+    def compute_initial_values(self) -> None:
+        """
+        Evaluate the initial conditions.
+        """
+        if not self.initial_conditions:
+            super(KEigenvalueSolver, self).execute()
+        else:
+            n_grps = self.num_groups
+            n_prec = self.num_precursors
+            num_ics = [n_grps, n_grps + n_prec]
+            grid = self.discretization.grid
+
+            # ======================================== Convert to lambdas
+            from sympy import lambdify
+            from sympy.matrices.dense import MutableDenseMatrix
+            if isinstance(self.initial_conditions, MutableDenseMatrix):
+                ics = []
+                symbols = list(self.initial_conditions.free_symbols)
+                for ic in self.initial_conditions:
+                    ics.append(lambdify(symbols, ic))
+                self.initial_conditions = ics
+
+            # ================================================== Evaluate ics
+            try:
+                if all([len(self.initial_conditions) != n for n in num_ics]):
+                    raise AssertionError(
+                        "Invalid number of initial conditions provided.")
+
+                # ================================================== Flux ics
+                for g, ic in enumerate(self.initial_conditions[:n_grps]):
+                    if callable(ic):
+                        self.phi[g::n_grps] = ic(grid)
+                    elif len(ic) == len(self.phi[g::n_grps]):
+                        self.phi[g::n_grps] = ic
+                    else:
+                        raise ValueError(
+                            f"Provided initial condition for group {g} "
+                            f"does not agree with discretization.")
+
+                # ================================================== Precursor ics
+                if self.use_precursors:
+                    for j, ic in enumerate(self.initial_conditions[n_grps:]):
+                        if callable(ic):
+                            self.precursors[j::n_prec] = ic(grid)
+                        elif len(ic) == len(self.precursors[j::n_prec]):
+                            self.precursors[j::n_prec] = ic
+                        else:
+                            raise ValueError(
+                                f"Provided initial condition for family {j} "
+                                f"does not agree with discretization.")
+
+            except AssertionError as err:
+                print(f"\n***** ERROR:\t{err.args[0]}\n")
+                sys.exit()
+            except ValueError as err:
+                print(f"\n***** ERROR:\t{err.args[0]}\n")
+                sys.exit()
+
+            self.phi_old[:] = self.phi
+            if self.use_precursors:
+                self.precursors_old[:] = self.precursors
