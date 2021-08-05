@@ -3,7 +3,6 @@ from numpy import ndarray
 from typing import TYPE_CHECKING
 
 from pyPDEs.spatial_discretization import FiniteVolume
-from pyPDEs.utilities import UnknownManager
 from ..steadystate_solver import SteadyStateSolver
 
 if TYPE_CHECKING:
@@ -30,19 +29,20 @@ def fv_assemble_mass_matrix(self: 'TransientSolver', g: int) -> csr_matrix:
     for cell in self.mesh.cells:
         volume = cell.volume
         xs = self.material_xs[cell.material_id]
-
         i = fv.map_dof(cell)
+
         value = xs.inv_velocity[g] * volume
         rows.append(i)
         cols.append(i)
         data.append(value)
-    return csr_matrix((data, (rows, cols)), shape=(fv.num_nodes,) * 2)
+    return csr_matrix((data, (rows, cols)), shape=(fv.n_nodes,) * 2)
 
 
 def fv_set_transient_source(self: 'TransientSolver', g: int,
                             phi: ndarray, step: int = 0):
     """
     Set the transient source.
+
     Parameters
     ----------
     g : int
@@ -52,36 +52,45 @@ def fv_set_transient_source(self: 'TransientSolver', g: int,
     step : int, default 0
         The step of the time step.
     """
-    flags = (True, True, False, True)
+    flags = (True, True, False, False)
     SteadyStateSolver.fv_set_source(self, g, phi, *flags)
 
     fv: FiniteVolume = self.discretization
+    flux_uk_man = self.flux_uk_man
+    prec_uk_man = self.precursor_uk_man
     eff_dt = self.effective_dt(step)
 
     # ============================================= Loop over cells
     for cell in self.mesh.cells:
         volume = cell.volume
         xs = self.material_xs[cell.material_id]
-        ir = fv.map_dof(cell, 0, self.flux_uk_man, 0, 0)
+        ig = fv.map_dof(cell, 0, flux_uk_man, 0, g)
 
-        # =================================== Total/prompt fission
-        for gp in range(self.num_groups):
+        # ======================================== Loop over groups
+        for gp in range(self.n_groups):
+            igp = fv.map_dof(cell, 0, flux_uk_man, 0, gp)
+
+            # ==================== Total/prompt fission source
+            # Without delayed neutrons
             if not self.use_precursors:
-                self.b[ir + g] += xs.chi[g] * \
-                                  xs.nu_sigma_f[gp] * \
-                                  phi[ir + gp] * volume
+                self.b[ig] += xs.chi[g] * \
+                              xs.nu_sigma_f[gp] * \
+                              phi[igp] * volume
+
+            # With delayed neutrons
             else:
-                self.b[ir + g] += xs.chi_prompt[g] * \
-                                  xs.nu_prompt_sigma_f[gp] * \
-                                  phi[ir + gp] * volume
+                self.b[ig] += xs.chi_prompt[g] * \
+                              xs.nu_prompt_sigma_f[gp] * \
+                              phi[igp] * volume
 
-        # =================================== Delayed fission
+        # ==================== Delayed fission
         if self.use_precursors:
-            jr = fv.map_dof(cell, 0, self.precursor_uk_man, 0, 0)
+            # =================================== Loop over precursors
+            for j in range(xs.n_precursors):
+                ij = cell.id * prec_uk_man.total_components + j
 
-            for j in range(xs.num_precursors):
-                prec = self.precursors[jr + j]
-                prec_old = self.precursors_old[jr + j]
+                prec = self.precursors[ij]
+                prec_old = self.precursors_old[ij]
 
                 coeff = xs.chi_delayed[g][j] * xs.precursor_lambda[j]
                 if not self.lag_precursors:
@@ -89,18 +98,24 @@ def fv_set_transient_source(self: 'TransientSolver', g: int,
 
                 # Old precursor contributions
                 if step == 0:
-                    self.b[ir + g] += coeff * prec_old * volume
+                    self.b[ig] += coeff * prec_old * volume
                 else:
                     tmp = (4.0 * prec - prec_old) / 3.0
-                    self.b[ir + g] += coeff * tmp * volume
+                    self.b[ig] += coeff * tmp * volume
 
                 # Delayed fission contributions
                 if not self.lag_precursors:
                     coeff *= eff_dt * xs.precursor_yield[j]
-                    for gp in range(self.num_groups):
-                        self.b[ir + g] += coeff * \
-                                          xs.nu_delayed_sigma_f[gp] * \
-                                          phi[ir + gp] * volume
+
+                    # ============================== Loop over groups
+                    for gp in range(self.n_groups):
+                        igp = fv.map_dof(cell, 0, flux_uk_man, 0, gp)
+                        self.b[ig] += \
+                            coeff * xs.nu_delayed_sigma_f[gp] * \
+                            phi[igp] * volume
+
+    flags = (False, False, False, True)
+    SteadyStateSolver.fv_set_source(self, g, phi, *flags)
 
 
 def fv_update_precursors(self: 'TransientSolver',
@@ -121,26 +136,25 @@ def fv_update_precursors(self: 'TransientSolver',
     # ================================================== Loop over cells
     for cell in self.mesh.cells:
         xs = self.material_xs[cell.material_id]
-        ir = fv.map_dof(cell, 0, flux_uk_man, 0, 0)
-        jr = fv.map_dof(cell, 0, prec_uk_man, 0, 0)
 
         # ============================================= Loop over precursors
-        for j in range(xs.num_precursors):
-            prec = self.precursors[jr + j]
-            prec_old = self.precursors_old[jr + j]
+        for j in range(xs.n_precursors):
+            ij = cell.id * prec_uk_man.total_components + j
+            prec = self.precursors[ij]
+            prec_old = self.precursors_old[ij]
 
             # Contributions from previous time step
             coeff = 1.0 / (1.0 + xs.precursor_lambda[j] * eff_dt)
             if step == 0:
-                self.precursors[jr + j] = coeff * prec_old
+                self.precursors[ij] = coeff * prec_old
             else:
                 tmp = (4.0 * prec - prec_old) / 3.0
-                self.precursors[jr + j] = coeff * tmp
+                self.precursors[ij] = coeff * tmp
 
             # =================================== Loop over groups
             # Contributions from delayed fission
-            for g in range(self.num_groups):
-                self.precursors[jr + j] += coeff * eff_dt * \
-                                           xs.precursor_yield[j] * \
-                                           xs.nu_delayed_sigma_f[g] * \
-                                           self.phi[ir + g]
+            for g in range(self.n_groups):
+                ig = fv.map_dof(cell, 0, flux_uk_man, 0, g)
+                self.precursors[ij] += \
+                    coeff * eff_dt * xs.precursor_yield[j] * \
+                    xs.nu_delayed_sigma_f[g] * self.phi[ig]

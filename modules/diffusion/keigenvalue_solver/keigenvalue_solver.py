@@ -3,6 +3,9 @@ import numpy as np
 from numpy.linalg import norm
 from scipy.sparse.linalg import spsolve
 
+from pyPDEs.spatial_discretization import (FiniteVolume,
+                                           PiecewiseContinuous)
+
 from modules.diffusion import SteadyStateSolver
 
 
@@ -16,6 +19,7 @@ class KEigenvalueSolver(SteadyStateSolver):
     """
 
     from .assemble_fv import fv_compute_fission_production
+    from .assemble_pwc import pwc_compute_fission_production
 
     def __init__(self) -> None:
         super().__init__()
@@ -25,11 +29,11 @@ class KEigenvalueSolver(SteadyStateSolver):
         """
         Execute the k-eigenvalue diffusion solver.
         """
-        print("\n***** Executing the multi-group diffusion "
-              "k-eigenvalue solver.\n")
+        print("\n***** Executing the k-eigenvalue "
+              "multi-group diffusion solver.\n")
         uk_man = self.flux_uk_man
-        num_dofs = self.discretization.num_dofs(uk_man)
-        n_grps = self.num_groups
+        num_dofs = self.discretization.n_dofs(uk_man)
+        n_grps = self.n_groups
         phi_ell = self.phi = np.ones(num_dofs)
         production_ell = self.fv_compute_fission_production(self.phi, )
         k_eff_ell = k_eff_change = 1.0
@@ -42,20 +46,29 @@ class KEigenvalueSolver(SteadyStateSolver):
 
             # =================================== Solve groups-wise
             self.b *= 0.0
-            for g in range(self.num_groups):
+            for g in range(self.n_groups):
                 # Precompute fission source
                 flags = (False, False, True, False)
-                self.fv_set_source(g, self.phi, *flags)
+                if isinstance(self.discretization, FiniteVolume):
+                    self.fv_set_source(g, self.phi, *flags)
+                else:
+                    self.pwc_set_source(g, self.phi, *flags)
                 self.b[g::n_grps] /= self.k_eff
 
                 # Add scattering + boundary source
                 flags = (False, True, False, True)
-                self.fv_set_source(g, self.phi, *flags)
+                if isinstance(self.discretization, FiniteVolume):
+                    self.fv_set_source(g, self.phi, *flags)
+                else:
+                    self.pwc_set_source(g, self.phi, *flags)
                 self.phi[g::n_grps] = spsolve(self.L[g],
                                               self.b[g::n_grps])
 
             # ============================== Update k-eigenvalue
-            production = self.fv_compute_fission_production(self.phi, )
+            if isinstance(self.discretization, FiniteVolume):
+                production = self.fv_compute_fission_production(self.phi)
+            else:
+                production = self.pwc_compute_fission_production(self.phi)
             self.k_eff *= production / production_ell
 
             # ============================== Check for convergence
@@ -85,3 +98,5 @@ class KEigenvalueSolver(SteadyStateSolver):
         msg += f"\nFinal Phi Change:\t\t{phi_change:.3e}"
         msg += f"\n# of Iterations:\t\t{nit}"
         print(msg)
+        print("\n***** Done executing k-eigenvalue "
+              "multi-group diffusion solver. *****\n")

@@ -1,2 +1,3 @@
 from .mesh import Mesh, Cell, Face
-from .line_mesh import LineMesh
+
+from .create_1d_mesh import create_1d_mesh
