@@ -6,7 +6,7 @@ from scipy.interpolate import lagrange
 from typing import TYPE_CHECKING
 
 from ...mesh import Cell
-from ...utilities.quadratures import GaussLegendre
+from ...utilities.quadratures import LineQuadrature
 from ...utilities import Vector
 from .fe_view import CellFEView
 
@@ -21,7 +21,7 @@ class SlabFEView(CellFEView):
     Class for a finite element slab view.
     """
     def __init__(self, fe: 'PiecewiseContinuous',
-                 quadrature: GaussLegendre,
+                 quadrature: LineQuadrature,
                  cell: Cell) -> None:
         super().__init__(fe, quadrature)
         self.coord_sys: str = cell.coord_sys
@@ -59,7 +59,7 @@ class SlabFEView(CellFEView):
         if not min(domain) < point.z < max(domain):
             raise ValueError(
                 f"Provided point not in volume quadrature domain.")
-        return self.v0 + self.h * (point + Vector(z=max(domain)))
+        return self.v0 + self.h * (point - Vector(z=min(domain)))
 
     def shape_value(self, i: int, point: Vector) -> float:
         return self._shape[i](point.z)
