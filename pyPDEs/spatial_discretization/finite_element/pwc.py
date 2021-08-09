@@ -4,7 +4,7 @@ from typing import List
 
 from .. import SpatialDiscretization
 from ...mesh import Mesh, Cell
-from ...utilities import UnknownManager
+from ...utilities import UnknownManager, Vector
 from ...utilities.quadratures import GaussLegendre
 from .fe_view import CellFEView
 from .fe_slab_view import SlabFEView
@@ -24,7 +24,7 @@ class PiecewiseContinuous(SpatialDiscretization):
 
         self.quadrature: GaussLegendre = GaussLegendre(order)
 
-        self.nodes: ndarray = None
+        self.nodes: List[Vector] = None
         self.fe_views: List[CellFEView] = None
 
         self.create_nodes()
@@ -46,15 +46,15 @@ class PiecewiseContinuous(SpatialDiscretization):
         """
         Define the node locations .
         """
-        self.nodes = []
-
+        nodes = []
         if self.dim == 1:
             for cell in self.mesh.cells:
                 v0 = self.mesh.vertices[cell.vertex_ids[0]]
                 v1 = self.mesh.vertices[cell.vertex_ids[1]]
-                x = np.linspace(v0, v1, self.degree + 1)
-                self.nodes.extend(x)
-            self.nodes = np.unique(self.nodes)
+                x = np.linspace(v0.z, v1.z, self.degree + 1)
+                nodes.extend(x)
+            nodes = np.unique(nodes)
+            self.nodes = [Vector(z=node) for node in nodes]
         else:
             raise NotImplementedError(
                 f"Only 1D discretizations are implemented.")
