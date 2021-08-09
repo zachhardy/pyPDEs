@@ -1,5 +1,7 @@
 from typing import List
 
+from ..utilities import Vector
+
 
 class Cell:
     """
@@ -16,8 +18,8 @@ class Cell:
         self.faces: List[Face] = []
 
         self.volume: float = 0.0
-        self.centroid: float = 0.0
-        self.width: float = 0.0
+        self.centroid: Vector = 0.0
+        self.width: Vector = 0.0
 
     @property
     def n_faces(self) -> int:
@@ -52,9 +54,9 @@ class Face:
     def __init__(self):
         self.vertex_ids: List[int] = []
 
-        self.normal: float = 0.0
+        self.normal: Vector = 0.0
         self.area: float = 0.0
-        self.centroid: float = 0.0
+        self.centroid: Vector = 0.0
 
         self.has_neighbor: bool = False
         self.neighbor_id = 0
