@@ -91,6 +91,16 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
         # ======================================== Connectivity
         mesh.establish_connectivity()
 
+        # ======================================== Define boundaries
+        for cell_id in mesh.boundary_cell_ids:
+            cell: Cell = mesh.cells[cell_id]
+            for face in cell.faces:
+                v = mesh.vertices[face.vertex_ids[0]]
+                if face.normal == Vector(z=-1.0) and v.z == mesh.z_min:
+                    face.neighbor_id = -1
+                elif face.normal == Vector(z=1.0) and v.z == mesh.z_max:
+                    face.neighbor_id = -2
+
         # ======================================== Verbose printout
         if verbose:
             print("***** Summary of the 1D mesh:\n")
@@ -178,18 +188,33 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
     # ======================================== Cell connectivity
     mesh.establish_connectivity()
 
+    # ======================================== Define boundaries
+    for cell_id in mesh.boundary_cell_ids:
+        cell: Cell = mesh.cells[cell_id]
+        for face in cell.faces:
+            v = mesh.vertices[face.vertex_ids[0]]
+            if face.normal == Vector(x=-1.0) and v.x == mesh.x_min:
+                face.neighbor_id = -1
+            elif face.normal == Vector(y=-1.0) and v.y == mesh.y_min:
+                face.neighbor_id = -2
+            elif face.normal == Vector(x=1.0) and v.x == mesh.x_max:
+                face.neighbor_id = -3
+            elif face.normal == Vector(y=1.0) and v.y == mesh.y_max:
+                face.neighbor_id = -4
+
     # ======================================== Verbose printout
     if verbose:
         print("***** Summary of the 2D mesh:\n")
-        vertices = [v for v in mesh.vertices]
+        vertices = [(v.x, v.y) for v in mesh.vertices]
+        vertices = [list(np.round(v, 6)) for v in vertices]
         print(f"Vertices:\n{vertices}\n")
 
-        centroids = [c.centroid for c in mesh.cells]
+        centroids = [(c.centroid.x, c.centroid.y) for c in mesh.cells]
+        centroids = [list(np.round(c, 6)) for c in centroids]
         print(f"Centroids:\n{centroids}\n")
 
-        widths = [c.width for c in mesh.cells]
+        widths = [(c.width.x, c.width.y) for c in mesh.cells]
+        widths = [list(np.round(w, 6)) for w in widths]
         print(f"Widths:\n{widths}\n")
-
-
 
     return mesh

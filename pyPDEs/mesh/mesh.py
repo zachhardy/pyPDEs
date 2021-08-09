@@ -1,5 +1,8 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from typing import List, Union
+
+from matplotlib.figure import Figure
 
 from .cell import Cell, Face
 from ..utilities import Vector
@@ -32,6 +35,30 @@ class Mesh:
     @property
     def n_vertices(self) -> int:
         return len(self.vertices)
+
+    @property
+    def x_min(self) -> float:
+        return np.min([v.x for v in self.vertices])
+
+    @property
+    def x_max(self) -> float:
+        return np.max([v.x for v in self.vertices])
+
+    @property
+    def y_min(self) -> float:
+        return np.min([v.y for v in self.vertices])
+
+    @property
+    def y_max(self) -> float:
+        return np.max([v.y for v in self.vertices])
+
+    @property
+    def z_min(self) -> float:
+        return np.min([v.z for v in self.vertices])
+
+    @property
+    def z_max(self) -> float:
+        return np.max([v.z for v in self.vertices])
 
     def compute_volume(self, cell: Cell) -> float:
         """
@@ -141,3 +168,27 @@ class Mesh:
 
             if any([f.has_neighbor for f in cell.faces]):
                 self.boundary_cell_ids.append(cell.id)
+
+    def plot_material_ids(self) -> None:
+        fig: Figure = plt.figure()
+
+        matids = [cell.material_id for cell in self.cells]
+        if self.dim == 1:
+            plt.xlabel("z")
+
+            z = [cell.centroid.z for cell in self.cells]
+            plt.plot(z, matids, "ob")
+            plt.grid(True)
+
+        elif self.dim == 2:
+            plt.xlabel("x")
+            plt.ylabel("y")
+
+            x = [cell.centroid.x for cell in self.cells]
+            y = [cell.centroid.y for cell in self.cells]
+            xx, yy = np.meshgrid(np.unique(x), np.unique(y))
+            matids = np.array(matids).reshape(xx.shape)
+            plt.pcolormesh(xx, yy, matids, cmap="jet", shading="auto")
+            plt.colorbar()
+
+        plt.tight_layout()
