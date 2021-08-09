@@ -43,8 +43,8 @@ def pwc_assemble_matrix(self: 'SteadyStateSolver', g: int) -> csr_matrix:
             # ============================== Loop over trial functions
             for k in range(view.n_nodes):
                 kk = pwc.map_dof(cell, k)
-                mass_ik = view.intV_shapeI_shapeJ[i, k]
-                stiff_ik = view.intV_gradI_gradJ[i, k]
+                mass_ik = view.intV_shapeI_shapeJ[i][k]
+                stiff_ik = view.intV_gradI_gradJ[i][k]
 
                 # ==================== Reaction + diffusion term
                 value = xs.sigma_t[g] * mass_ik
@@ -136,7 +136,7 @@ def pwc_set_source(self: 'SteadyStateSolver', g: int, phi: ndarray,
 
             # =================================== Loop over trial fucntions
             for k in range(view.n_nodes):
-                mass_ik = view.intV_shapeI_shapeJ[i, k]
+                mass_ik = view.intV_shapeI_shapeJ[i][k]
 
                 # ============================== Loop over groups
                 for gp in range(self.n_groups):
@@ -145,7 +145,7 @@ def pwc_set_source(self: 'SteadyStateSolver', g: int, phi: ndarray,
                     # ==================== Scattering source
                     if apply_scattering:
                         self.b[ig] += \
-                            xs.sigma_tr[gp, g] * phi[kgp] * mass_ik
+                            xs.sigma_tr[gp][g] * phi[kgp] * mass_ik
 
                     # ==================== Fission source
                     if apply_fission:

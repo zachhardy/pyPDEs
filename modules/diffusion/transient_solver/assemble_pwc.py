@@ -83,7 +83,7 @@ def pwc_set_transient_source(self: 'TransientSolver', g: int,
 
             # =================================== Loop over trial functions
             for k in range(view.n_nodes):
-                mass_ik = view.intV_shapeI_shapeJ[i, k]
+                mass_ik = view.intV_shapeI_shapeJ[i][k]
 
                 # ============================== Loop over groups
                 for gp in range(self.n_groups):
@@ -129,7 +129,7 @@ def pwc_set_transient_source(self: 'TransientSolver', g: int,
                         coeff *= eff_dt * xs.precursor_yield[j]
 
                         for k in range(view.n_nodes):
-                            mass_ik = view.intV_shapeI_shapeJ[i, k]
+                            mass_ik = view.intV_shapeI_shapeJ[i][k]
 
                             for gp in range(self.n_groups):
                                 kgp = pwc.map_dof(cell, k, flux_uk_man, 0, gp)

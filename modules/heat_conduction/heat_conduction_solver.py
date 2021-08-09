@@ -199,14 +199,14 @@ class HeatConductionSolver:
                 # ============================== Loop over test functions
                 for i in range(view.n_nodes):
                     ii = pwc.map_dof(cell, i)
-                    grad_i = view.grad_shape_values[i, qp]
+                    grad_i = view.grad_shape_values[i][qp]
 
                     # ========================= Loop over trial functions
                     for j in range(view.n_nodes):
                         jj = pwc.map_dof(cell, j)
-                        grad_j = view.grad_shape_values[j, qp]
+                        grad_j = view.grad_shape_values[j][qp]
 
-                        value = grad_i * k[qp] * grad_j * jxw
+                        value = k[qp] * grad_i.dot(grad_j) * jxw
                         rows.append(ii)
                         cols.append(jj)
                         data.append(value)
@@ -249,7 +249,6 @@ class HeatConductionSolver:
                                 rows.append(ii)
                                 cols.append(jj)
                                 data.append(value)
-
         return csr_matrix((data, (rows, cols)), shape=(pwc.n_nodes,) * 2)
 
     def assemble_source(self) -> ndarray:
@@ -270,7 +269,7 @@ class HeatConductionSolver:
 
                 # ============================== Loop over quadrature
                 for qp in range(view.n_qpoints):
-                    b[ii] += q * view.shape_values[i, qp] * view.jxw[qp]
+                    b[ii] += q * view.shape_values[i][qp] * view.jxw[qp]
 
             # =================================== Loop over faces
             for f_id, face in enumerate(cell.faces):
