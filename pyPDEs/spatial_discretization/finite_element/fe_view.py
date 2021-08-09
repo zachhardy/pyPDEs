@@ -3,10 +3,16 @@ from numpy import ndarray
 from typing import List, Callable, TYPE_CHECKING
 
 from ...mesh import Cell
+from ...utilities import Vector
 from ...utilities.quadratures import Quadrature
 
 if TYPE_CHECKING:
     from ...spatial_discretization import PiecewiseContinuous
+
+VecFlt = List[float]
+MatFlt = List[VecFlt]
+VecVec3 = List[Vector]
+MatVec3 = List[VecVec3]
 
 
 class CellFEView:
@@ -14,33 +20,28 @@ class CellFEView:
     Base class for a finite element cell view.
     """
     def __init__(self, fe: 'PiecewiseContinuous',
-                 quadrature: Quadrature) -> None:
+                 quadrature: Quadrature,
+                 face_quadrature: Quadrature = None) -> None:
         self.degree: int = fe.degree
         self.face_node_mapping: List[List[int]] = None
 
         self.node_ids: List[int] = None
-        self.nodes: List[float] = None
+        self.nodes: List[Vector] = None
 
         self.quadrature: Quadrature = quadrature
+        self.face_quadrature: Quadrature = face_quadrature
 
-        self.jacobian: ndarray = np.empty(0)
-        self.inverse_jacobian: ndarray = np.empty(0)
-        self.jxw: ndarray = np.empty(0)
+        self.shape_values: List[List[float]] = None
+        self.grad_shape_values: List[List[Vector]] = None
 
-        self._shape: List[Callable] = None
-        self._grad_shape: List[Callable] = None
+        self.intV_shapeI: VecFlt = None
+        self.intV_shapeI_shapeJ: MatFlt = None
+        self.intV_gradI_gradJ: MatFlt = None
+        self.intV_shapeI_gradJ: MatVec = None
 
-        self.shape_values: ndarray = np.empty(0)
-        self.grad_shape_values: ndarray = np.empty(0)
-
-        self.intV_shapeI: ndarray = np.empty(0)
-        self.intV_shapeI_shapeJ: ndarray = np.empty(0)
-        self.intV_gradI_gradJ: ndarray = np.empty(0)
-        self.intV_shapeI_gradJ: ndarray = np.empty(0)
-
-        self.intS_shapeI: ndarray = np.empty(0)
-        self.intS_shapeI_shapeJ: ndarray = np.empty(0)
-        self.intS_shapeI_gradJ: ndarray = np.empty(0)
+        self.intS_shapeI: List[VecFlt] = None
+        self.intS_shapeI_shapeJ: List[MatFlt] = None
+        self.intS_shapeI_gradJ: List[MatVec] = None
 
     @property
     def n_nodes(self) -> int:
@@ -51,16 +52,20 @@ class CellFEView:
         return self.quadrature.n_qpoints
 
     @property
-    def qpoints(self) -> ndarray:
+    def qpoints(self) -> List[Vector]:
         return self.quadrature.qpoints
 
-    def shape_value(self, i: int, point: float) -> float:
-        return self._shape[i](point)
+    @property
+    def n_face_qpoints(self) -> int:
+        if self.face_quadrature:
+            return self.face_quadrature.n_qpoints
 
-    def shape_grad(self, i: int, point: float) -> float:
-        return self._grad_shape[i](point)
+    @property
+    def face_qpoints(self) -> List[Vector]:
+        if self.face_quadrature:
+            return self.face_quadrature.qpoints
 
-    def get_function_values(self, u: ndarray) -> ndarray:
+    def get_function_values(self, u: List[float]) -> ndarray:
         """
         Get the function values at quadrature points from
         a solution vector at the nodes on this cell.
@@ -68,7 +73,7 @@ class CellFEView:
         vals = np.zeros(self.n_qpoints)
         for qp in range(self.n_qpoints):
             for i in range(self.n_nodes):
-                shape_i = self.shape_values[i, qp]
+                shape_i = self.shape_values[i][qp]
                 vals[qp] += shape_i * u[i]
         return vals
 
@@ -80,7 +85,7 @@ class CellFEView:
         vals = np.zeros(self.n_qpoints)
         for qp in range(self.n_qpoints):
             for i in range(self.n_nodes):
-                grad_i = self.grad_shape_values[i, qp]
+                grad_i = self.grad_shape_values[i][qp]
                 vals[qp] += grad_i * u[i]
         return vals
 

@@ -132,6 +132,26 @@ class Vector:
                 f"Only inplace division by float or {cls_name} is allowed.")
         return self
 
+    def __pow__(self, power: Union[float, int]) -> 'Vector':
+        if not isinstance(power, (float, int)):
+            cls_name = self.__class__.__name__
+            raise TypeError(
+                f"Exponentiation only allowed with float or int.")
+        x = self.x ** power
+        y = self.y ** power
+        z = self.z ** power
+        return Vector(x, y, z)
+
+    def __ipow__(self, power: Union[float, int]) -> 'Vector':
+        if not isinstance(power, (float, int)):
+            cls_name = self.__class__.__name__
+            raise TypeError(
+                f"Inplace exponentiation only allowed with float or int.")
+        self.x **= power
+        self.y **= power
+        self.z **= power
+        return self
+
     def __abs__(self) -> 'Vector':
         return Vector(abs(self.x), abs(self.y), abs(self.z))
 

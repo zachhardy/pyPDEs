@@ -25,12 +25,20 @@ class SlabFEView(CellFEView):
                  cell: Cell) -> None:
         super().__init__(fe, quadrature)
         self.coord_sys: str = cell.coord_sys
-        self.v0: float = fe.mesh.vertices[cell.vertex_ids[0]]
 
+        v0 = fe.mesh.vertices[cell.vertex_ids[0]]
+        v1 = fe.mesh.vertices[cell.vertex_ids[1]]
+        self.v0: Vector = v0
+
+        domain = quadrature.domain
+        self.h: float = (v1 - v0).norm() / (domain[1] - domain[0])
+
+        # Node IDs and face-to-node mapping
         c, degree = cell.id, fe.degree
-        self.face_node_mapping = [[0], [degree]]
         self.node_ids = [c * degree + i for i in range(degree + 1)]
+        self.face_node_mapping = [[0], [degree]]
 
+        # Get the node locations
         self.nodes = []
         for nid in self.node_ids:
             self.nodes.append(fe.nodes[nid])
@@ -42,7 +50,7 @@ class SlabFEView(CellFEView):
         self.compute_quadrature_data(cell)
         self.compute_integral_data(cell)
 
-    def map_reference_to_global(self, point: Vector) -> float:
+    def map_reference_to_global(self, point: Vector) -> Vector:
         """
         Map a point from the reference cell to
         the real cell.
@@ -51,19 +59,22 @@ class SlabFEView(CellFEView):
         if not min(domain) < point.z < max(domain):
             raise ValueError(
                 f"Provided point not in volume quadrature domain.")
-        return self.jacobian * (point.z + 1.0) + self.v0.z
+        return self.v0 + self.h * (point + Vector(z=max(domain)))
+
+    def shape_value(self, i: int, point: Vector) -> float:
+        return self._shape[i](point.z)
+
+    def grad_shape_value(self, i: int, point: Vector) -> Vector:
+        val = self._grad_shape[i](point.z) / self.h
+        return Vector(z=val)
 
     def compute_quadrature_data(self, cell: Cell) -> None:
         # =================================== Mapping data
-        domain = self.quadrature.domain
-        self.jacobian = cell.width.z / (domain[1] - domain[0])
-        self.inverse_jacobian = 1.0 / self.jacobian
-
         weights = self.quadrature.weights
-        self.jxw.resize(self.n_qpoints)
+        self.jxw = np.zeros(self.n_qpoints)
         for qp in range(self.n_qpoints):
-            x = self.map_reference_to_global(self.qpoints[qp])
-            self.jxw[qp] = self.jacobian * weights[qp]
+            x = self.map_reference_to_global(self.qpoints[qp]).z
+            self.jxw[qp] = self.h * weights[qp]
             if self.coord_sys == "CYLINDRICAL":
                 self.jxw[qp] *= 2.0 * np.pi * x
             elif self.coord_sys == "SPHERICAL":
@@ -71,59 +82,58 @@ class SlabFEView(CellFEView):
 
         # =================================== Finite element data
         n_nodes, n_qpoints = self.n_nodes, self.n_qpoints
-        self.shape_values.resize((n_nodes, n_qpoints))
-        self.grad_shape_values.resize((n_nodes, n_qpoints))
+        shapes = [[0.0 for _ in range(n_qpoints)] for _ in range(n_nodes)]
+        grads = [[Vector() for _ in range(n_qpoints)] for _ in range(n_nodes)]
         for qp in range(self.n_qpoints):
-            point = self.qpoints[qp].z
+            point = self.qpoints[qp]
             for i in range(self.n_nodes):
-                self.shape_values[i, qp] = self._shape[i](point)
-                self.grad_shape_values[i, qp] = \
-                    self._grad_shape[i](point) * self.inverse_jacobian
+                shapes[i][qp] = self.shape_value(i, point)
+                grads[i][qp] = self.grad_shape_value(i, point)
+        self.shape_values = shapes
+        self.grad_shape_values = grads
 
     def compute_integral_data(self, cell: Cell) -> None:
         """
         Compute the finite element integrals.
         """
         # ======================================== Compute volume integrals
-        self.intV_shapeI *= 0.0
-        self.intV_shapeI_shapeJ *= 0.0
-        self.intV_gradI_gradJ *= 0.0
-        self.intV_shapeI_gradJ *= 0.0
+        n = self.n_nodes
+        self.intV_shapeI = [0.0 for _ in range(n)]
+        self.intV_shapeI_shapeJ = \
+            [[0.0 for _ in range(n)] for _ in range(n)]
+        self.intV_gradI_gradJ = \
+            [[0.0 for _ in range(n)] for _ in range(n)]
+        self.intV_shapeI_gradJ = \
+            [[Vector() for _ in range(n)] for _ in range(n)]
 
-        self.intV_shapeI.resize(self.n_nodes)
-        self.intV_shapeI_shapeJ.resize((self.n_nodes,) * 2)
-        self.intV_gradI_gradJ.resize((self.n_nodes,) * 2)
-        self.intV_shapeI_gradJ.resize((self.n_nodes,) * 2)
         for qp in range(self.n_qpoints):
             jxw = self.jxw[qp]
 
             for i in range(self.n_nodes):
-                shape_i = self.shape_values[i, qp]
-                grad_shape_i = self.grad_shape_values[i, qp]
+                shape_i = self.shape_values[i][qp]
+                grad_shape_i = self.grad_shape_values[i][qp]
 
                 self.intV_shapeI[i] += shape_i * jxw
 
                 for j in range(self.n_nodes):
-                    shape_j = self.shape_values[j, qp]
-                    grad_shape_j = self.grad_shape_values[j, qp]
+                    shape_j = self.shape_values[j][qp]
+                    grad_shape_j = self.grad_shape_values[j][qp]
 
-                    self.intV_shapeI_shapeJ[i, j] += \
+                    self.intV_shapeI_shapeJ[i][j] += \
                         shape_i * shape_j * jxw
 
-                    self.intV_gradI_gradJ[i, j] += \
-                        grad_shape_i * grad_shape_j * jxw
+                    self.intV_gradI_gradJ[i][j] += \
+                        grad_shape_i.dot(grad_shape_j) * jxw
 
-                    self.intV_shapeI_gradJ[i, j] += \
+                    self.intV_shapeI_gradJ[i][j] += \
                         shape_i * grad_shape_j * jxw
 
         # ======================================== Compute surface integrals
-        self.intS_shapeI *= 0.0
-        self.intS_shapeI_shapeJ *= 0.0
-        self.intS_shapeI_gradJ *= 0.0
-
-        self.intS_shapeI.resize((2, self.n_nodes))
-        self.intS_shapeI_shapeJ.resize((2, *(self.n_nodes,) * 2))
-        self.intS_shapeI_gradJ.resize((2, *(self.n_nodes,) * 2))
+        self.intS_shapeI = [np.zeros(n) for _ in range(2)]
+        self.intS_shapeI_shapeJ = \
+            [np.zeros((n, n)) for _ in range(2)]
+        self.intS_shapeI_gradJ = \
+            [[[Vector() for _ in range(n)] for _ in range(n)] for _ in range(2)]
 
         self.intS_shapeI[0][0] = cell.faces[0].area
         self.intS_shapeI[1][-1] = cell.faces[1].area
@@ -132,11 +142,11 @@ class SlabFEView(CellFEView):
         self.intS_shapeI_shapeJ[1][-1][-1] = cell.faces[1].area
 
         for j in range(self.n_nodes):
-            grad_left = self._grad_shape[j](self.nodes[0].z)
+            grad_left = Vector(z=self._grad_shape[j](self.nodes[0].z))
             self.intS_shapeI_gradJ[0][0][j] = \
-                grad_left * cell.faces[0].area
+               grad_left * cell.faces[0].area
 
-            grad_right = self._grad_shape[j](self.nodes[-1].z)
+            grad_right = Vector(z=self._grad_shape[j](self.nodes[-1].z))
             self.intS_shapeI_gradJ[1][-1][j] = \
                 grad_right * cell.faces[1].area
 
