@@ -131,6 +131,9 @@ class SteadyStateSolver:
             # =================================== Check convergence
             phi_change = norm(self.phi - phi_ell)
             phi_ell[:] = self.phi
+
+            print(f"===== Iteration {nit} Change = {phi_change:.3e}")
+
             if phi_change <= self.tolerance:
                 converged = True
                 break
@@ -144,11 +147,11 @@ class SteadyStateSolver:
 
         # ======================================== Print summary
         if converged:
-            msg = '***** Solver Converged *****'
+            msg = "\n***** Solver Converged *****"
         else:
-            msg = '!!!!! WARNING: Solver NOT Converged !!!!!'
-        msg += f'\nFinal Change:\t\t{phi_change:.3e}'
-        msg += f'\n# of Iterations:\t{nit}'
+            msg = "!!!!! WARNING: Solver NOT Converged !!!!!"
+        msg += f"\nFinal Change:\t\t{phi_change:.3e}"
+        msg += f"\n# of Iterations:\t{nit}"
         print(msg)
         print("\n***** Done executing steady-state "
               "multi-group diffusion solver. *****\n")
@@ -202,6 +205,15 @@ class SteadyStateSolver:
                 ax.plot(grid, phi, label=label)
             ax.legend()
             ax.grid(True)
+        elif self.mesh.dim == 2:
+            x = np.unique([p.x for p in grid])
+            y = np.unique([p.y for p in grid])
+            xx, yy = np.meshgrid(x, y)
+            phi: ndarray = self.phi[0::self.n_groups]
+            phi = phi.reshape(xx.shape)
+            im = ax.pcolor(xx, yy, phi, cmap="jet", shading="auto" ,
+                           vmin=0.0, vmax=phi.max())
+            plt.colorbar(im)
         plt.tight_layout()
 
     def plot_precursors(self, ax: Axes = None, title: str = None) -> None:
@@ -241,9 +253,9 @@ class SteadyStateSolver:
     def _check_mesh(self) -> None:
         if not self.mesh:
             raise AssertionError("No mesh is attached to the solver.")
-        elif self.mesh.dim != 1:
+        if self.mesh.dim > 2:
             raise NotImplementedError(
-                "Only 1D problems have been implemented.")
+                "Only 1D and 2D problems have been implemented.")
 
     def _check_discretization(self) -> None:
         if not self.discretization:
@@ -257,10 +269,14 @@ class SteadyStateSolver:
         if not self.boundaries:
             raise AssertionError(
                 "No boundary conditions are attached to the solver.")
-        elif len(self.boundaries) != 2 * self.n_groups:
+        if self.mesh.dim == 1 and len(self.boundaries) != 2 * self.n_groups:
             raise NotImplementedError(
                 "There can only be 2 * n_groups boundary conditions "
                 "for 1D problems.")
+        if self.mesh.dim == 2 and len(self.boundaries) != 4 * self.n_groups:
+            raise NotImplementedError(
+                "There can only be 4 * n_groups boundary conditions "
+                "for 2D problems.")
 
     def _check_materials(self) -> None:
         if not self.material_xs:
@@ -274,7 +290,7 @@ class SteadyStateSolver:
 
         if self.material_src:
             for n in range(len(self.material_xs)):
-                if len(self.material_src) < n + 1:
+                if len(self.material_src) <= n + 1:
                     src = self.material_src[n]
                     if src.n_components != self.n_groups:
                         raise AssertionError(

@@ -34,8 +34,13 @@ class KEigenvalueSolver(SteadyStateSolver):
         uk_man = self.flux_uk_man
         num_dofs = self.discretization.n_dofs(uk_man)
         n_grps = self.n_groups
-        phi_ell = self.phi = np.ones(num_dofs)
-        production_ell = self.fv_compute_fission_production(self.phi, )
+
+        # Initialize with unit flux
+        self.phi = np.ones(num_dofs)
+        phi_ell = np.copy(self.phi)
+
+        # Initialize book-keeping parameters
+        production_ell = self.fv_compute_fission_production(self.phi)
         k_eff_ell = k_eff_change = 1.0
         phi_change = 1.0
 
@@ -77,6 +82,12 @@ class KEigenvalueSolver(SteadyStateSolver):
             k_eff_ell = self.k_eff
             production_ell = production
             phi_ell[:] = self.phi
+
+            print(f"\n===== Iteration {nit}\n"
+                  f"\t{'k_eff':<15} = {self.k_eff:.6g}\n"
+                  f"\t{'k_eff Change':<15} = {k_eff_change:.3e}\n"
+                  f"\t{'Phi Change':<15} = {phi_change:.3e}")
+
             if k_eff_change <= self.tolerance and \
                     phi_change <= self.tolerance:
                 converged = True
@@ -90,7 +101,7 @@ class KEigenvalueSolver(SteadyStateSolver):
 
         # ======================================== Print summary
         if converged:
-            msg = "***** k-Eigenvalue Solver Converged!*****"
+            msg = "\n***** k-Eigenvalue Solver Converged!*****"
         else:
             msg = "!!!!! WARNING: k-Eigenvalue Solver NOT Converged !!!!!"
         msg += f"\nFinal k Effective:\t\t{self.k_eff:.6g}"
