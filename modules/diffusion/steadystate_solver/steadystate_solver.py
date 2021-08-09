@@ -230,12 +230,10 @@ class SteadyStateSolver:
         if title:
             ax.set_title(title)
 
-        grid = self.discretization.grid
-
         if self.mesh.dim == 1:
             ax.set_xlabel("Location")
             ax.set_ylabel("Precursor Family")
-            grid = [p.z for p in grid]
+            grid = [cell.centroid.z for cell in self.mesh.cells]
             for j in range(self.n_precursors):
                 label = f"Family {j}"
                 precursor = self.precursors[j::self.n_precursors]
