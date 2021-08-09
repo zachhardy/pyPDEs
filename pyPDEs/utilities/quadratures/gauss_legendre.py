@@ -3,6 +3,7 @@ from numpy import ndarray
 from numpy.polynomial.legendre import leggauss
 
 from .quadrature import Quadrature
+from .. import Vector
 
 
 class GaussLegendre(Quadrature):
@@ -16,7 +17,6 @@ class GaussLegendre(Quadrature):
         n_pts = int(np.ceil((order + 1.0) / 2.0))
         pts, wts = leggauss(n_pts)
 
-        self.qpoints = pts
+        self.qpoints = [Vector(z=pt) for pt in pts]
         self.weights = wts
-        self.domain = [-1.0, 1.0]
-        self.width = 2.0
+        self.domain = (-1.0, 1.0)
