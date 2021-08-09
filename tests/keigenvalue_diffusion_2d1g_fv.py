@@ -7,13 +7,14 @@ from pyPDEs.mesh import create_2d_mesh
 from pyPDEs.spatial_discretization import *
 from pyPDEs.material import CrossSections, MultiGroupSource
 from pyPDEs.utilities.boundaries import *
+from time import time
 
 from modules.diffusion import *
 
 
 print(f"\n===== Creating the mesh")
-x_verts = np.linspace(0.0, 10.0, 41)
-y_verts = np.linspace(0.0, 10.0, 41)
+x_verts = np.linspace(0.0, 10.0, 81)
+y_verts = np.linspace(0.0, 10.0, 81)
 mesh = create_2d_mesh(x_verts, y_verts)
 print(f"===== Mesh created")
 

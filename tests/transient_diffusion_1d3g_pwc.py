@@ -12,8 +12,8 @@ from pyPDEs.utilities.boundaries import *
 
 from modules.diffusion import *
 
-mesh = create_1d_mesh([0.0, 6.0], [50], coord_sys="SPHERICAL")
-discretization = PiecewiseContinuous(mesh, degree=1)
+mesh = create_1d_mesh([0.0, 6.0], [100], coord_sys="SPHERICAL")
+discretization = PiecewiseContinuous(mesh, degree=2)
 
 xs = CrossSections()
 xs.read_from_xs_file('xs/three_grp.cxs', density=0.05)
