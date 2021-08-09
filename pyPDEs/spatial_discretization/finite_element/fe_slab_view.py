@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from ...mesh import Cell
 from ...utilities.quadratures import GaussLegendre
+from ...utilities import Vector
 from .fe_view import CellFEView
 
 if TYPE_CHECKING:
@@ -30,30 +31,32 @@ class SlabFEView(CellFEView):
         self.face_node_mapping = [[0], [degree]]
         self.node_ids = [c * degree + i for i in range(degree + 1)]
 
-        v0, v1 = self.v0, fe.mesh.vertices[cell.vertex_ids[1]]
-        self.nodes = np.linspace(v0, v1, self.n_nodes)
+        self.nodes = []
+        for nid in self.node_ids:
+            self.nodes.append(fe.nodes[nid])
 
-        tmp = lagrange_elements(degree, *quadrature.domain)
+        tmp = lagrange_elements(degree, quadrature.domain)
         self._shape = tmp[0]
         self._grad_shape = tmp[1]
 
         self.compute_quadrature_data(cell)
         self.compute_integral_data(cell)
 
-    def map_reference_to_global(self, point: float) -> float:
+    def map_reference_to_global(self, point: Vector) -> float:
         """
         Map a point from the reference cell to
         the real cell.
         """
         domain = self.quadrature.domain
-        if not min(domain) < point < max(domain):
+        if not min(domain) < point.z < max(domain):
             raise ValueError(
                 f"Provided point not in volume quadrature domain.")
-        return self.jacobian * (point + 1.0) + self.v0
+        return self.jacobian * (point.z + 1.0) + self.v0.z
 
     def compute_quadrature_data(self, cell: Cell) -> None:
         # =================================== Mapping data
-        self.jacobian = cell.width / self.quadrature.width
+        domain = self.quadrature.domain
+        self.jacobian = cell.width.z / (domain[1] - domain[0])
         self.inverse_jacobian = 1.0 / self.jacobian
 
         weights = self.quadrature.weights
@@ -71,7 +74,7 @@ class SlabFEView(CellFEView):
         self.shape_values.resize((n_nodes, n_qpoints))
         self.grad_shape_values.resize((n_nodes, n_qpoints))
         for qp in range(self.n_qpoints):
-            point = self.qpoints[qp]
+            point = self.qpoints[qp].z
             for i in range(self.n_nodes):
                 self.shape_values[i, qp] = self._shape[i](point)
                 self.grad_shape_values[i, qp] = \
@@ -129,17 +132,16 @@ class SlabFEView(CellFEView):
         self.intS_shapeI_shapeJ[1][-1][-1] = cell.faces[1].area
 
         for j in range(self.n_nodes):
-            grad_left = self._grad_shape[j](self.nodes[0])
+            grad_left = self._grad_shape[j](self.nodes[0].z)
             self.intS_shapeI_gradJ[0][0][j] = \
                 grad_left * cell.faces[0].area
 
-            grad_right = self._grad_shape[j](self.nodes[-1])
+            grad_right = self._grad_shape[j](self.nodes[-1].z)
             self.intS_shapeI_gradJ[1][-1][j] = \
                 grad_right * cell.faces[1].area
 
 
-def lagrange_elements(degree: int = 1, xmin: float = -1.0,
-                      xmax: float = 1.0) -> FEBasis:
+def lagrange_elements(degree: int, domain: Tuple[Vector]) -> FEBasis:
     """
     Generate the Lagrange finite elements.
 
@@ -147,10 +149,7 @@ def lagrange_elements(degree: int = 1, xmin: float = -1.0,
     ----------
     degree : int, default 1.
         The finite element polynomial degree.
-    xmin : float, default -1.0
-        The left boundary of the reference cell.
-    xmax : float, default 1.0
-        The right boundary of the reference cell.
+    domain : Tuple[Vector]
 
     Returns
     -------
@@ -160,11 +159,11 @@ def lagrange_elements(degree: int = 1, xmin: float = -1.0,
         Basis function derivatives on the reference element.
     """
     shapes, grad_shapes = [], []
-    x = np.linspace(xmin, xmax, degree + 1)
+    z_min, z_max = domain[0], domain[1]
+    x = np.linspace(z_min, z_max, degree + 1)
     for i in range(degree + 1):
         y = [1.0 if i == j else 0.0 for j in range(degree + 1)]
         shape: poly1d = lagrange(x, y)
         shapes.append(shape)
         grad_shapes.append(shape.deriv())
     return shapes, grad_shapes
-
