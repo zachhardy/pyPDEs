@@ -20,7 +20,7 @@ class FiniteVolume(SpatialDiscretization):
 
     @property
     def grid(self) -> ndarray:
-        return np.array([cell.centroid for cell in self.mesh.cells])
+        return [cell.centroid for cell in self.mesh.cells]
 
     def map_dof(self, cell: Cell, node: int = 0,
                 unknown_manager: UnknownManager = None,

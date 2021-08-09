@@ -186,12 +186,14 @@ class SteadyStateSolver:
             An Axes to plot on.
         title : str, default None
         """
-        grid = self.discretization.grid
         ax: Axes = plt.gca() if ax is None else ax
         if title:
             ax.set_title(title)
 
+        grid = self.discretization.grid
+
         if self.mesh.dim == 1:
+            grid = [p.z for p in grid]
             ax.set_xlabel("Location")
             ax.set_ylabel(r"$\phi(r)$")
             for g in range(self.n_groups):
@@ -212,14 +214,16 @@ class SteadyStateSolver:
             An Axes to plot on.
         title : str, default None
         """
-        grid = [c.centroid for c in self.mesh.cells]
         ax: Axes = plt.gca() if ax is None else ax
         if title:
             ax.set_title(title)
 
+        grid = self.discretization.grid
+
         if self.mesh.dim == 1:
             ax.set_xlabel("Location")
             ax.set_ylabel("Precursor Family")
+            grid = [p.z for p in grid]
             for j in range(self.n_precursors):
                 label = f"Family {j}"
                 precursor = self.precursors[j::self.n_precursors]

@@ -1,9 +1,11 @@
 from typing import Union
 
+import numpy as np
 
-class Point:
+
+class Vector:
     """
-    Class for a 3-dimensional point.
+    Class for a 3-dimensional vector.
     """
     def __init__(self,
                  x: float = 0.0,
@@ -14,9 +16,12 @@ class Point:
         self.z: float = z
 
     def __str__(self) -> str:
-        return f"Point ({self.x}, {self.y}, {self.z})"
+        return f"Vector({self.x}, {self.y}, {self.z})"
 
-    def __add__(self, other: 'Point') -> 'Point':
+    def __repr__(self) -> str:
+        return f"Vector({self.x}, {self.y}, {self.z})"
+
+    def __add__(self, other: 'Vector') -> 'Vector':
         if not isinstance(other, type(self)):
             cls_name = self.__class__.__name__
             raise TypeError(
@@ -24,9 +29,9 @@ class Point:
         x = self.x + other.x
         y = self.y + other.y
         z = self.z + other.z
-        return Point(x, y, z)
+        return Vector(x, y, z)
 
-    def __iadd__(self, other: 'Point') -> None:
+    def __iadd__(self, other: 'Vector') -> 'Vector':
         if not isinstance(other, type(self)):
             cls_name = self.__class__.__name__
             raise TypeError(
@@ -34,8 +39,9 @@ class Point:
         self.x += other.x
         self.y += other.y
         self.z += other.z
+        return self
 
-    def __sub__(self, other: 'Point') -> 'Point':
+    def __sub__(self, other: 'Vector') -> 'Vector':
         if not isinstance(other, type(self)):
             cls_name = self.__class__.__name__
             raise TypeError(
@@ -43,9 +49,9 @@ class Point:
         x = self.x - other.x
         y = self.y - other.y
         z = self.z - other.z
-        return Point(x, y, z)
+        return Vector(x, y, z)
 
-    def __isub__(self, other: 'Point') -> None:
+    def __isub__(self, other: 'Vector') -> 'Vector':
         if not isinstance(other, type(self)):
             cls_name = self.__class__.__name__
             raise TypeError(
@@ -53,54 +59,86 @@ class Point:
         self.x -= other.x
         self.y -= other.y
         self.z -= other.z
+        return self
 
-    def __mul__(self, other: float) -> 'Point':
-        if not isinstance(other, float):
+    def __mul__(self, other: Union[float, int, 'Vector']) -> 'Vector':
+        if isinstance(other, (float, int)):
+            x = other * self.x
+            y = other * self.y
+            z = other * self.z
+            return Vector(x, y, z)
+        elif isinstance(other, type(self)):
+            x = other.x * self.x
+            y = other.y * self.y
+            z = other.z * self.z
+        else:
+            cls_name = self.__class__.__name__
             raise TypeError(
-                f"Only multiplication by float is allowed.")
-        x = other * self.x
-        y = other * self.y
-        z = other * self.z
-        return Point(x, y, z)
+                f"Only multiplication by float, int, or "
+                f"{cls_name} is allowed.")
+        return Vector(x, y, z)
 
-    def __rmul__(self, other: float) -> 'Point':
-        if not isinstance(other, float):
+    def __rmul__(self, other: Union[float, int, 'Vector']) -> 'Vector':
+        if not isinstance(other, (float, int, type(self))):
+            cls_name = self.__class__.__name__
             raise TypeError(
-                f"Only right multiplication by float is allowed.")
+                f"Only right multiplication by float, int, or "
+                f"{cls_name} is allowed.")
         return self * other
 
-    def __imul__(self, other: float) -> None:
-        if not isinstance(other, float):
+    def __imul__(self, other: Union[float, int, 'Vector']) -> 'Vector':
+        if isinstance(other, (float, int)):
+            self.x *= other
+            self.y *= other
+            self.z *= other
+        elif isinstance(other, type(self)):
+            self.x *= other.x
+            self.y *= other.y
+            self.z *= other.z
+        else:
+            cls_name = self.__class__.__name__
             raise TypeError(
-                f"Only inplace multiplication by float is allowed.")
-        self.x *= other
-        self.y *= other
-        self.z *= other
+                f"Only inplace multiplication by float or "
+                f"{cls_name} is allowed.")
+        return self
 
-    def __truediv__(self, other: float) -> 'Point':
-        if not isinstance(other, float):
+    def __truediv__(self, other: Union[float, int, 'Vector']) -> 'Vector':
+        if isinstance(other, (float, int)):
+            x = self.x / other
+            y = self.y / other
+            z = self.z / other
+        elif isinstance(other, type(self)):
+            x = self.x / other.x
+            y = self.y / other.y
+            z = self.z / other.z
+        else:
+            cls_name = self.__class__.__name__
             raise TypeError(
-                f"Only division by float is allowed.")
-        x = self.x / other
-        y = self.y / other
-        z = self.z / other
-        return Point(x, y, z)
+                f"Only division by float or {cls_name} is allowed.")
+        return Vector(x, y, z)
 
-    def __itruediv__(self, other: float) -> None:
-        if not isinstance(other, float):
+    def __itruediv__(self, other: Union[float, int, 'Vector']) -> 'Vector':
+        if isinstance(other, (float, int)):
+            self.x /= other
+            self.y /= other
+            self.z /= other
+        elif isinstance(other, type(self)):
+            self.x /= other.x
+            self.y /= other.y
+            self.z /= other.z
+        else:
+            cls_name = self.__class__.__name__
             raise TypeError(
-                f"Only inplace division by float is allowed.")
-        self.x /= other
-        self.y /= other
-        self.z /= other
+                f"Only inplace division by float or {cls_name} is allowed.")
+        return self
 
-    def __abs__(self) -> 'Point':
-        return Point(abs(self.x), abs(self.y), abs(self.z))
+    def __abs__(self) -> 'Vector':
+        return Vector(abs(self.x), abs(self.y), abs(self.z))
 
-    def __neg__(self) -> 'Point':
-        return Point(-self.x, -self.y, -self.z)
+    def __neg__(self) -> 'Vector':
+        return Vector(-self.x, -self.y, -self.z)
 
-    def __eq__(self, other: 'Point') -> bool:
+    def __eq__(self, other: 'Vector') -> bool:
         if not isinstance(other, type(self)):
             cls_name = self.__class__.__name__
             raise TypeError(
@@ -110,5 +148,47 @@ class Point:
         z_eq = self.z == other.z
         return x_eq and y_eq and z_eq
 
-    def __ne__(self, other: 'Point'):
+    def __ne__(self, other: 'Vector'):
         return not self == other
+
+    def dot(self, other: 'Vector') -> float:
+        """
+        Compute the dot product of this with other.
+        """
+        if not isinstance(other, type(self)):
+            cls_name = self.__class__.__name__
+            raise TypeError(
+                f"Dot products must be with {cls_name}.")
+        dot = self.x * other.x
+        dot += self.y * other.y
+        dot += self.z * other.z
+        return dot
+
+    def cross(self, other: 'Vector') -> 'Vector':
+        """
+        Compute the cross product of this with other.
+        """
+        if not isinstance(other, type(self)):
+            cls_name = self.__class__.__name__
+            raise TypeError(
+                f"Cross products must be with {cls_name}.")
+        x = self.y * other.z - self.z * other.y
+        y = self.z * other.x - self.x * other.z
+        z = self.x * other.y - self.y * other.x
+        return Vector(x, y, z)
+
+    def norm(self) -> float:
+        """
+        Compute the norm of this.
+        """
+        return np.sqrt(self.dot(self))
+
+    def normalize(self) -> 'Vector':
+        """
+        Normalize this vector to unit length
+        """
+        norm = self.norm()
+        self /= norm
+        return self
+
+

@@ -22,8 +22,8 @@ def fv_assemble_matrix(self: 'SteadyStateSolver', g: int) -> csr_matrix:
     fv: FiniteVolume = self.discretization
     rows, cols, data = [], [], []
     for cell in self.mesh.cells:
-        dr = cell.width
         volume = cell.volume
+        width = cell.width
         xs = self.material_xs[cell.material_id]
         i = fv.map_dof(cell)
 
@@ -38,23 +38,26 @@ def fv_assemble_matrix(self: 'SteadyStateSolver', g: int) -> csr_matrix:
             # ============================== Interior faces
             if face.has_neighbor:
                 nbr_cell = self.mesh.cells[face.neighbor_id]
-                nbr_dr = nbr_cell.width
+                nbr_width = nbr_cell.width
                 nbr_xs = self.material_xs[nbr_cell.material_id]
                 j = fv.map_dof(nbr_cell)
 
-                # Median-mesh cell width
-                eff_dr = 0.5 * (dr + nbr_dr)
-
                 # Diffusion coefficients
-                diff_coeff = xs.diffusion_coeff[g]
-                nbr_diff_coeff = nbr_xs.diffusion_coeff[g]
+                D_p = xs.diffusion_coeff[g]
+                D_n = nbr_xs.diffusion_coeff[g]
 
-                # Effective diffusion coefficient
-                tmp = dr / diff_coeff + nbr_dr / nbr_diff_coeff
-                eff_diff_coeff = 2.0 * eff_dr / tmp
+                # Node-to-neighbor information
+                d_pn = (cell.centroid - nbr_cell.centroid).norm()
+
+                # Node-to-face information
+                d_pf = (cell.centroid - face.centroid).norm()
+
+                # Face diffusion coefficient
+                w = d_pf / d_pn  # harmonic mean weight
+                D_f = (w / D_p + (1.0 - w) / D_n) ** (-1)
 
                 # ==================== Diffusion term
-                value = eff_diff_coeff / eff_dr * face.area
+                value = D_f / d_pn * face.area
                 rows.extend([i, i])
                 cols.extend([i, j])
                 data.extend([value, -value])
@@ -63,16 +66,17 @@ def fv_assemble_matrix(self: 'SteadyStateSolver', g: int) -> csr_matrix:
             else:
                 bndry_id = -1 * (face.neighbor_id + 1)
                 bc = self.boundaries[bndry_id * self.n_groups + g]
-                diff_coeff = xs.diffusion_coeff[g]
+                D_p = xs.diffusion_coeff[g]
+                d_pf = (cell.centroid - face.centroid).norm()
 
                 # ==================== Boundary conditions
                 value = 0.0
                 if issubclass(type(bc), DirichletBoundary):
-                    value = 2.0 * diff_coeff / dr * face.area
+                    value = D_p / d_pf * face.area
                 elif issubclass(type(bc), RobinBoundary):
                     bc: RobinBoundary = bc
-                    tmp = 2.0 * bc.b * diff_coeff + bc.a * dr
-                    value = 2.0 * bc.a * diff_coeff / tmp * face.area
+                    tmp = bc.a * d_pf - bc.b * D_p
+                    value = bc.a * D_p / tmp * face.area
 
                 rows.append(i)
                 cols.append(i)
@@ -149,21 +153,21 @@ def fv_set_source(self: 'SteadyStateSolver', g: int, phi: ndarray,
             if not face.has_neighbor and apply_boundaries:
                 bndry_id = -1 * (face.neighbor_id + 1)
                 bc = self.boundaries[bndry_id * self.n_groups + g]
-                diff_coeff = xs.diffusion_coeff[g]
-                dr = cell.width
+                D_p = xs.diffusion_coeff[g]
+                d_pf = (cell.centroid - face.centroid).norm()
 
                 # ==================== Boundary conditions
                 value = 0.0
                 if issubclass(type(bc), DirichletBoundary):
                     bc: DirichletBoundary = bc
-                    value = 2.0 * diff_coeff / dr * bc.value
+                    value = D_p / d_pf * bc.value
                 elif issubclass(type(bc), NeumannBoundary):
                     bc: NeumannBoundary = bc
                     value = bc.value
                 elif issubclass(type(bc), RobinBoundary):
                     bc: RobinBoundary = bc
-                    tmp = 2.0 * bc.b * diff_coeff + bc.a * dr
-                    value = 2.0 * diff_coeff / tmp * bc.f
+                    tmp = bc.a * d_pf - bc.b * D_p
+                    value = -bc.b * D_p / tmp * bc.f
 
                 self.b[ig] += value * face.area
 

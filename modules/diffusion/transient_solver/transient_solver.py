@@ -266,6 +266,7 @@ class TransientSolver(KEigenvalueSolver):
             n_prec = self.n_precursors
             num_ics = [n_grps, n_grps + n_prec]
             grid = self.discretization.grid
+            grid = np.array([p.z for p in grid])
 
             # ======================================== Convert to lambdas
             from sympy import lambdify
