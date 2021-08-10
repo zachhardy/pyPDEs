@@ -1,7 +1,8 @@
 from numpy import ndarray
+from typing import List
 
 from ..mesh import Mesh, Cell
-from ..utilities import UnknownManager
+from ..utilities import UnknownManager, Vector
 
 
 class SpatialDiscretization:
@@ -21,7 +22,7 @@ class SpatialDiscretization:
             f"Subclasses must implement to {cls_name}.n_nodes property.")
 
     @property
-    def grid(self) -> ndarray:
+    def grid(self) -> List[Vector]:
         cls_name = self.__class__.__name__
         raise NotImplementedError(
             f"Subclasses must implement to {cls_name}.grid property.")

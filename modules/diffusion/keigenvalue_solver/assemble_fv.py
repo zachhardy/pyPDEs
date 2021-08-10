@@ -8,8 +8,7 @@ if TYPE_CHECKING:
     from .keigenvalue_solver import KEigenvalueSolver
 
 
-def fv_compute_fission_production(self: 'KEigenvalueSolver',
-                                  phi: ndarray) -> float:
+def fv_compute_fission_production(self: 'KEigenvalueSolver') -> float:
     """
     Compute the fission production from a given vector for
     finite volume discretizations.
@@ -26,5 +25,5 @@ def fv_compute_fission_production(self: 'KEigenvalueSolver',
         # =================================== Loop over groups
         for g in range(self.n_groups):
             ig = fv.map_dof(cell, 0, uk_man, 0, g)
-            production += xs.nu_sigma_f[g] * phi[ig] * volume
+            production += xs.nu_sigma_f[g] * self.phi[ig] * volume
     return production
