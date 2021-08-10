@@ -13,8 +13,8 @@ from modules.diffusion import *
 
 
 print(f"\n===== Creating the mesh")
-x_verts = np.linspace(0.0, 10.0, 81)
-y_verts = np.linspace(0.0, 10.0, 81)
+x_verts = np.linspace(0.0, 10.0, 41)
+y_verts = np.linspace(0.0, 10.0, 41)
 mesh = create_2d_mesh(x_verts, y_verts)
 print(f"===== Mesh created")
 

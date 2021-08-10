@@ -8,8 +8,7 @@ if TYPE_CHECKING:
     from .keigenvalue_solver import KEigenvalueSolver
 
 
-def pwc_compute_fission_production(self: 'KEigenvalueSolver',
-                                   phi: ndarray) -> float:
+def pwc_compute_fission_production(self: 'KEigenvalueSolver') -> float:
     """
     Compute the fission production from a given vector for
     finite volume discretizations.
@@ -31,5 +30,5 @@ def pwc_compute_fission_production(self: 'KEigenvalueSolver',
             for g in range(self.n_groups):
                 ig = pwc.map_dof(cell, i, uk_man, 0, g)
                 production += \
-                    xs.nu_sigma_f[g] * phi[ig] * intV_shapeI
+                    xs.nu_sigma_f[g] * self.phi[ig] * intV_shapeI
     return production

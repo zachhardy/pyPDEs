@@ -40,7 +40,7 @@ class KEigenvalueSolver(SteadyStateSolver):
         phi_ell = np.copy(self.phi)
 
         # Initialize book-keeping parameters
-        production_ell = self.fv_compute_fission_production(self.phi)
+        production_ell = self.fv_compute_fission_production()
         k_eff_ell = k_eff_change = 1.0
         phi_change = 1.0
 
@@ -71,9 +71,9 @@ class KEigenvalueSolver(SteadyStateSolver):
 
             # ============================== Update k-eigenvalue
             if isinstance(self.discretization, FiniteVolume):
-                production = self.fv_compute_fission_production(self.phi)
+                production = self.fv_compute_fission_production()
             else:
-                production = self.pwc_compute_fission_production(self.phi)
+                production = self.pwc_compute_fission_production()
             self.k_eff *= production / production_ell
 
             # ============================== Check for convergence
