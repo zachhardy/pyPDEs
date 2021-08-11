@@ -14,7 +14,16 @@ if TYPE_CHECKING:
 
 def pwc_assemble_mass_matrix(self: 'TransientSolver', g: int) -> csr_matrix:
     """
-    Assemble the mass matrix for time stepping.
+    Assemble the mass matrix for time stepping for group `g`
+
+    Parameters
+    ----------
+    g : int
+        The group under consideration.
+
+    Returns
+    -------
+    csr_matrix
     """
     pwc: PiecewiseContinuous = self.discretization
 
@@ -53,16 +62,19 @@ def pwc_assemble_mass_matrix(self: 'TransientSolver', g: int) -> csr_matrix:
 def pwc_set_transient_source(self: 'TransientSolver', g: int,
                              phi: ndarray, step: int = 0):
     """
-    Set the transient source.
+    Assemble the right-hand side of the diffusion equation.
+    This includes the previous time step contributions and
+    material, scattering, fission, and boundary sources for
+    group `g`.
 
     Parameters
     ----------
     g : int
         The group under consideration.
     phi : ndarray
-        The solution vector to compute sources from.
+        The vector to compute scattering and fission sources with.
     step : int, default 0
-        The step of the time step.
+        The section of the time step.
     """
     flags = (True, True, False, False)
     SteadyStateSolver.pwc_set_source(self, g, phi, *flags)
@@ -144,12 +156,12 @@ def pwc_set_transient_source(self: 'TransientSolver', g: int,
 def pwc_update_precursors(self: 'TransientSolver',
                           step: int = 0) -> None:
     """
-    Solve a precursor time step for finite volume discretizations.
+    Solve a precursor time step.
 
     Parameters
     ----------
     step : int, default 0
-        The step of the time step.
+        The section of the time step.
     """
     pwc: PiecewiseContinuous = self.discretization
     flux_uk_man = self.flux_uk_man

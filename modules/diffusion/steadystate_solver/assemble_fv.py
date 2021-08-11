@@ -14,9 +14,17 @@ if TYPE_CHECKING:
 
 def fv_assemble_matrix(self: 'SteadyStateSolver', g: int) -> csr_matrix:
     """
-    Assemble the diffusion matrix across all groups.
-    The structure of this matrix follows the ordering
-    of the unknown manager.
+    Assemble the diffusion matrix for group `g`.
+
+    Parameters
+    ----------
+    g : int
+        The energy group under consideration.
+
+    Returns
+    -------
+    csr_matrix
+        The diffusion matrix for group `g`.
     """
     # ======================================== Loop over cells
     fv: FiniteVolume = self.discretization
@@ -90,16 +98,16 @@ def fv_set_source(self: 'SteadyStateSolver', g: int, phi: ndarray,
                   apply_fission: bool = True,
                   apply_boundaries: bool = True) -> None:
     """
-    Assemble the right-hand side of the multi-group diffusion
-    equation for a finite volume discretization. This includes
-    material sources, scattering sources, and fission sources.
+    Assemble the right-hand side of the diffusion equation.
+    This includes material, scattering, fission, and boundary
+    sources for group `g`.
 
     Parameters
     ----------
     g : int
         The group under consideration
     phi : ndarray
-        A flux vector to use to compute sources.
+        A vector to compute scattering and fission sources with.
     apply_material_source : bool, default True
     apply_scattering : bool, default True
     apply_fission : bool, default True

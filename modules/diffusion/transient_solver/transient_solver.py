@@ -142,12 +142,12 @@ class TransientSolver(KEigenvalueSolver):
 
     def solve_system(self, step: int = 0) -> None:
         """
-        Solve the system for a n'th step of the time step.
+        Solve the system for the n'th step of a time step.
 
         Parameters
         ----------
         step : int, default 0
-            The step of the time step.
+            The section of the time step.
         """
         n_grps = self.n_groups
         phi_ell = np.copy(self.phi)
@@ -179,12 +179,13 @@ class TransientSolver(KEigenvalueSolver):
 
     def set_old_transient_source(self, step: int = 0) -> ndarray:
         """
-        Assemble the previous time step contributions to the right-hand side.
+        Assemble the previous time step contributions to the
+        right-hand side.
 
         Parameters
         ----------
         step : int, default 0
-            The step of the time step.
+            The section of the time step.
 
         Returns
         -------
@@ -239,7 +240,7 @@ class TransientSolver(KEigenvalueSolver):
         Parameters
         ----------
         step : int
-            The step of the time step.
+            The section of the time step.
 
         Returns
         -------

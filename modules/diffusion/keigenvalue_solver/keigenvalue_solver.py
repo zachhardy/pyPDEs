@@ -12,10 +12,6 @@ from modules.diffusion import SteadyStateSolver
 class KEigenvalueSolver(SteadyStateSolver):
     """
     Class for solving a multi-group k-eigenvalue problem.
-
-    Attributes
-    ----------
-    k_eff : float
     """
 
     from .assemble_fv import fv_compute_fission_production

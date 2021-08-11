@@ -56,6 +56,10 @@ class SteadyStateSolver:
     def n_groups(self) -> int:
         """
         Get the number of groups.
+
+        Returns
+        -------
+        int
         """
         return self.material_xs[0].n_groups
 
@@ -64,6 +68,9 @@ class SteadyStateSolver:
         """
         Get the total number of precursors.
 
+        Returns
+        -------
+        int
         """
         return sum([xs.n_precursors for xs in self.material_xs])
 
@@ -163,6 +170,7 @@ class SteadyStateSolver:
         Parameters
         ----------
         title : str
+            A title for the figure.
         """
         fig: Figure = plt.figure()
         if self.use_precursors:
@@ -188,6 +196,7 @@ class SteadyStateSolver:
         ax : Axes
             An Axes to plot on.
         title : str, default None
+            A title for the Axes.
         """
         ax: Axes = plt.gca() if ax is None else ax
         if title:
@@ -225,6 +234,7 @@ class SteadyStateSolver:
         ax : Axes
             An Axes to plot on.
         title : str, default None
+            A title for the Axes.
         """
         ax: Axes = plt.gca() if ax is None else ax
         if title:
@@ -243,6 +253,9 @@ class SteadyStateSolver:
         plt.tight_layout()
 
     def check_inputs(self) -> None:
+        """
+        Check the inputs provided to the solver.
+        """
         self._check_mesh()
         self._check_discretization()
         self._check_boundaries()
@@ -267,11 +280,13 @@ class SteadyStateSolver:
         if not self.boundaries:
             raise AssertionError(
                 "No boundary conditions are attached to the solver.")
-        if self.mesh.dim == 1 and len(self.boundaries) != 2 * self.n_groups:
+        if self.mesh.cell_type == "LINE" and \
+                len(self.boundaries) != 2 * self.n_groups:
             raise NotImplementedError(
                 "There can only be 2 * n_groups boundary conditions "
                 "for 1D problems.")
-        if self.mesh.dim == 2 and len(self.boundaries) != 4 * self.n_groups:
+        if self.mesh.cell_type == "QUAD" and \
+                len(self.boundaries) != 4 * self.n_groups:
             raise NotImplementedError(
                 "There can only be 4 * n_groups boundary conditions "
                 "for 2D problems.")

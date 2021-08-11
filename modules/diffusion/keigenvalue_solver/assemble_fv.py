@@ -10,8 +10,12 @@ if TYPE_CHECKING:
 
 def fv_compute_fission_production(self: 'KEigenvalueSolver') -> float:
     """
-    Compute the fission production from a given vector for
-    finite volume discretizations.
+    Compute the fission production from the most recent
+    solution vector.
+
+    Returns
+    -------
+    float
     """
     fv: FiniteVolume = self.discretization
     uk_man: UnknownManager = self.flux_uk_man
