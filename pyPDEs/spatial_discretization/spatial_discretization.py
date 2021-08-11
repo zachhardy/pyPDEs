@@ -8,6 +8,11 @@ from ..utilities import UnknownManager, Vector
 class SpatialDiscretization:
     """
     Base class for spatial discretizations.
+
+    Parameters
+    ----------
+    mesh : Mesh
+        The geometrical mesh that is being discretized.
     """
     def __init__(self, mesh: 'Mesh') -> None:
         self.type: str = None
@@ -17,12 +22,28 @@ class SpatialDiscretization:
 
     @property
     def n_nodes(self) -> int:
+        """
+        Abstract class to get the number of nodes in a
+        spatial discretization. This method must be implemented
+        in derived classes.
+
+        Returns
+        -------
+        int
+        """
         cls_name = self.__class__.__name__
         raise NotImplementedError(
             f"Subclasses must implement to {cls_name}.n_nodes property.")
 
     @property
     def grid(self) -> List[Vector]:
+        """
+        Get the grid of nodes that defines this spatial discretization.
+
+        Returns
+        -------
+        List[Vector]
+        """
         cls_name = self.__class__.__name__
         raise NotImplementedError(
             f"Subclasses must implement to {cls_name}.grid property.")
@@ -30,6 +51,18 @@ class SpatialDiscretization:
     def n_dofs(self, unknown_manager: UnknownManager = None) -> int:
         """
         Get the total number of dofs in the problem.
+
+        Parameters
+        ----------
+        unknown_manager : UnknownManager
+           The unknown manager is used to communicate how
+           many unknwons per node exists.
+
+        Returns
+        -------
+        int
+            The number of nodes multiplied by the number of
+            unknowns from the unknown manager.
         """
         num_unknowns = 1
         if unknown_manager:
@@ -40,9 +73,24 @@ class SpatialDiscretization:
                 unknown_manager: UnknownManager = None,
                 unknown_id: int = 0, component: int = 0) -> int:
         """
-        Maps a node on a cell to a dof. Unknown managers
-        are used for multi-component problems and are used
-        to map to specific unknowns and components.
+        Maps a node on a cell to a global DoF index. This is an
+        abstract method that must be implemented in derived classes.
+
+        Parameters
+        ----------
+        cell : Cell
+            The cell that the node under consideration lives on.
+        node : int
+            The local index of the node on the cell.
+        unknown_manager : UnknownManager, default None
+            The unknown manager is used as a mapping from node
+            to global DoF index for multi-component problems.
+            If no unknown manager is supplied, it is assumed
+            that it is a one component problem.
+
+        Returns
+        -------
+        int
         """
         cls_name = self.__class__.__name__
         raise NotImplementedError(
