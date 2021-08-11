@@ -9,6 +9,14 @@ from .. import Vector
 class GaussLegendre(Quadrature):
     """
     Gauss-Legendre 1D quadrature.
+
+    Parameters
+    ----------
+    order : int, default 2
+        The maximum monomial order the quadrature set
+        can integrate exactly. For GaussLegendre, the
+        number of points this will yield is
+        `n_qpoints = ceil(0.5 * (order + 1)`.
     """
     def __init__(self, order: int = 2) -> None:
         super().__init__(order)
