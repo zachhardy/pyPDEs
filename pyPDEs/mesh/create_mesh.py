@@ -53,65 +53,66 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
 
     # ======================================== Define cells
     count = 0
+    n_cells = sum(zone_subdivs)
     for i in range(len(zone_subdivs)):
         for c in range(zone_subdivs[i]):
 
             # ============================== Create cell
             cell = Cell()
+            cell.id = count
             cell.cell_type = "SLAB"
             cell.coord_sys = coord_sys
-            cell.id = count
-            cell.vertex_ids = [count, count + 1]
             cell.material_id = material_ids[i]
+
+            # ========== Vertices numbered left-to-right
+            cell.vertex_ids = [count, count + 1]
+
+            # ========== Cell geometric quantities
             cell.volume = mesh.compute_volume(cell)
             cell.centroid = mesh.compute_centroid(cell)
             cell.width = verts[count + 1] - verts[count]
 
-            # ============================== Create left face
-            left_face = Face()
-            left_face.vertex_ids = [count]
-            left_face.area = mesh.compute_area(left_face)
-            left_face.centroid = mesh.compute_centroid(left_face)
-            left_face.normal = Vector(z=-1.0)
-            cell.faces.append(left_face)
+            # ============================== Create faces
+            for f in range(2):
+                face = Face()
 
-            # ============================== Create right face
-            max_ind = sum(zone_subdivs) - 1
-            right_face = Face()
-            right_face.vertex_ids = [count + 1]
-            right_face.area = mesh.compute_area(right_face)
-            right_face.centroid = mesh.compute_centroid(right_face)
-            right_face.normal = Vector(z=1.0)
-            cell.faces.append(right_face)
+                # ========== Left face
+                if f == 0:
+                    face.vertex_ids = [count]
+                    face.normal = Vector(z=-1.0)
+                    face.has_neighbor = True if count > 0 else False
+                    face.neighbor_id = count - 1 if count > 0 else -1
+
+                # ========== Right face
+                else:
+                    face.vertex_ids = [count + 1]
+                    face.normal = Vector(z=1.0)
+                    face.has_neighbor = \
+                        True if count < n_cells - 1 else False
+                    face.neighbor_id = \
+                        count + 1 if count < n_cells - 1 else -2
+
+                # ========== Face geometric quantities
+                face.area = mesh.compute_area(face)
+                face.centroid = mesh.compute_centroid(face)
+
+                # ========================= Add face to cell
+                cell.faces.append(face)
+
+            # ============================== Cell on boundary?
+            if count == 0 or count == n_cells - 1:
+                mesh.boundary_cell_ids.append(count)
 
             # ============================== Add cell to mesh
             mesh.cells.append(cell)
             count += 1
 
-        # ======================================== Connectivity
-        mesh.establish_connectivity()
-
-        # ======================================== Define boundaries
-        for cell_id in mesh.boundary_cell_ids:
-            cell: Cell = mesh.cells[cell_id]
-            for face in cell.faces:
-                v = mesh.vertices[face.vertex_ids[0]]
-                if face.normal == Vector(z=-1.0) and v.z == mesh.z_min:
-                    face.neighbor_id = -1
-                elif face.normal == Vector(z=1.0) and v.z == mesh.z_max:
-                    face.neighbor_id = -2
-
         # ======================================== Verbose printout
         if verbose:
             print("***** Summary of the 1D mesh:\n")
-            vertices = [v.z for v in mesh.vertices]
-            print(f"Vertices:\n{np.round(vertices, 6)}\n")
-
-            centroids = np.array([c.centroid.z for c in mesh.cells])
-            print(f"Centroids:\n{np.round(centroids, 6)}\n")
-
-            widths = [c.width.z for c in mesh.cells]
-            print(f"Widths:\n{np.round(widths, 6)}\n")
+            print(f"Number of Cells:\t{mesh.n_cells}")
+            print(f"Number of Faces:\t{mesh.n_faces}")
+            print(f"Number of Vertices:\t{mesh.n_vertices}\n")
     return mesh
 
 
@@ -150,6 +151,8 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
             cell.cell_type = "QUAD"
             cell.id = i * (nx - 1) + j
 
+            # ========== Vertices start at the bottom left and
+            #            are numbered counter-clockwise
             cell.vertex_ids = [vmap[i][j], vmap[i][j + 1],
                                vmap[i + 1][j + 1], vmap[i + 1][j]]
 
@@ -157,7 +160,7 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
             vbl = mesh.vertices[vmap[i][j]]
             vtr = mesh.vertices[vmap[i + 1][j + 1]]
 
-            # Compute volumetric quantites
+            # ========== Cell geometric quantites
             cell.width = vtr - vbl
             cell.centroid = mesh.compute_centroid(cell)
             cell.volume = mesh.compute_volume(cell)
@@ -165,6 +168,9 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
             # ============================== Create faces
             for f in range(4):
                 face = Face()
+
+                # ========== Faces start at bottom and are defined
+                #            in a counter-clockwise manner
                 if f < 3:
                     face.vertex_ids = [cell.vertex_ids[f],
                                        cell.vertex_ids[f + 1]]
@@ -172,49 +178,52 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
                     face.vertex_ids = [cell.vertex_ids[f],
                                        cell.vertex_ids[0]]
 
-                face.centroid = mesh.compute_centroid(face)
-                face.area = mesh.compute_area(face)
-
                 v0 = mesh.vertices[face.vertex_ids[0]]
                 v1 = mesh.vertices[face.vertex_ids[1]]
+
+                # ========== Face geometric quantities
+                face.centroid = mesh.compute_centroid(face)
+                face.area = mesh.compute_area(face)
                 normal = Vector(z=1.0).cross(v0 - v1)
                 face.normal = normal.normalize()
 
+                # ========== Define neighbors
+                if face.normal == Vector(x=1.0):
+                    face.neighbor_id = cell.id + 1
+                elif face.normal == Vector(x=-1.0):
+                    face.neighbor_id = cell.id - 1
+                elif face.normal == Vector(y=1.0):
+                    face.neighbor_id = cell.id + nx - 1
+                elif face.normal == Vector(y=-1.0):
+                    face.neighbor_id = cell.id - nx + 1
+
+                # ========== Define boundaries starting at the
+                #            bottom going counter-clockwise
+                if v0.y == v1.y == mesh.y_min:
+                    face.neighbor_id = -1
+                elif v0.x == v1.x == mesh.x_max:
+                    face.neighbor_id = -2
+                elif v0.y == v1.y == mesh.y_max:
+                    face.neighbor_id = -3
+                elif v0.x == v1.x == mesh.x_min:
+                    face.neighbor_id = -4
+                else:
+                    face.has_neighbor = True
+
                 cell.faces.append(face)
+
+            # ============================== Cell on boundary?
+            if any([face.neighbor_id < 0 for face in cell.faces]):
+                mesh.boundary_cell_ids.append(cell.id)
 
             # ============================== Add cell to mesh
             mesh.cells.append(cell)
 
-    # ======================================== Cell connectivity
-    mesh.establish_connectivity()
-
-    # ======================================== Define boundaries
-    for cell_id in mesh.boundary_cell_ids:
-        cell: Cell = mesh.cells[cell_id]
-        for face in cell.faces:
-            v = mesh.vertices[face.vertex_ids[0]]
-            if face.normal == Vector(x=-1.0) and v.x == mesh.x_min:
-                face.neighbor_id = -1
-            elif face.normal == Vector(y=-1.0) and v.y == mesh.y_min:
-                face.neighbor_id = -2
-            elif face.normal == Vector(x=1.0) and v.x == mesh.x_max:
-                face.neighbor_id = -3
-            elif face.normal == Vector(y=1.0) and v.y == mesh.y_max:
-                face.neighbor_id = -4
-
     # ======================================== Verbose printout
     if verbose:
         print("***** Summary of the 2D mesh:\n")
-        vertices = [(v.x, v.y) for v in mesh.vertices]
-        vertices = [list(np.round(v, 6)) for v in vertices]
-        print(f"Vertices:\n{vertices}\n")
-
-        centroids = [(c.centroid.x, c.centroid.y) for c in mesh.cells]
-        centroids = [list(np.round(c, 6)) for c in centroids]
-        print(f"Centroids:\n{centroids}\n")
-
-        widths = [(c.width.x, c.width.y) for c in mesh.cells]
-        widths = [list(np.round(w, 6)) for w in widths]
-        print(f"Widths:\n{widths}\n")
+        print(f"Number of Cells:\t{mesh.n_cells}")
+        print(f"Number of Faces:\t{mesh.n_faces}")
+        print(f"Number of Vertices:\t{mesh.n_vertices}\n")
 
     return mesh
