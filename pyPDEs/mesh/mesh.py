@@ -15,9 +15,11 @@ class Mesh:
     def __init__(self):
         self.dim: int = 0
         self.coord_sys: str = "CARTESIAN"
+        self.cell_type: str = None
+
+        self.vertices: List[Vector] = []
 
         self.cells: List[Cell] = []
-        self.vertices: List[Vector] = []
         self.boundary_cell_ids: List[int] = []
 
         self._n_faces: int = 0

@@ -41,6 +41,7 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
     mesh = Mesh()
     mesh.dim = 1
     mesh.coord_sys = coord_sys
+    mesh.cell_type = "LINE"
 
     # ======================================== Define vertices
     verts = []
@@ -60,7 +61,7 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
             # ============================== Create cell
             cell = Cell()
             cell.id = count
-            cell.cell_type = "SLAB"
+            cell.cell_type = mesh.cell_type
             cell.coord_sys = coord_sys
             cell.material_id = material_ids[i]
 
@@ -133,6 +134,7 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
     mesh = Mesh()
     mesh.dim = 2
     mesh.coord_sys = "CARTESIAN"
+    mesh.cell_type = "QUAD"
 
     # ======================================== Create vertices
     verts = []
@@ -148,7 +150,7 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
     for i in range(ny - 1):
         for j in range(nx - 1):
             cell = Cell()
-            cell.cell_type = "QUAD"
+            cell.cell_type = mesh.cell_type
             cell.id = i * (nx - 1) + j
 
             # ========== Vertices start at the bottom left and
