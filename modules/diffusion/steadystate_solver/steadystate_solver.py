@@ -280,12 +280,12 @@ class SteadyStateSolver:
         if not self.boundaries:
             raise AssertionError(
                 "No boundary conditions are attached to the solver.")
-        if self.mesh.cell_type == "LINE" and \
+        if self.mesh.type == "LINE" and \
                 len(self.boundaries) != 2 * self.n_groups:
             raise NotImplementedError(
                 "There can only be 2 * n_groups boundary conditions "
                 "for 1D problems.")
-        if self.mesh.cell_type == "QUAD" and \
+        if self.mesh.type == "ORTHO_QUAD" and \
                 len(self.boundaries) != 4 * self.n_groups:
             raise NotImplementedError(
                 "There can only be 4 * n_groups boundary conditions "

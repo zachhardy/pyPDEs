@@ -49,12 +49,12 @@ class PiecewiseContinuous(SpatialDiscretization):
         """
         n = self.mesh.n_vertices
 
-        # ======================================== Line meshes
-        if self.mesh.cell_type == "LINE":
+        # ======================================== Slab meshes
+        if self.mesh.type == "LINE":
             return n + self.mesh.n_cells * (self.degree - 1)
 
-        # ======================================== Quad meshes
-        elif self.mesh.cell_type == "QUAD":
+        # ======================================== Othogonal Quad meshes
+        elif self.mesh.type == "ORTHO_QUAD":
             n += self.mesh.n_faces * (self.degree - 1)
             n += self.mesh.n_cells * (self.degree - 1) ** 2
             return n
@@ -87,7 +87,7 @@ class PiecewiseContinuous(SpatialDiscretization):
         nodes = []
 
         # ======================================== Line meshes
-        if self.dim == 1:
+        if self.mesh.type == "LINE":
             for cell in self.mesh.cells:
                 # ========== Get left and right vertices
                 v0 = self.mesh.vertices[cell.vertex_ids[0]]
@@ -99,8 +99,8 @@ class PiecewiseContinuous(SpatialDiscretization):
             nodes = np.unique(nodes)
             self.nodes = [Vector(z=node) for node in nodes]
 
-        # ======================================== Quad meshes
-        elif self.dim == 2 and self.mesh.cell_type == "QUAD":
+        # ======================================== Orthogonal Quad meshes
+        elif self.mesh.type == "ORTHO_QUAD":
             for cell in self.mesh.cells:
                 # ========== Get bottom-left and top-right vertices
                 vbl = self.mesh.vertices[cell.vertex_ids[0]]

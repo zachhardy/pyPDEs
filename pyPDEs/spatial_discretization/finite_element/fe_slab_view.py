@@ -136,7 +136,7 @@ class SlabFEView(CellFEView):
         weights = self.quadrature.weights
         self.jxw = np.zeros(self.n_qpoints)
         for qp in range(self.n_qpoints):
-            qpoint = self.quadrature.qpoints
+            qpoint = self.quadrature.qpoints[qp]
             x = self.map_reference_to_global(qpoint).z
             self.jxw[qp] = self.h * weights[qp]
             if self.coord_sys == "CYLINDRICAL":
@@ -151,8 +151,8 @@ class SlabFEView(CellFEView):
         for qp in range(self.n_qpoints):
             qpoint = self.quadrature.qpoints[qp]
             for i in range(self.n_nodes):
-                shapes[i][qp] = self.shape_value(i, point)
-                grads[i][qp] = self.grad_shape_value(i, point)
+                shapes[i][qp] = self.shape_value(i, qpoint)
+                grads[i][qp] = self.grad_shape_value(i, qpoint)
         self.shape_values = shapes
         self.grad_shape_values = grads
 

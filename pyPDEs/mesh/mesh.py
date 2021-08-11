@@ -15,8 +15,8 @@ class Mesh:
     """
     def __init__(self):
         self.dim: int = 0
+        self.type: str = None
         self.coord_sys: str = "CARTESIAN"
-        self.cell_type: str = None
 
         self.vertices: List[Vector] = []
 
@@ -52,7 +52,7 @@ class Mesh:
         int
         """
         if self._n_faces == 0:
-            for cell in self.mesh.cells:
+            for cell in self.cells:
                 for face in cell.faces:
                     if face.has_neighbor:
                         self._n_faces += 0.5
