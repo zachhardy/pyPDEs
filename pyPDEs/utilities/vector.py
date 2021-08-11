@@ -195,10 +195,6 @@ class Vector:
         x = self.y * other.z - self.z * other.y
         y = self.z * other.x - self.x * other.z
         z = self.x * other.y - self.y * other.x
-
-        for val in [x, y, z]:
-            if abs(val) == 0.0:
-                val = 0.0
         return Vector(x, y, z)
 
     def norm(self) -> float:
