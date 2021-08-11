@@ -11,14 +11,10 @@ from time import time
 
 from modules.diffusion import *
 
+x_verts = np.linspace(0.0, 10.0, 51)
+y_verts = np.linspace(0.0, 10.0, 51)
+mesh = create_2d_mesh(x_verts, y_verts, verbose=True)
 
-print(f"\n===== Creating the mesh")
-x_verts = np.linspace(0.0, 10.0, 41)
-y_verts = np.linspace(0.0, 10.0, 41)
-mesh = create_2d_mesh(x_verts, y_verts)
-print(f"===== Mesh created")
-
-print(f"\n===== Assigning material IDs")
 fuel_dim = 7.5
 for cell in mesh.cells:
     vids = cell.vertex_ids
@@ -27,13 +23,9 @@ for cell in mesh.cells:
         cell.material_id = 0
     else:
         cell.material_id = 1
-print(f"===== Material IDs assigned")
 
-print(f"\n===== Creating discretization")
 discretization = FiniteVolume(mesh)
-print(f"===== Discretization created.")
 
-print(f"\n====== Creating materials")
 xs_fuel = CrossSections()
 xs_fuel.read_from_xs_file("xs/fuel_1g.cxs")
 
@@ -42,12 +34,9 @@ xs_refl.read_from_xs_file("xs/reflector_1g.cxs")
 
 src_fuel = MultiGroupSource(np.ones(xs_fuel.n_groups))
 src_refl = MultiGroupSource(np.zeros(xs_refl.n_groups))
-print(f"===== Materialis created")
 
-print(f"\n===== Creating boundaries")
-boundaries = [ReflectiveBoundary()] * 2
-boundaries.extend([VacuumBoundary()] * 2)
-print(f"\n===== Boundaries created")
+boundaries = [ReflectiveBoundary(), VacuumBoundary(),
+              VacuumBoundary(), ReflectiveBoundary()]
 
 solver = KEigenvalueSolver()
 solver.mesh = mesh
