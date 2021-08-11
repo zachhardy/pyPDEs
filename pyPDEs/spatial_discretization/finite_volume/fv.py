@@ -1,5 +1,6 @@
 import numpy as np
 from numpy import ndarray
+from typing import List
 
 from ...mesh import Mesh, Cell
 from .. import SpatialDiscretization
