@@ -18,6 +18,18 @@ MatVec3 = List[VecVec3]
 class CellFEView:
     """
     Base class for a finite element cell view.
+
+    Parameters
+    ----------
+    fe : PiecewiseContinuous
+        The discretization that the `CellFEView` is being
+        attached to.
+    quadrature : Quadrature
+        A quadrature set for integrating over a cell.
+    face_quadrature : Quadrature
+        A quadrature set for integrating over a face.
+    cell : Cell
+        The cell that this `CellFEView` is based off of.
     """
     def __init__(self, fe: 'PiecewiseContinuous',
                  quadrature: Quadrature,
@@ -45,31 +57,52 @@ class CellFEView:
 
     @property
     def n_nodes(self) -> int:
+        """
+        Get the number of nodes the cell.
+
+        Returns
+        -------
+        int
+        """
         return len(self.node_ids)
 
     @property
     def n_qpoints(self) -> int:
+        """
+        Get the number of volumetric quadrature points
+        in the set.
+
+        Returns
+        -------
+        int
+        """
         return self.quadrature.n_qpoints
 
     @property
-    def qpoints(self) -> List[Vector]:
-        return self.quadrature.qpoints
-
-    @property
     def n_face_qpoints(self) -> int:
+        """
+        Get the number of face quadrature points in the set.
+
+        Returns
+        -------
+        int
+        """
         if self.face_quadrature:
             return self.face_quadrature.n_qpoints
-
-    @property
-    def face_qpoints(self) -> List[Vector]:
-        if self.face_quadrature:
-            return self.face_quadrature.qpoints
 
     def get_function_values(self, u: List[float]) -> ndarray:
         """
         Get the function values at quadrature points from
         a solution vector at the nodes on this cell.
+
+        Parameters
+        ----------
+        u : List[float] or ndarray
+            A solution defined on the nodes of this cell.
         """
+        if len(u) != self.n_nodes:
+            raise ValueError("u must have exactly n_nodes entries.")
+
         vals = np.zeros(self.n_qpoints)
         for qp in range(self.n_qpoints):
             for i in range(self.n_nodes):
@@ -81,7 +114,15 @@ class CellFEView:
         """
         Get the function gradients at quadrature points from
         a solution vector at the nodes on this cell.
+
+        Parameters
+        ----------
+        u : List[float] or ndarray
+            A solution defined on the nodes of this cell.
         """
+        if len(u) != self.n_nodes:
+            raise ValueError("u must have exactly n_nodes entries.")
+
         vals = np.zeros(self.n_qpoints)
         for qp in range(self.n_qpoints):
             for i in range(self.n_nodes):
@@ -89,19 +130,56 @@ class CellFEView:
                 vals[qp] += grad_i * u[i]
         return vals
 
-    def map_reference_to_global(self, point: float) -> float:
+    def map_reference_to_global(self, point: Vector) -> Vector:
+        """
+        Map from a point from the reference coordinates to the
+        global coordinates. This is an abstract method and must
+        be implemented in derived classes.
+
+        Parameters
+        ----------
+        point : Vector
+            A point in the reference coordinate system.
+
+        Returns
+        -------
+        Vector
+            The mapped point in global coordinates.
+        """
         cls_name = self.__class__.__name__
         raise NotImplementedError(
             f"Subclasses must implement {cls_name}."
             f"map_reference_to_global.")
 
     def compute_quadrature_data(self, cell: Cell) -> None:
+        """
+        Compute the quadrature point related data. This includes
+        quantities such as the quadrature weights multiplied by the
+        coordinate transformation Jacobian and shape function and shape
+        function gradient evaluations. This is an abstract method and
+        must be implemented in derived classes.
+
+        Parameters
+        ----------
+        cell : Cell
+            The cell this `CellFEView` is based off of.
+        """
         cls_name = self.__class__.__name__
         raise NotImplementedError(
             f"Subclasses must implement {cls_name}."
             f"compute_quadrature_data.")
 
     def compute_integral_data(self, cell: Cell) -> None:
+        """
+        Compute the volumetric and surface finite element integrals.
+        This is an abstract method and must be implemented in derived
+        classes.
+
+        Parameters
+        ----------
+        cell : Cell
+            The cell this `CellFEView` is based off of.
+        """
         cls_name = self.__class__.__name__
         raise NotImplementedError(
             f"Subclasses must implement {cls_name}."

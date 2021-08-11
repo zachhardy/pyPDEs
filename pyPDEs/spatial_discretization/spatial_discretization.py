@@ -38,7 +38,7 @@ class SpatialDiscretization:
     @property
     def grid(self) -> List[Vector]:
         """
-        Get the grid of nodes that defines this spatial discretization.
+        Get the list of nodes that defines this spatial discretization.
 
         Returns
         -------
@@ -87,6 +87,10 @@ class SpatialDiscretization:
             to global DoF index for multi-component problems.
             If no unknown manager is supplied, it is assumed
             that it is a one component problem.
+        unknown_id : int, default 0
+            The unknown ID of the DoF being mapped.
+        component : int, default 0
+            The component of the unknown of the DoF being mapped.
 
         Returns
         -------

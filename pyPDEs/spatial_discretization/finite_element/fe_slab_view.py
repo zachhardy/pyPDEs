@@ -19,6 +19,16 @@ FEBasis = Tuple[List[poly1d], List[poly1d]]
 class SlabFEView(CellFEView):
     """
     Class for a finite element slab view.
+
+    Parameters
+    ----------
+    fe : PiecewiseContinuous
+        The discretization that the `CellFEView` is being
+        attached to.
+    quadrature : LineQuadrature
+        A quadrature set for integrating on a line.
+    cell : Cell
+        The cell that this `CellFEView` is based off of.
     """
     def __init__(self, fe: 'PiecewiseContinuous',
                  quadrature: LineQuadrature,
@@ -52,8 +62,18 @@ class SlabFEView(CellFEView):
 
     def map_reference_to_global(self, point: Vector) -> Vector:
         """
-        Map a point from the reference cell to
-        the real cell.
+        Map from a point from the reference coordinates to the
+        global coordinates.
+
+        Parameters
+        ----------
+        point : Vector
+            A point in the reference coordinate system.
+
+        Returns
+        -------
+        Vector
+            The mapped point in global coordinates.
         """
         domain = self.quadrature.domain
         if not min(domain) < point.z < max(domain):
@@ -62,18 +82,62 @@ class SlabFEView(CellFEView):
         return self.v0 + self.h * (point - Vector(z=min(domain)))
 
     def shape_value(self, i: int, point: Vector) -> float:
+        """
+        Evaluate the shape function affiliated with local node `i`
+        the specified point.
+
+        Parameters
+        ----------
+        i : int
+            The local node index.
+        point : Vector
+            A point in reference coordinates used to evaluate the
+            shape function.
+
+        Returns
+        -------
+        float
+        """
         return self._shape[i](point.z)
 
     def grad_shape_value(self, i: int, point: Vector) -> Vector:
+        """
+        Evaluate the gradient of the shape function affiliated
+        with local node `i` the specified point.
+
+        Parameters
+        ----------
+        i : int
+            The local node index.
+        point : Vector
+            A point in reference coordinates used to evaluate the
+            gradient of the shape function.
+
+        Returns
+        -------
+        Vector
+        """
         val = self._grad_shape[i](point.z) / self.h
         return Vector(z=val)
 
     def compute_quadrature_data(self, cell: Cell) -> None:
+        """
+        Compute the quadrature point related data. This includes
+        quantities such as the quadrature weights multiplied by the
+        coordinate transformation Jacobian and shape function and shape
+        function gradient evaluations.
+
+        Parameters
+        ----------
+        cell : Cell
+            The cell this `CellFEView` is based off of.
+        """
         # =================================== Mapping data
         weights = self.quadrature.weights
         self.jxw = np.zeros(self.n_qpoints)
         for qp in range(self.n_qpoints):
-            x = self.map_reference_to_global(self.qpoints[qp]).z
+            qpoint = self.quadrature.qpoints
+            x = self.map_reference_to_global(qpoint).z
             self.jxw[qp] = self.h * weights[qp]
             if self.coord_sys == "CYLINDRICAL":
                 self.jxw[qp] *= 2.0 * np.pi * x
@@ -85,7 +149,7 @@ class SlabFEView(CellFEView):
         shapes = [[0.0 for _ in range(n_qpoints)] for _ in range(n_nodes)]
         grads = [[Vector() for _ in range(n_qpoints)] for _ in range(n_nodes)]
         for qp in range(self.n_qpoints):
-            point = self.qpoints[qp]
+            qpoint = self.quadrature.qpoints[qp]
             for i in range(self.n_nodes):
                 shapes[i][qp] = self.shape_value(i, point)
                 grads[i][qp] = self.grad_shape_value(i, point)
@@ -94,7 +158,12 @@ class SlabFEView(CellFEView):
 
     def compute_integral_data(self, cell: Cell) -> None:
         """
-        Compute the finite element integrals.
+        Compute the volumetric and surface finite element integrals.
+
+        Parameters
+        ----------
+        cell : Cell
+            The cell this `CellFEView` is based off of.
         """
         # ======================================== Compute volume integrals
         n = self.n_nodes
@@ -153,7 +222,7 @@ class SlabFEView(CellFEView):
 
 def lagrange_elements(degree: int, domain: Tuple[Vector]) -> FEBasis:
     """
-    Generate the Lagrange finite elements.
+    Generate the Lagrange finite elements in one dimension.
 
     Parameters
     ----------
