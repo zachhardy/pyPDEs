@@ -4,7 +4,8 @@ from typing import List, Union
 
 from matplotlib.figure import Figure
 
-from .cell import Cell, Face
+from .cell import Cell
+from .face import Face
 from ..utilities import Vector
 
 
