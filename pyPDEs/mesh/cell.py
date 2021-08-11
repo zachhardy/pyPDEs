@@ -25,6 +25,10 @@ class Cell:
     def n_faces(self) -> int:
         """
         Get the number of faces on this cell.
+
+        Returns
+        -------
+        int
         """
         return len(self.faces)
 
@@ -32,6 +36,10 @@ class Cell:
     def n_vertices(self) -> int:
         """
         Get the number of vertices on this cell.
+
+        Returns
+        -------
+        int
         """
         return len(self.vertex_ids)
 
@@ -40,6 +48,10 @@ class Cell:
         """
         Return whether or not any face on this cell is
         on a boundary of the mesh.
+
+        Returns
+        -------
+        bool
         """
         return any([not f.has_neighbor for f in self.faces])
 
@@ -65,6 +77,10 @@ class Face:
     def n_vertices(self) -> int:
         """
         Get the number of vertices on this face.
+
+        Returns
+        -------
+        int
         """
         return len(self.vertex_ids)
 
