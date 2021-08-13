@@ -45,9 +45,10 @@ class Outputs:
     def write_outputs(self, path: str = ".") -> None:
         if not os.path.isdir(path):
             os.makedirs(path)
-        os.system(f"rm -r {path}/*")
+        if len(os.listdir(path)) > 0:
+            os.system(f"rm -r {path}/*")
 
-        time_path = os.path.join(path, "time.txt")
+        time_path = os.path.join(path, "times.txt")
         np.savetxt(time_path, self.time, fmt="%.6g")
 
         grid_path = os.path.join(path, "grid.txt")
@@ -56,7 +57,8 @@ class Outputs:
         flux_dirpath = os.path.join(path, "flux")
         if not os.path.isdir(flux_dirpath):
             os.makedirs(flux_dirpath)
-        os.system(f"rm -r {flux_dirpath}/*")
+        if len(os.listdir(flux_dirpath)) > 0:
+            os.system(f"rm -r {flux_dirpath}/*")
 
         for g in range(len(self.flux[0])):
             filepath = os.path.join(flux_dirpath, f"g{g}.txt")
@@ -66,7 +68,8 @@ class Outputs:
             precursor_dirpath = os.path.join(path, "precursors")
             if not os.path.isdir(precursor_dirpath):
                 os.makedirs(precursor_dirpath)
-            os.system(f"rm - r {precursor_dirpath}/*")
+            if len(os.listdir(precursor_dirpath)) > 0:
+                os.system(f"rm - r {precursor_dirpath}/*")
 
             for j in range(len(self.precursors[0])):
                 filepath = os.path.join(precursor_dirpath, f"j{j}.txt")

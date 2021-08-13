@@ -74,17 +74,18 @@ class TransientSolver(KEigenvalueSolver):
         self.compute_initial_values()
 
         self.outputs.reset()
-        self.outputs.store_outputs(self, 0.0)
+        self.store_outputs(0.0)
 
-    def execute(self) -> None:
+    def execute(self, verbose: bool = False) -> None:
         """
         Execute the transient multi-group diffusion solver.
         """
-        print("\n***** Executing the transient "
-              "multi-group diffusion solver. *****\n")
+        if verbose:
+            print("\n***** Executing the transient "
+                  "multi-group diffusion solver. *****\n")
 
         # ======================================== Start time stepping
-        time, n_steps = 0.0, 0
+        time, n_steps, dt0 = 0.0, 0, self.dt
         while time < self.t_final - sys.float_info.epsilon:
 
             # ============================== Force end time
@@ -96,18 +97,21 @@ class TransientSolver(KEigenvalueSolver):
             self.solve_time_step()
             time += self.dt
             n_steps += 1
-            self.outputs.store_outputs(self, time)
+            self.store_outputs(time)
 
             # ============================== Reset vectors
             self.phi_old[:] = self.phi
             if self.use_precursors:
                 self.precursors_old[:] = self.precursors
 
-            print(f"*** Time Step: {n_steps}\t "
-                  f"Time: [{time - self.dt:.3e}, {time:.3e}] ***")
+            if verbose:
+                print(f"*** Time Step: {n_steps}\t "
+                      f"Time: [{time - self.dt:.3e}, {time:.3e}] ***")
 
-        print("\n***** Done executing transient "
-              "multi-group diffusion solver. *****\n")
+        self.dt = dt0  # reset dt to original
+        if verbose:
+            print("\n***** Done executing transient "
+                  "multi-group diffusion solver. *****\n")
 
     def solve_time_step(self) -> None:
         """
@@ -312,3 +316,9 @@ class TransientSolver(KEigenvalueSolver):
             self.phi_old[:] = self.phi
             if self.use_precursors:
                 self.precursors_old[:] = self.precursors
+
+    def store_outputs(self, time: float) -> None:
+        self.outputs.store_outputs(self, time)
+
+    def write_outputs(self, path: str = ".") -> None:
+        self.outputs.write_outputs(path)

@@ -11,9 +11,12 @@ from time import time
 
 from modules.diffusion import *
 
-x_verts = np.linspace(0.0, 10.0, 51)
-y_verts = np.linspace(0.0, 10.0, 51)
+x_verts = np.linspace(0.0, 10.0, 81)
+y_verts = np.linspace(0.0, 10.0, 81)
+
+t0 = time()
 mesh = create_2d_mesh(x_verts, y_verts, verbose=True)
+print(f"Mesh creation time:\t{time() - t0} s")
 
 fuel_dim = 7.5
 for cell in mesh.cells:
