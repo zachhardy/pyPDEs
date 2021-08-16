@@ -39,7 +39,7 @@ def fv_assemble_mass_matrix(self: 'TransientSolver', g: int) -> csr_matrix:
 
 
 def fv_set_transient_source(self: 'TransientSolver', g: int,
-                            phi: ndarray, step: int = 0):
+                            phi: ndarray, step: int = 0) -> None:
     """
     Assemble the right-hand side of the diffusion equation.
     This includes the previous time step contributions and
@@ -161,3 +161,26 @@ def fv_update_precursors(self: 'TransientSolver',
                 self.precursors[ij] += \
                     coeff * eff_dt * xs.precursor_yield[j] * \
                     xs.nu_delayed_sigma_f[g] * self.phi[ig]
+
+
+def fv_compute_power(self: 'TransientSolver') -> float:
+    """
+    Compute the fission power with the most recent scalar flux solution.
+
+    Returns
+    -------
+    float
+    """
+    fv: FiniteVolume = self.discretization
+    uk_man = self.flux_uk_man
+
+    # ================================================== Loop over cells
+    power = 0.0
+    for cell in self.mesh.cells:
+        xs = self.material_xs[cell.material_id]
+
+        # ============================================= Loop over groups
+        for g in range(self.n_groups):
+            ig = fv.map_dof(cell, 0, uk_man, 0, g)
+            power += xs.sigma_f[g] * self.phi[ig] * cell.volume
+    return power * self.energy_per_fission

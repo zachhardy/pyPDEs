@@ -200,3 +200,30 @@ def pwc_update_precursors(self: 'TransientSolver',
                                            xs.nu_delayed_sigma_f[g] * \
                                            self.phi[ig] * intV_shapeI / \
                                            cell.volume
+
+
+def pwc_compute_power(self: 'TransientSolver') -> float:
+    """
+    Compute the fission power with the most recent scalar flux solution.
+
+    Returns
+    -------
+    float
+    """
+    pwc: PiecewiseContinuous = self.discretization
+    uk_man = self.flux_uk_man
+
+    # ================================================== Loop over cells
+    power = 0.0
+    for cell in self.mesh.cells:
+        view = pwc.fe_views[cell.id]
+        xs = self.material_xs[cell.material_id]
+
+        # ============================================= Loop over nodes
+        for i in range(view.n_nodes):
+            intV_shapeI = view.intV_shapeI[i]
+
+            for g in range(self.n_groups):
+                ig = fv.map_dof(cell, i, uk_man, 0, g)
+                power += xs.sigma_f[g] * self.phi[ig] * intV_shapeI
+    return power * self.energy_per_fission

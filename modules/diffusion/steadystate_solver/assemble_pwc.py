@@ -212,30 +212,29 @@ def pwc_compute_precursors(self: 'SteadyStateSolver') -> None:
     """
     Compute the delayed neutron precursor concentration.
     """
-    if self.use_precursors and self.n_precursors > 0:
-        pwc: PiecewiseContinuous = self.discretization
-        flux_uk_man = self.flux_uk_man
-        prec_uk_man = self.precursor_uk_man
-        self.precursors *= 0.0
+    pwc: PiecewiseContinuous = self.discretization
+    flux_uk_man = self.flux_uk_man
+    prec_uk_man = self.precursor_uk_man
+    self.precursors *= 0.0
 
-        # ======================================== Loop over cells
-        for cell in self.mesh.cells:
-            view = pwc.fe_views[cell.id]
-            xs = self.material_xs[cell.material_id]
+    # ======================================== Loop over cells
+    for cell in self.mesh.cells:
+        view = pwc.fe_views[cell.id]
+        xs = self.material_xs[cell.material_id]
 
-            # =================================== Loop over precursors
-            for j in range(xs.n_precursors):
-                ij = cell.id * prec_uk_man.total_components + j
-                coeff = \
-                    xs.precursor_yield[j] / xs.precursor_lambda[j]
+        # =================================== Loop over precursors
+        for j in range(xs.n_precursors):
+            ij = cell.id * prec_uk_man.total_components + j
+            coeff = \
+                xs.precursor_yield[j] / xs.precursor_lambda[j]
 
-                # ============================== Loop over nodes
-                for i in range(view.n_nodes):
-                    intV_shapeI = view.intV_shapeI[i]
+            # ============================== Loop over nodes
+            for i in range(view.n_nodes):
+                intV_shapeI = view.intV_shapeI[i]
 
-                    # ========================= Loop over groups
-                    for g in range(self.n_groups):
-                        ig = pwc.map_dof(cell, i, flux_uk_man, 0, g)
-                        self.precursors[ij] += \
-                            coeff * xs.nu_delayed_sigma_f[g] * \
-                            self.phi[ig] * intV_shapeI / cell.volume
+                # ========================= Loop over groups
+                for g in range(self.n_groups):
+                    ig = pwc.map_dof(cell, i, flux_uk_man, 0, g)
+                    self.precursors[ij] += \
+                        coeff * xs.nu_delayed_sigma_f[g] * \
+                        self.phi[ig] * intV_shapeI / cell.volume

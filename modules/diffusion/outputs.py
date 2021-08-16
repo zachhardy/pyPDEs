@@ -2,7 +2,7 @@ import os
 import numpy as np
 from numpy import ndarray
 
-from pyPDEs.spatial_discretization import SpatialDiscretization
+from pyPDEs.spatial_discretization import *
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -29,8 +29,7 @@ class Outputs:
 
         self.time.append(time)
 
-        power = solver.fv_compute_fission_production()
-        self.power.append(power)
+        self.power.append(solver.power)
 
         n_grps, phi = solver.n_groups, np.copy(solver.phi)
         flux = [phi[g::n_grps] for g in range(n_grps)]

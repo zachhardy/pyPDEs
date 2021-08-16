@@ -101,15 +101,14 @@ class SteadyStateSolver:
                 self.precursor_uk_man.add_unknown(max_precursors)
                 precursor_dofs = self.mesh.n_cells * max_precursors
                 self.precursors = np.zeros(precursor_dofs)
+            else:
+                self.use_precursors = False
 
         # ======================================== Initialize system storage
         self.b = np.zeros(flux_dofs)
         self.L = []
         for g in range(self.n_groups):
-            if isinstance(self.discretization, FiniteVolume):
-                self.L.append(self.fv_assemble_matrix(g))
-            else:
-                self.L.append(self.pwc_assemble_matrix(g))
+            self.L.append(self.assemble_matrix(g))
 
     def execute(self) -> None:
         """
@@ -128,12 +127,9 @@ class SteadyStateSolver:
             # =================================== Solve group-wise
             self.b *= 0.0
             for g in range(n_grps):
-                if isinstance(self.discretization, FiniteVolume):
-                    self.fv_set_source(g, self.phi)
-                else:
-                    self.pwc_set_source(g, self.phi)
-                self.phi[g::n_grps] = spsolve(self.L[g],
-                                              self.b[g::n_grps])
+                self.set_source(g, self.phi)
+                self.phi[g::n_grps] = \
+                    spsolve(self.L[g], self.b[g::n_grps])
 
             # =================================== Check convergence
             phi_change = norm(self.phi - phi_ell)
@@ -146,11 +142,7 @@ class SteadyStateSolver:
                 break
 
         # ======================================== Compute precursors
-        if self.use_precursors:
-            if isinstance(self.discretization, FiniteVolume):
-                self.fv_compute_precursors()
-            else:
-                self.pwc_compute_precursors()
+        self.compute_precursors()
 
         # ======================================== Print summary
         if converged:
@@ -162,6 +154,64 @@ class SteadyStateSolver:
         print(msg)
         print("\n***** Done executing steady-state "
               "multi-group diffusion solver. *****\n")
+
+    def assemble_matrix(self, g: int) -> csr_matrix:
+        """
+        Assemble the diffusion matrix for group `g`.
+
+        Parameters
+        ----------
+        g : int
+            The energy group under consideration.
+
+        Returns
+        -------
+        csr_matrix
+            The diffusion matrix for group `g`.
+        """
+        if isinstance(self.discretization, FiniteVolume):
+            return self.fv_assemble_matrix(g)
+        else:
+            return self.pwc_assemble_matrix(g)
+
+    def set_source(self, g: int, phi: ndarray,
+                  apply_material_source: bool = True,
+                  apply_scattering: bool = True,
+                  apply_fission: bool = True,
+                  apply_boundaries: bool = True) -> None:
+        """
+        Assemble the right-hand side of the diffusion equation.
+        This includes material, scattering, fission, and boundary
+        sources for group `g`.
+
+        Parameters
+        ----------
+        g : int
+            The group under consideration
+        phi : ndarray
+            A vector to compute scattering and fission sources with.
+        apply_material_source : bool, default True
+        apply_scattering : bool, default True
+        apply_fission : bool, default True
+        apply_boundaries : bool, default True
+        """
+
+        flags = (apply_material_source, apply_scattering,
+                 apply_fission, apply_boundaries)
+        if isinstance(self.discretization, FiniteVolume):
+            self.fv_set_source(g, phi, *flags)
+        else:
+            self.pwc_set_source(g, phi, *flags)
+
+    def compute_precursors(self) -> None:
+        """
+        Compute the delayed neutron precursor concentration.
+        """
+        if self.use_precursors:
+            if isinstance(self.discretization, FiniteVolume):
+                self.fv_compute_precursors()
+            else:
+                self.pwc_compute_precursors()
 
     def plot_solution(self, title: str = None) -> None:
         """

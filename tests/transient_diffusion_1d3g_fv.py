@@ -28,7 +28,7 @@ solver.material_xs = [xs]
 solver.material_src = [src]
 
 solver.use_precursors = True
-solver.lag_precursors = True
+solver.lag_precursors = False
 solver.t_final = 0.1
 solver.dt = 1.0e-3
 solver.stepping_method = "TBDF2"
@@ -40,9 +40,10 @@ solver.initial_conditions = \
 
 solver.initialize()
 
-# solver.plot_solution(title="Initial Condition")
-# plt.show()
 
-solver.execute()
+solver.plot_solution(title="Initial Condition")
+
+solver.execute(verbose=True)
+
 solver.plot_solution(title="Final Solution")
 plt.show()

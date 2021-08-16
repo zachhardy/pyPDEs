@@ -184,24 +184,23 @@ def fv_compute_precursors(self: 'SteadyStateSolver') -> None:
     """
     Compute the delayed neutron precursor concentration.
     """
-    if self.use_precursors and self.n_precursors > 0:
-        fv: FiniteVolume = self.discretization
-        flux_uk_man = self.flux_uk_man
-        prec_uk_man = self.precursor_uk_man
-        self.precursors *= 0.0
+    fv: FiniteVolume = self.discretization
+    flux_uk_man = self.flux_uk_man
+    prec_uk_man = self.precursor_uk_man
+    self.precursors *= 0.0
 
-        # ======================================== Loop over cells
-        for cell in self.mesh.cells:
-            xs = self.material_xs[cell.material_id]
+    # ======================================== Loop over cells
+    for cell in self.mesh.cells:
+        xs = self.material_xs[cell.material_id]
 
-            # =================================== Loop over precursors
-            for j in range(xs.n_precursors):
-                ij = cell.id * prec_uk_man.total_components + j
-                coeff = \
-                    xs.precursor_yield[j] / xs.precursor_lambda[j]
+        # =================================== Loop over precursors
+        for j in range(xs.n_precursors):
+            ij = cell.id * prec_uk_man.total_components + j
+            coeff = \
+                xs.precursor_yield[j] / xs.precursor_lambda[j]
 
-                # ============================== Loop over groups
-                for g in range(self.n_groups):
-                    ig = fv.map_dof(cell, 0, flux_uk_man, 0, g)
-                    self.precursors[ij] += \
-                        coeff * xs.nu_delayed_sigma_f[g] * self.phi[ig]
+            # ============================== Loop over groups
+            for g in range(self.n_groups):
+                ig = fv.map_dof(cell, 0, flux_uk_man, 0, g)
+                self.precursors[ij] += \
+                    coeff * xs.nu_delayed_sigma_f[g] * self.phi[ig]
