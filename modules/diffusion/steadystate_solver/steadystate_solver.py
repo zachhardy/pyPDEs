@@ -110,7 +110,7 @@ class SteadyStateSolver:
         for g in range(self.n_groups):
             self.L.append(self.assemble_matrix(g))
 
-    def execute(self) -> None:
+    def execute(self, verbose: bool = False) -> None:
         """
         Execute the steady-state diffusion solver.
         """
@@ -135,7 +135,8 @@ class SteadyStateSolver:
             phi_change = norm(self.phi - phi_ell)
             phi_ell[:] = self.phi
 
-            print(f"===== Iteration {nit} Change = {phi_change:.3e}")
+            if verbose:
+                print(f"===== Iteration {nit} Change = {phi_change:.3e}")
 
             if phi_change <= self.tolerance:
                 converged = True
