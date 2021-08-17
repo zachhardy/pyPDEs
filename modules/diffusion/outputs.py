@@ -53,6 +53,9 @@ class Outputs:
         grid_path = os.path.join(path, "grid.txt")
         np.savetxt(grid_path, self.grid, fmt="%.6g")
 
+        power_path = os.path.join(path, "power.txt")
+        np.savetxt(power_path, self.power, fmt="%.6e")
+
         flux_dirpath = os.path.join(path, "flux")
         if not os.path.isdir(flux_dirpath):
             os.makedirs(flux_dirpath)

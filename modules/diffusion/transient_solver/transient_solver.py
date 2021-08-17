@@ -37,16 +37,17 @@ class TransientSolver(KEigenvalueSolver):
         super().__init__()
         self.initial_conditions: list = None
 
-        self.output_frequency: float = 0.01
-        self.next_output_time: float = 0.01
-        self.max_dt: float = 0.01
+        self.output_frequency: float = None
+        self.next_output_time: float = None
+        self.max_dt: float = None
 
         self.t_final: float = 0.25
         self.dt: float = 5.0e-3
         self.stepping_method: str = "CRANK_NICHOLSON"
+
         self.adaptivity: bool = False
-        self.refine_level: float = 0.01
-        self.coarsen_level: float = 0.001
+        self.refine_level: float = 0.02
+        self.coarsen_level: float = 0.005
 
         self.lag_precursors: bool = False
 
@@ -82,8 +83,18 @@ class TransientSolver(KEigenvalueSolver):
         self.assemble_evolution_matrices()
         self.compute_initial_values()
 
+        if not self.output_frequency:
+            self.output_frequency = self.dt
+        self.next_output_time = self.output_frequency
+        self.max_dt = self.output_frequency
+
+        if self.dt > self.max_dt:
+            self.dt = self.max_dt
+
         self.outputs.reset()
         self.store_outputs(0.0)
+
+        self.energy_per_fission = self.power / self.compute_power()
 
     def execute(self, verbose: bool = False) -> None:
         """
@@ -96,56 +107,74 @@ class TransientSolver(KEigenvalueSolver):
         time, n_steps, dt0 = 0.0, 0, self.dt
         while time < self.t_final - sys.float_info.epsilon:
 
-            # ============================== Force end time
+            # ==================== Force coincidence with output times
+            if time + self.dt > self.next_output_time:
+                self.dt = self.next_output_time - time
+                self.assemble_evolution_matrices()
+
+            # ==================== Force coincidence with end time
             if time + self.dt > self.t_final:
                 self.dt = self.t_final - time
                 self.assemble_evolution_matrices()
 
             # ============================== Solve time step
             self.solve_time_step()
+            self.post_process_time_step()
+            self.power = self.compute_power()
+
+            dP = abs(self.power - self.power_old) / self.power_old
+            while self.adaptivity and dP > self.refine_level:
+                self.phi[:] = self.phi_old
+                self.precursors[:] = self.precursors_old
+
+                self.dt /= 2.0
+                self.assemble_evolution_matrices()
+
+                self.solve_time_step()
+                self.post_process_time_step()
+
+                self.power = self.compute_power()
+                dP = abs(self.power - self.power_old) / self.power_old
+
             time += self.dt
             n_steps += 1
-            self.store_outputs(time)
 
             # ============================== Reset vectors
             self.phi_old[:] = self.phi
+            self.power_old = self.power
             if self.use_precursors:
                 self.precursors_old[:] = self.precursors
 
+            # ============================== Output solutions
+            if time == self.next_output_time:
+                self.store_outputs(time)
+                self.next_output_time += self.output_frequency
+                if self.next_output_time > self.t_final:
+                    self.next_output_time = self.t_final
+
+            # ============================== Coarsen time steps
+            if self.adaptivity and dP < self.coarsen_level:
+                self.dt *= 2.0
+                self.assemble_evolution_matrices()
+            if self.adaptivity and self.dt > self.max_dt:
+                self.dt = self.max_dt
+                self.assemble_evolution_matrices()
+            if not self.adaptivity:
+                self.dt = dt0
+                self.assemble_evolution_matrices()
+
+
             if verbose:
-                print(f"*** Time Step: {n_steps}\t "
-                      f"Time: [{time - self.dt:.3e}, {time:.3e}] ***")
+                print(f"***** Time Step: {n_steps} *****")
+                print(f"Simulation Time:\t{time}")
+                print(f"Time Step Size:\t\t{self.dt}")
+                print(f"System Power:\t\t{self.power}\n")
 
         self.dt = dt0  # reset dt to original
         print("\n***** Done executing transient "
-              "multi-group diffusion solver. *****å")
+              "multi-group diffusion solver. *****")
 
-    def solve_time_step(self) -> None:
-        """
-        Solve a full time step.
-        """
-        # ======================================== First step of time step
-        self.solve_system(step=0)
-
-        # ======================================== Compute precursors
-        if self.use_precursors:
-            self.update_precursors(step=0)
-
-        # ======================================== Post-process results
-        if self.stepping_method in ["CRANK_NICHOLSON", "TBDF2"]:
-            self.phi = 2.0 * self.phi - self.phi_old
-            if self.use_precursors:
-                self.precursors = 2.0 * self.precursors - self.precursors_old
-
-            # ============================== Second step of time step
-            if self.stepping_method == "TBDF2":
-                self.solve_system(step=1)
-
-                # ========================= Compute precursors
-                if self.use_precursors:
-                    self.update_precursors(step=1)
-
-    def solve_system(self, step: int = 0) -> None:
+    def solve_time_step(self, step: int = 0) -> None:
         """
         Solve the system for the n'th step of a time step.
 
@@ -177,7 +206,31 @@ class TransientSolver(KEigenvalueSolver):
                 break
 
         if not converged:
-            print(f"!!!!! WARNING: Solver did not converge. !!!!!")
+            print(f"!!!!! WARNING: Solver did not converge. "
+                  f"Final Change: {phi_change:.3e} !!!!!")
+
+        if self.use_precursors:
+            self.update_precursors(step)
+
+    def post_process_time_step(self) -> None:
+        """
+        Perform the post-processing step for a time step.
+        For Backward Euler, nothing is done. For Crank Nicholson,
+        this computes the next time step value from the previous and
+        half time step values. For TBDF-2, this computes the half time
+        step value from the previous and quarter time step values, then
+        takes a step of BDF-2.
+        """
+        # =================================== Handle 2nd order methods
+        if self.stepping_method in ["CRANK_NICHOLSON", "TBDF2"]:
+            self.phi = 2.0 * self.phi - self.phi_old
+            if self.use_precursors:
+                self.precursors = \
+                    2.0 * self.precursors - self.precursors_old
+
+            # ============================== Second step of time step
+            if self.stepping_method == "TBDF2":
+                self.solve_time_step(step=1)
 
     def set_old_transient_source(self, step: int = 0) -> ndarray:
         """
@@ -332,7 +385,7 @@ class TransientSolver(KEigenvalueSolver):
         Evaluate the initial conditions.
         """
         if self.initial_conditions is None:
-            super(TransientSolver, self).execute(verbose=False)
+            KEigenvalueSolver.execute(self, verbose=False)
         else:
             n_grps = self.n_groups
             n_prec = self.n_precursors

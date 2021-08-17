@@ -36,7 +36,8 @@ class KEigenvalueSolver(SteadyStateSolver):
         phi_ell = np.copy(self.phi)
 
         # Initialize book-keeping parameters
-        production_ell = self.fv_compute_fission_production()
+        production = self.compute_fission_production()
+        production_ell = production
         k_eff_ell = k_eff_change = 1.0
         phi_change = 1.0
 
@@ -60,7 +61,7 @@ class KEigenvalueSolver(SteadyStateSolver):
                                               self.b[g::n_grps])
 
             # ============================== Update k-eigenvalue
-
+            production = self.compute_fission_production()
             self.k_eff *= production / production_ell
 
             # ============================== Check for convergence
@@ -100,7 +101,7 @@ class KEigenvalueSolver(SteadyStateSolver):
         print("\n***** Done executing k-eigenvalue "
               "multi-group diffusion solver. *****")
 
-    def compute_fission_production(self) -> None:
+    def compute_fission_production(self) -> float:
         """
         Compute the fission production from the most recent
         solution vector.
@@ -110,6 +111,6 @@ class KEigenvalueSolver(SteadyStateSolver):
         float
         """
         if isinstance(self.discretization, FiniteVolume):
-            production = self.fv_compute_fission_production()
+            return self.fv_compute_fission_production()
         else:
-            production = self.pwc_compute_fission_production()
+            return self.pwc_compute_fission_production()
