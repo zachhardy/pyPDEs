@@ -194,8 +194,8 @@ class TransientSolver(KEigenvalueSolver):
         if not self.output_frequency:
             self.output_frequency = self.dt
 
-        if self.dt > self.max_dt:
-            self.dt = self.max_dt
+        if self.dt > self.output_frequency:
+            self.dt = self.output_frequency
 
         self.outputs.reset()
         self.store_outputs(0.0)
