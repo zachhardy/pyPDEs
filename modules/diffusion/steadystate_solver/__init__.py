@@ -24,21 +24,26 @@ class SteadyStateSolver:
     ----------
     mesh : Mesh
         The spatial mesh to solve the problem on.
+
     discretization : SpatialDiscretization
         The spatial discretization used to solve the problem.
+
     boundaries : List[Boundary]
         The boundary conditions imposed on the equations.
         There should be a boundary condition for each group
         and boundary. In the list, each boundaries group-wise
         boundary conditions should be listed next to each other.
+
     material_xs : List[CrossSections]
         The cross sections corresponding to the material IDs
         defined on the cells. There should be as many cross
         sections as unique material IDs on the mesh.
+
     material_src : List[MultigroupSource]
         The multi-group sources corresponding to the material
         IDs defined on the cells. There should be as many
         multi-group sources as unique material IDs on the mesh.
+
     use_precursors : bool
         A flag for including delayed neutrons.
     tolerance : float
@@ -46,15 +51,18 @@ class SteadyStateSolver:
     max_iterations : int
         The maximum number of iterations for the group-wise
         solver to take before exiting.
+
     b : ndarray (n_nodes * n_groups,)
         The right-hand side of the linear system to solve.
     L : List[csr_matrix]
         The group-wise diffusion operators used to solve the
         equations group-wise. There are n_groups matrices stored.
+
     phi : ndarray (n_nodes * n_groups,)
         The most current scalar flux solution vector.
     flux_uk_man : UnknownManager
         An unknown manager tied to the scalar flux solution vector.
+
     precurosrs : ndarray (n_nodes * max_precursors_per_material,)
         The delayed neutron precursor concentrations.
 
@@ -99,8 +107,7 @@ class SteadyStateSolver:
 
     @property
     def n_groups(self) -> int:
-        """
-        Get the number of groups.
+        """Get the number of groups.
 
         Returns
         -------
@@ -110,8 +117,7 @@ class SteadyStateSolver:
 
     @property
     def n_precursors(self) -> int:
-        """
-        Get the total number of precursors.
+        """Get the total number of precursors.
 
         Returns
         -------
@@ -120,9 +126,7 @@ class SteadyStateSolver:
         return sum([xs.n_precursors for xs in self.material_xs])
 
     def initialize(self) -> None:
-        """
-        Initialize the diffusion solver.
-        """
+        """Initialize the steady state diffusion solver."""
         self.check_inputs()
         sd = self.discretization
 
@@ -156,9 +160,7 @@ class SteadyStateSolver:
             self.L.append(self.assemble_matrix(g))
 
     def execute(self, verbose: bool = False) -> None:
-        """
-        Execute the steady-state diffusion solver.
-        """
+        """Execute the steady-state diffusion solver."""
         print("\n***** Executing steady-state "
               "multi-group diffusion solver *****\n")
         n_grps = self.n_groups
@@ -202,8 +204,7 @@ class SteadyStateSolver:
               "multi-group diffusion solver. *****\n")
 
     def assemble_matrix(self, g: int) -> csr_matrix:
-        """
-        Assemble the diffusion matrix for group `g`.
+        """Assemble the diffusion matrix for group g.
 
         Parameters
         ----------
@@ -213,7 +214,7 @@ class SteadyStateSolver:
         Returns
         -------
         csr_matrix
-            The diffusion matrix for group `g`.
+            The diffusion matrix for group g.
         """
         if isinstance(self.discretization, FiniteVolume):
             return self.fv_assemble_matrix(g)
@@ -225,10 +226,10 @@ class SteadyStateSolver:
                   apply_scattering: bool = True,
                   apply_fission: bool = True,
                   apply_boundaries: bool = True) -> None:
-        """
-        Assemble the right-hand side of the diffusion equation.
-        This includes material, scattering, fission, and boundary
-        sources for group `g`.
+        """Assemble the right-hand side for group g.
+
+        This routine assembles the material source, scattering source,
+        fission source, and boundary source based upon the provided flags.
 
         Parameters
         ----------
@@ -241,7 +242,6 @@ class SteadyStateSolver:
         apply_fission : bool, default True
         apply_boundaries : bool, default True
         """
-
         flags = (apply_material_source, apply_scattering,
                  apply_fission, apply_boundaries)
         if isinstance(self.discretization, FiniteVolume):
@@ -250,9 +250,7 @@ class SteadyStateSolver:
             self.pwc_set_source(g, phi, *flags)
 
     def compute_precursors(self) -> None:
-        """
-        Compute the delayed neutron precursor concentration.
-        """
+        """Compute the delayed neutron precursor concentration."""
         if self.use_precursors:
             if isinstance(self.discretization, FiniteVolume):
                 self.fv_compute_precursors()
@@ -260,8 +258,7 @@ class SteadyStateSolver:
                 self.pwc_compute_precursors()
 
     def plot_solution(self, title: str = None) -> None:
-        """
-        Plot the solution, including the precursors, if used.
+        """Plot the solution, including the precursors, if used.
 
         Parameters
         ----------
@@ -284,8 +281,7 @@ class SteadyStateSolver:
         plt.tight_layout()
 
     def plot_flux(self, ax: Axes = None, title: str = None) -> None:
-        """
-        Plot the scalar flux on ax.
+        """Plot the scalar flux on an Axes.
 
         Parameters
         ----------
@@ -322,8 +318,7 @@ class SteadyStateSolver:
         plt.tight_layout()
 
     def plot_precursors(self, ax: Axes = None, title: str = None) -> None:
-        """
-        Plot the delayed neutron precursors on ax.
+        """Plot the delayed neutron precursors on an Axes.
 
         Parameters
         ----------
@@ -349,9 +344,7 @@ class SteadyStateSolver:
         plt.tight_layout()
 
     def check_inputs(self) -> None:
-        """
-        Check the inputs provided to the solver.
-        """
+        """Check the inputs provided to the solver."""
         self._check_mesh()
         self._check_discretization()
         self._check_boundaries()

@@ -11,25 +11,31 @@ from modules.diffusion import SteadyStateSolver
 
 class KEigenvalueSolver(SteadyStateSolver):
     """Class for solving a multi-group k-eigenvalue problem.
+
     Attributes
     ----------
     mesh : Mesh
         The spatial mesh to solve the problem on.
+
     discretization : SpatialDiscretization
         The spatial discretization used to solve the problem.
+
     boundaries : List[Boundary]
         The boundary conditions imposed on the equations.
         There should be a boundary condition for each group
         and boundary. In the list, each boundaries group-wise
         boundary conditions should be listed next to each other.
+
     material_xs : List[CrossSections]
         The cross sections corresponding to the material IDs
         defined on the cells. There should be as many cross
         sections as unique material IDs on the mesh.
+
     material_src : List[MultigroupSource]
         The multi-group sources corresponding to the material
         IDs defined on the cells. There should be as many
         multi-group sources as unique material IDs on the mesh.
+
     use_precursors : bool
         A flag for including delayed neutrons.
     tolerance : float
@@ -37,15 +43,18 @@ class KEigenvalueSolver(SteadyStateSolver):
     max_iterations : int
         The maximum number of iterations for the group-wise
         solver to take before exiting.
+
     b : ndarray (n_nodes * n_groups,)
         The right-hand side of the linear system to solve.
     L : List[csr_matrix]
         The group-wise diffusion operators used to solve the
         equations group-wise. There are n_groups matrices stored.
+
     phi : ndarray (n_nodes * n_groups,)
         The most current scalar flux solution vector.
     flux_uk_man : UnknownManager
         An unknown manager tied to the scalar flux solution vector.
+
     precurosrs : ndarray (n_nodes * max_precursors_per_material,)
         The delayed neutron precursor concentrations.
 
@@ -56,6 +65,7 @@ class KEigenvalueSolver(SteadyStateSolver):
         is used to prevent very sparse vectors in many materials.
     precursor_uk_man : UnknownManager
         An unknown manager tied to the precursor vector.
+
     k_eff : float
         The most current k-eigenvalue estimate.
     """
