@@ -1,20 +1,17 @@
 from numpy import ndarray
 from scipy.sparse import csr_matrix
 
-from pyPDEs.spatial_discretization import PiecewiseContinuous
-from pyPDEs.utilities.boundaries import DirichletBoundary
-
-from ..steadystate_solver import SteadyStateSolver
-
 from typing import TYPE_CHECKING
-
 if TYPE_CHECKING:
     from . import TransientSolver
 
+from pyPDEs.spatial_discretization import PiecewiseContinuous
+from pyPDEs.utilities.boundaries import DirichletBoundary
+from ..steadystate_solver import SteadyStateSolver
 
-def pwc_assemble_mass_matrix(self: 'TransientSolver', g: int) -> csr_matrix:
-    """
-    Assemble the mass matrix for time stepping for group `g`
+
+def pwc_assemble_mass_matrix(self: "TransientSolver", g: int) -> csr_matrix:
+    """Assemble the mass matrix for time stepping for group g
 
     Parameters
     ----------
@@ -59,13 +56,12 @@ def pwc_assemble_mass_matrix(self: 'TransientSolver', g: int) -> csr_matrix:
     return csr_matrix((data, (rows, cols)), shape=(pwc.n_nodes,) * 2)
 
 
-def pwc_set_transient_source(self: 'TransientSolver', g: int,
+def pwc_set_transient_source(self: "TransientSolver", g: int,
                              phi: ndarray, step: int = 0):
-    """
-    Assemble the right-hand side of the diffusion equation.
-    This includes the previous time step contributions and
-    material, scattering, fission, and boundary sources for
-    group `g`.
+    """Assemble the right-hand side of the linear system for group g.
+
+    This includes previous time step contributions as well as material,
+    scattering, fission, and boundary sources for group g.
 
     Parameters
     ----------
@@ -153,10 +149,9 @@ def pwc_set_transient_source(self: 'TransientSolver', g: int,
     SteadyStateSolver.pwc_set_source(self, g, phi, *flags)
 
 
-def pwc_update_precursors(self: 'TransientSolver',
+def pwc_update_precursors(self: "TransientSolver",
                           step: int = 0) -> None:
-    """
-    Solve a precursor time step.
+    """Solve a precursor time step.
 
     Parameters
     ----------
@@ -202,9 +197,12 @@ def pwc_update_precursors(self: 'TransientSolver',
                                            cell.volume
 
 
-def pwc_compute_power(self: 'TransientSolver') -> float:
-    """
-    Compute the fission power with the most recent scalar flux solution.
+def pwc_compute_power(self: "TransientSolver") -> float:
+    """Compute the fission power.
+
+    Notes
+    -----
+    This method uses the most current scalar flux solution.
 
     Returns
     -------
