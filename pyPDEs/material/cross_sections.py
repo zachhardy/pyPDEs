@@ -12,7 +12,8 @@ class CrossSections(MaterialProperty):
     Class for neutronics cross sections.
     """
     def __init__(self):
-        super().__init__("XS")
+        super().__init__()
+        self.type = "XS"
 
         self.n_groups: int = 0
         self.n_precursors: int = 0
@@ -55,6 +56,15 @@ class CrossSections(MaterialProperty):
     def read_from_xs_dict(self, xs: dict, density: float = 1.0) -> None:
         """
         Populate the cross sections with a dictionary.
+
+        Parameters
+        ----------
+        xs : dict
+            The cross sections contained within a dictionary.
+        density : float, default 1.0
+            A scaling factor for the cross section. This is meant
+            to be synonymous with scaling a microscopic cross section
+            by an atom density.
         """
         self.n_groups = xs.get("n_groups")
         if not self.n_groups:
@@ -197,7 +207,16 @@ class CrossSections(MaterialProperty):
 
     def read_from_xs_file(self, filename: str, density: float = 1.0) -> None:
         """
-        Read a ChiTech cross section file.
+        Populate the cross sections with a ChiTech cross section file.
+
+        Parameters
+        ----------
+        filename : str
+            The path to the ChiTech cross section file.
+        density : float, default 1.0
+            A scaling factor for the cross section. This is meant
+            to be synonymous with scaling a microscopic cross section
+            by an atom density.
         """
         def read_1d_xs(key, xs, f, ln):
             words = f[ln + 1].split()

@@ -37,12 +37,12 @@ class ReflectiveBoundary(NeumannBoundary):
 
 class MarshakBoundary(RobinBoundary):
     def __init__(self, f: float) -> None:
-        super().__init__(0.25, 0.5, 2.0 * f)
+        super().__init__(-0.5, 1.0, 2.0 * f)
 
 
 class VacuumBoundary(RobinBoundary):
     def __init__(self) -> None:
-        super().__init__(0.25, 0.5, 0.0)
+        super().__init__(-0.5, 1.0, 0.0)
 
 
 class ZeroFluxBoundary(DirichletBoundary):

@@ -40,8 +40,7 @@ for method in methods:
 labels = ["Picard", "Newton Direct",
           "Newton GMRES", "Newton JFNK"]
 lines = ["-ob", "--.r", "-.g", "^y"]
-x = solver.discretization.grid
-
+x = [p.z for p in discretization.grid]
 for i in range(len(u)):
     plt.plot(x, u[i], lines[i], label=labels[i])
 

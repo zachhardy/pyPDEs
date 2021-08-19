@@ -84,6 +84,24 @@ class HeatConductionSolver:
 
     def solve_picard_iterations(
             self, verbose: bool) -> Tuple[bool, int, float]:
+        """
+        Solve a non-linear heat conduction problem with Picard
+        iterations.
+
+        Parameters
+        ----------
+        verbose : bool
+            Flag for printing iteration information.
+
+        Returns
+        -------
+        converged : bool
+            If True, iterations converged.
+        nit : int
+            The number of iterations taken.
+        u_change : float
+            The final difference between iterates.
+        """
         u_ell = np.copy(self.u)
         u_change, nit, converged = 1.0, 0, False
         for nit in range(self.nonlinear_max_iterations):
@@ -105,6 +123,26 @@ class HeatConductionSolver:
 
     def solve_newton_iterations(
             self, verbose: bool) -> Tuple[bool, int, float]:
+        """
+        Solve a non-linear heat conduction problem with Newton
+        iterations.
+
+        Parameters
+        ----------
+        verbose : bool
+            Flag for printing iteration information.
+
+        Returns
+        -------
+        converged : bool
+            If True, iterations converged.
+        nit : int
+            The number of iterations taken.
+        u_change : float
+            The final difference between iterates.
+        """
+
+
 
         class GMRESCounter(object):
             def __init__(self) -> None:
@@ -147,11 +185,46 @@ class HeatConductionSolver:
         return converged, nit, u_change
 
     def residual(self, u: ndarray) -> ndarray:
+        """
+        Compute the residual associated with a given state.
+
+        Parameters
+        ----------
+        u : ndarray
+            The state to compute a residual with.
+
+        Returns
+        -------
+        ndarray
+        """
         A = self.assemble_matrix()
         b = self.assemble_source()
         return A @ u - b
 
-    def jacobian(self, u: ndarray, r: ndarray, jfnk=False) -> ndarray:
+    def jacobian(self, u: ndarray, r: ndarray,
+                 jfnk=False) -> Union[ndarray, LinearOperator]:
+        """
+        Compute the Jacobian matrix associated with a given state.
+        This can be computed as an actual matrix by perturbing
+        the vector `u` element-wise or by defining the action
+        of the Jacobian on a vector.
+
+        Parameters
+        ----------
+        u : ndarray
+            The state to compute the Jacobian from.
+        r : ndarray
+            The residual to compute the Jacobian from.
+        jfnk : bool, default False
+            A flag for using the Jacobian-Free-Newton-Krylov
+            method, which constructs the action of the
+            Jacobian rather than the numerical Jacobian matrix.
+
+        Returns
+        -------
+        ndarray or LinearOperator
+            The prior if jfnk is False, the latter otherwise.
+        """
         eps_m = np.finfo(float).eps
         n_nodes = self.discretization.n_nodes
 
@@ -177,6 +250,10 @@ class HeatConductionSolver:
     def assemble_matrix(self) -> csr_matrix:
         """
         Assemble the heat conduction matrix.
+
+        Returns
+        -------
+        csr_matrix
         """
         pwc: PiecewiseContinuous = self.discretization
 
@@ -199,14 +276,14 @@ class HeatConductionSolver:
                 # ============================== Loop over test functions
                 for i in range(view.n_nodes):
                     ii = pwc.map_dof(cell, i)
-                    grad_i = view.grad_shape_values[i, qp]
+                    grad_i = view.grad_shape_values[i][qp]
 
                     # ========================= Loop over trial functions
                     for j in range(view.n_nodes):
                         jj = pwc.map_dof(cell, j)
-                        grad_j = view.grad_shape_values[j, qp]
+                        grad_j = view.grad_shape_values[j][qp]
 
-                        value = grad_i * k[qp] * grad_j * jxw
+                        value = k[qp] * grad_i.dot(grad_j) * jxw
                         rows.append(ii)
                         cols.append(jj)
                         data.append(value)
@@ -249,12 +326,15 @@ class HeatConductionSolver:
                                 rows.append(ii)
                                 cols.append(jj)
                                 data.append(value)
-
         return csr_matrix((data, (rows, cols)), shape=(pwc.n_nodes,) * 2)
 
     def assemble_source(self) -> ndarray:
         """
         Assemble the right-hand side source vector.
+
+        Returns
+        -------
+        ndarray
         """
         pwc: PiecewiseContinuous = self.discretization
 
@@ -270,7 +350,7 @@ class HeatConductionSolver:
 
                 # ============================== Loop over quadrature
                 for qp in range(view.n_qpoints):
-                    b[ii] += q * view.shape_values[i, qp] * view.jxw[qp]
+                    b[ii] += q * view.shape_values[i][qp] * view.jxw[qp]
 
             # =================================== Loop over faces
             for f_id, face in enumerate(cell.faces):
@@ -312,6 +392,14 @@ class HeatConductionSolver:
         return b
 
     def plot_solution(self, title: str = None) -> None:
+        """
+        Plot the currently stored solution.
+
+        Parameters
+        ----------
+        title : str, default None
+            A title for the figure.s
+        """
         grid = self.discretization.grid
         if title:
             plt.title(title)
@@ -323,6 +411,9 @@ class HeatConductionSolver:
         plt.tight_layout()
 
     def check_inputs(self) -> None:
+        """
+        Check the inputs of the solver.
+        """
         self._check_mesh()
         self._check_discretization()
         self._check_boundaries()

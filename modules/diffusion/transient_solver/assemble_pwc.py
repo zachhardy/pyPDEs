@@ -14,7 +14,16 @@ if TYPE_CHECKING:
 
 def pwc_assemble_mass_matrix(self: 'TransientSolver', g: int) -> csr_matrix:
     """
-    Assemble the mass matrix for time stepping.
+    Assemble the mass matrix for time stepping for group `g`
+
+    Parameters
+    ----------
+    g : int
+        The group under consideration.
+
+    Returns
+    -------
+    csr_matrix
     """
     pwc: PiecewiseContinuous = self.discretization
 
@@ -53,16 +62,19 @@ def pwc_assemble_mass_matrix(self: 'TransientSolver', g: int) -> csr_matrix:
 def pwc_set_transient_source(self: 'TransientSolver', g: int,
                              phi: ndarray, step: int = 0):
     """
-    Set the transient source.
+    Assemble the right-hand side of the diffusion equation.
+    This includes the previous time step contributions and
+    material, scattering, fission, and boundary sources for
+    group `g`.
 
     Parameters
     ----------
     g : int
         The group under consideration.
     phi : ndarray
-        The solution vector to compute sources from.
+        The vector to compute scattering and fission sources with.
     step : int, default 0
-        The step of the time step.
+        The section of the time step.
     """
     flags = (True, True, False, False)
     SteadyStateSolver.pwc_set_source(self, g, phi, *flags)
@@ -83,7 +95,7 @@ def pwc_set_transient_source(self: 'TransientSolver', g: int,
 
             # =================================== Loop over trial functions
             for k in range(view.n_nodes):
-                mass_ik = view.intV_shapeI_shapeJ[i, k]
+                mass_ik = view.intV_shapeI_shapeJ[i][k]
 
                 # ============================== Loop over groups
                 for gp in range(self.n_groups):
@@ -129,7 +141,7 @@ def pwc_set_transient_source(self: 'TransientSolver', g: int,
                         coeff *= eff_dt * xs.precursor_yield[j]
 
                         for k in range(view.n_nodes):
-                            mass_ik = view.intV_shapeI_shapeJ[i, k]
+                            mass_ik = view.intV_shapeI_shapeJ[i][k]
 
                             for gp in range(self.n_groups):
                                 kgp = pwc.map_dof(cell, k, flux_uk_man, 0, gp)
@@ -144,12 +156,12 @@ def pwc_set_transient_source(self: 'TransientSolver', g: int,
 def pwc_update_precursors(self: 'TransientSolver',
                           step: int = 0) -> None:
     """
-    Solve a precursor time step for finite volume discretizations.
+    Solve a precursor time step.
 
     Parameters
     ----------
     step : int, default 0
-        The step of the time step.
+        The section of the time step.
     """
     pwc: PiecewiseContinuous = self.discretization
     flux_uk_man = self.flux_uk_man
@@ -188,3 +200,30 @@ def pwc_update_precursors(self: 'TransientSolver',
                                            xs.nu_delayed_sigma_f[g] * \
                                            self.phi[ig] * intV_shapeI / \
                                            cell.volume
+
+
+def pwc_compute_power(self: 'TransientSolver') -> float:
+    """
+    Compute the fission power with the most recent scalar flux solution.
+
+    Returns
+    -------
+    float
+    """
+    pwc: PiecewiseContinuous = self.discretization
+    uk_man = self.flux_uk_man
+
+    # ================================================== Loop over cells
+    power = 0.0
+    for cell in self.mesh.cells:
+        view = pwc.fe_views[cell.id]
+        xs = self.material_xs[cell.material_id]
+
+        # ============================================= Loop over nodes
+        for i in range(view.n_nodes):
+            intV_shapeI = view.intV_shapeI[i]
+
+            for g in range(self.n_groups):
+                ig = fv.map_dof(cell, i, uk_man, 0, g)
+                power += xs.sigma_f[g] * self.phi[ig] * intV_shapeI
+    return power * self.energy_per_fission

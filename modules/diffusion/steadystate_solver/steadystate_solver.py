@@ -56,6 +56,10 @@ class SteadyStateSolver:
     def n_groups(self) -> int:
         """
         Get the number of groups.
+
+        Returns
+        -------
+        int
         """
         return self.material_xs[0].n_groups
 
@@ -64,6 +68,9 @@ class SteadyStateSolver:
         """
         Get the total number of precursors.
 
+        Returns
+        -------
+        int
         """
         return sum([xs.n_precursors for xs in self.material_xs])
 
@@ -94,17 +101,16 @@ class SteadyStateSolver:
                 self.precursor_uk_man.add_unknown(max_precursors)
                 precursor_dofs = self.mesh.n_cells * max_precursors
                 self.precursors = np.zeros(precursor_dofs)
+            else:
+                self.use_precursors = False
 
         # ======================================== Initialize system storage
         self.b = np.zeros(flux_dofs)
         self.L = []
         for g in range(self.n_groups):
-            if isinstance(self.discretization, FiniteVolume):
-                self.L.append(self.fv_assemble_matrix(g))
-            else:
-                self.L.append(self.pwc_assemble_matrix(g))
+            self.L.append(self.assemble_matrix(g))
 
-    def execute(self) -> None:
+    def execute(self, verbose: bool = False) -> None:
         """
         Execute the steady-state diffusion solver.
         """
@@ -121,37 +127,92 @@ class SteadyStateSolver:
             # =================================== Solve group-wise
             self.b *= 0.0
             for g in range(n_grps):
-                if isinstance(self.discretization, FiniteVolume):
-                    self.fv_set_source(g, self.phi)
-                else:
-                    self.pwc_set_source(g, self.phi)
-                self.phi[g::n_grps] = spsolve(self.L[g],
-                                              self.b[g::n_grps])
+                self.set_source(g, self.phi)
+                self.phi[g::n_grps] = \
+                    spsolve(self.L[g], self.b[g::n_grps])
 
             # =================================== Check convergence
             phi_change = norm(self.phi - phi_ell)
             phi_ell[:] = self.phi
+
+            if verbose:
+                print(f"===== Iteration {nit} Change = {phi_change:.3e}")
+
             if phi_change <= self.tolerance:
                 converged = True
                 break
 
         # ======================================== Compute precursors
+        self.compute_precursors()
+
+        # ======================================== Print summary
+        if converged:
+            msg = "\n***** Solver Converged *****"
+        else:
+            msg = "!!!!! WARNING: Solver NOT Converged !!!!!"
+        msg += f"\nFinal Change:\t\t{phi_change:.3e}"
+        msg += f"\n# of Iterations:\t{nit}"
+        print(msg)
+        print("\n***** Done executing steady-state "
+              "multi-group diffusion solver. *****\n")
+
+    def assemble_matrix(self, g: int) -> csr_matrix:
+        """
+        Assemble the diffusion matrix for group `g`.
+
+        Parameters
+        ----------
+        g : int
+            The energy group under consideration.
+
+        Returns
+        -------
+        csr_matrix
+            The diffusion matrix for group `g`.
+        """
+        if isinstance(self.discretization, FiniteVolume):
+            return self.fv_assemble_matrix(g)
+        else:
+            return self.pwc_assemble_matrix(g)
+
+    def set_source(self, g: int, phi: ndarray,
+                  apply_material_source: bool = True,
+                  apply_scattering: bool = True,
+                  apply_fission: bool = True,
+                  apply_boundaries: bool = True) -> None:
+        """
+        Assemble the right-hand side of the diffusion equation.
+        This includes material, scattering, fission, and boundary
+        sources for group `g`.
+
+        Parameters
+        ----------
+        g : int
+            The group under consideration
+        phi : ndarray
+            A vector to compute scattering and fission sources with.
+        apply_material_source : bool, default True
+        apply_scattering : bool, default True
+        apply_fission : bool, default True
+        apply_boundaries : bool, default True
+        """
+
+        flags = (apply_material_source, apply_scattering,
+                 apply_fission, apply_boundaries)
+        if isinstance(self.discretization, FiniteVolume):
+            self.fv_set_source(g, phi, *flags)
+        else:
+            self.pwc_set_source(g, phi, *flags)
+
+    def compute_precursors(self) -> None:
+        """
+        Compute the delayed neutron precursor concentration.
+        """
         if self.use_precursors:
             if isinstance(self.discretization, FiniteVolume):
                 self.fv_compute_precursors()
             else:
                 self.pwc_compute_precursors()
-
-        # ======================================== Print summary
-        if converged:
-            msg = '***** Solver Converged *****'
-        else:
-            msg = '!!!!! WARNING: Solver NOT Converged !!!!!'
-        msg += f'\nFinal Change:\t\t{phi_change:.3e}'
-        msg += f'\n# of Iterations:\t{nit}'
-        print(msg)
-        print("\n***** Done executing steady-state "
-              "multi-group diffusion solver. *****\n")
 
     def plot_solution(self, title: str = None) -> None:
         """
@@ -160,6 +221,7 @@ class SteadyStateSolver:
         Parameters
         ----------
         title : str
+            A title for the figure.
         """
         fig: Figure = plt.figure()
         if self.use_precursors:
@@ -185,13 +247,16 @@ class SteadyStateSolver:
         ax : Axes
             An Axes to plot on.
         title : str, default None
+            A title for the Axes.
         """
-        grid = self.discretization.grid
         ax: Axes = plt.gca() if ax is None else ax
         if title:
             ax.set_title(title)
 
+        grid = self.discretization.grid
+
         if self.mesh.dim == 1:
+            grid = [p.z for p in grid]
             ax.set_xlabel("Location")
             ax.set_ylabel(r"$\phi(r)$")
             for g in range(self.n_groups):
@@ -200,6 +265,15 @@ class SteadyStateSolver:
                 ax.plot(grid, phi, label=label)
             ax.legend()
             ax.grid(True)
+        elif self.mesh.dim == 2:
+            x = np.unique([p.x for p in grid])
+            y = np.unique([p.y for p in grid])
+            xx, yy = np.meshgrid(x, y)
+            phi: ndarray = self.phi[0::self.n_groups]
+            phi = phi.reshape(xx.shape)
+            im = ax.pcolor(xx, yy, phi, cmap="jet", shading="auto" ,
+                           vmin=0.0, vmax=phi.max())
+            plt.colorbar(im)
         plt.tight_layout()
 
     def plot_precursors(self, ax: Axes = None, title: str = None) -> None:
@@ -211,8 +285,8 @@ class SteadyStateSolver:
         ax : Axes
             An Axes to plot on.
         title : str, default None
+            A title for the Axes.
         """
-        grid = [c.centroid for c in self.mesh.cells]
         ax: Axes = plt.gca() if ax is None else ax
         if title:
             ax.set_title(title)
@@ -220,6 +294,7 @@ class SteadyStateSolver:
         if self.mesh.dim == 1:
             ax.set_xlabel("Location")
             ax.set_ylabel("Precursor Family")
+            grid = [cell.centroid.z for cell in self.mesh.cells]
             for j in range(self.n_precursors):
                 label = f"Family {j}"
                 precursor = self.precursors[j::self.n_precursors]
@@ -229,6 +304,9 @@ class SteadyStateSolver:
         plt.tight_layout()
 
     def check_inputs(self) -> None:
+        """
+        Check the inputs provided to the solver.
+        """
         self._check_mesh()
         self._check_discretization()
         self._check_boundaries()
@@ -237,9 +315,9 @@ class SteadyStateSolver:
     def _check_mesh(self) -> None:
         if not self.mesh:
             raise AssertionError("No mesh is attached to the solver.")
-        elif self.mesh.dim != 1:
+        if self.mesh.dim > 2:
             raise NotImplementedError(
-                "Only 1D problems have been implemented.")
+                "Only 1D and 2D problems have been implemented.")
 
     def _check_discretization(self) -> None:
         if not self.discretization:
@@ -253,10 +331,16 @@ class SteadyStateSolver:
         if not self.boundaries:
             raise AssertionError(
                 "No boundary conditions are attached to the solver.")
-        elif len(self.boundaries) != 2 * self.n_groups:
+        if self.mesh.type == "LINE" and \
+                len(self.boundaries) != 2 * self.n_groups:
             raise NotImplementedError(
                 "There can only be 2 * n_groups boundary conditions "
                 "for 1D problems.")
+        if self.mesh.type == "ORTHO_QUAD" and \
+                len(self.boundaries) != 4 * self.n_groups:
+            raise NotImplementedError(
+                "There can only be 4 * n_groups boundary conditions "
+                "for 2D problems.")
 
     def _check_materials(self) -> None:
         if not self.material_xs:
@@ -270,7 +354,7 @@ class SteadyStateSolver:
 
         if self.material_src:
             for n in range(len(self.material_xs)):
-                if len(self.material_src) < n + 1:
+                if len(self.material_src) <= n + 1:
                     src = self.material_src[n]
                     if src.n_components != self.n_groups:
                         raise AssertionError(

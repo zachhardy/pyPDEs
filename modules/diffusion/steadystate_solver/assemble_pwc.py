@@ -15,18 +15,17 @@ if TYPE_CHECKING:
 
 def pwc_assemble_matrix(self: 'SteadyStateSolver', g: int) -> csr_matrix:
     """
-    Assemble the diffusion matrix across all groups.
-    The structure of this matrix follows the ordering
-    of the unknown manager.
+    Assemble the diffusion matrix for group `g`.
 
     Parameters
     ----------
     g : int
-        The group under consideration.
+        The energy group under consideration.
 
     Returns
     -------
     csr_matrix
+        The diffusion matrix for group `g`.
     """
     pwc: PiecewiseContinuous = self.discretization
 
@@ -43,8 +42,8 @@ def pwc_assemble_matrix(self: 'SteadyStateSolver', g: int) -> csr_matrix:
             # ============================== Loop over trial functions
             for k in range(view.n_nodes):
                 kk = pwc.map_dof(cell, k)
-                mass_ik = view.intV_shapeI_shapeJ[i, k]
-                stiff_ik = view.intV_gradI_gradJ[i, k]
+                mass_ik = view.intV_shapeI_shapeJ[i][k]
+                stiff_ik = view.intV_gradI_gradJ[i][k]
 
                 # ==================== Reaction + diffusion term
                 value = xs.sigma_t[g] * mass_ik
@@ -102,16 +101,16 @@ def pwc_set_source(self: 'SteadyStateSolver', g: int, phi: ndarray,
                    apply_fission: bool = True,
                    apply_boundaries: bool = True) -> None:
     """
-    Assemble the right-hand side of the multi-group diffusion
-    equation for a finite element discretization. This includes
-    material sources, scattering sources, and fission sources.
+    Assemble the right-hand side of the diffusion equation.
+    This includes material, scattering, fission, and boundary
+    sources for group `g`.
 
     Parameters
     ----------
     g : int
         The group under consideration
     phi : ndarray
-        A flux vector to use to compute sources.
+        A vector to compute scattering and fission sources with.
     apply_material_source : bool, default True
     apply_scattering : bool, default True
     apply_fission : bool, default True
@@ -136,7 +135,7 @@ def pwc_set_source(self: 'SteadyStateSolver', g: int, phi: ndarray,
 
             # =================================== Loop over trial fucntions
             for k in range(view.n_nodes):
-                mass_ik = view.intV_shapeI_shapeJ[i, k]
+                mass_ik = view.intV_shapeI_shapeJ[i][k]
 
                 # ============================== Loop over groups
                 for gp in range(self.n_groups):
@@ -145,7 +144,7 @@ def pwc_set_source(self: 'SteadyStateSolver', g: int, phi: ndarray,
                     # ==================== Scattering source
                     if apply_scattering:
                         self.b[ig] += \
-                            xs.sigma_tr[gp, g] * phi[kgp] * mass_ik
+                            xs.sigma_tr[gp][g] * phi[kgp] * mass_ik
 
                     # ==================== Fission source
                     if apply_fission:
@@ -213,30 +212,29 @@ def pwc_compute_precursors(self: 'SteadyStateSolver') -> None:
     """
     Compute the delayed neutron precursor concentration.
     """
-    if self.use_precursors and self.n_precursors > 0:
-        pwc: PiecewiseContinuous = self.discretization
-        flux_uk_man = self.flux_uk_man
-        prec_uk_man = self.precursor_uk_man
-        self.precursors *= 0.0
+    pwc: PiecewiseContinuous = self.discretization
+    flux_uk_man = self.flux_uk_man
+    prec_uk_man = self.precursor_uk_man
+    self.precursors *= 0.0
 
-        # ======================================== Loop over cells
-        for cell in self.mesh.cells:
-            view = pwc.fe_views[cell.id]
-            xs = self.material_xs[cell.material_id]
+    # ======================================== Loop over cells
+    for cell in self.mesh.cells:
+        view = pwc.fe_views[cell.id]
+        xs = self.material_xs[cell.material_id]
 
-            # =================================== Loop over precursors
-            for j in range(xs.n_precursors):
-                ij = cell.id * prec_uk_man.total_components + j
-                coeff = \
-                    xs.precursor_yield[j] / xs.precursor_lambda[j]
+        # =================================== Loop over precursors
+        for j in range(xs.n_precursors):
+            ij = cell.id * prec_uk_man.total_components + j
+            coeff = \
+                xs.precursor_yield[j] / xs.precursor_lambda[j]
 
-                # ============================== Loop over nodes
-                for i in range(view.n_nodes):
-                    intV_shapeI = view.intV_shapeI[i]
+            # ============================== Loop over nodes
+            for i in range(view.n_nodes):
+                intV_shapeI = view.intV_shapeI[i]
 
-                    # ========================= Loop over groups
-                    for g in range(self.n_groups):
-                        ig = pwc.map_dof(cell, i, flux_uk_man, 0, g)
-                        self.precursors[ij] += \
-                            coeff * xs.nu_delayed_sigma_f[g] * \
-                            self.phi[ig] * intV_shapeI / cell.volume
+                # ========================= Loop over groups
+                for g in range(self.n_groups):
+                    ig = pwc.map_dof(cell, i, flux_uk_man, 0, g)
+                    self.precursors[ij] += \
+                        coeff * xs.nu_delayed_sigma_f[g] * \
+                        self.phi[ig] * intV_shapeI / cell.volume

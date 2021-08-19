@@ -17,6 +17,11 @@ class Material:
     def add_properties(self, properties: Properties) -> None:
         """
         Add material properties to this material.
+
+        Parameters
+        ----------
+        properties : List[MaterialProperty]
+            A list of properties to add to this material.
         """
         if not isinstance(properties, list):
             properties = [properties]
@@ -27,25 +32,37 @@ class MaterialProperty:
     """
     Base class for a material property.
     """
-    def __init__(self, property_type: str) -> None:
-        self.type: str = property_type
+    def __init__(self) -> None:
+        self.type: str = None
         self.name: str = None
 
 
 class ScalarProperty(MaterialProperty):
     """
     Class for a scalar property.
+
+    Parameters
+    ----------
+    value : float, default 1.0
+        The scalar property value.
     """
     def __init__(self, value: float = 1.0) -> None:
-        super().__init__("SCALAR")
+        super().__init__()
+        self.type = "SCALAR"
         self.value: float = value
 
 
 class MultiGroupSource(MaterialProperty):
     """
     Class for a multi-group source.
+
+    Parameters
+    ----------
+    values : ndarray or List[float]
+        The multigroup source values.
     """
     def __init__(self, values: ndarray) -> None:
-        super().__init__("MULTIGROUP_SOURCE")
+        super().__init__()
+        self.type = "MULTIGROUP_SOURCE"
         self.values: ndarray = np.array(values)
         self.n_components = len(self.values)

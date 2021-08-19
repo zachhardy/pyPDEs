@@ -14,16 +14,24 @@ if TYPE_CHECKING:
 
 def fv_assemble_matrix(self: 'SteadyStateSolver', g: int) -> csr_matrix:
     """
-    Assemble the diffusion matrix across all groups.
-    The structure of this matrix follows the ordering
-    of the unknown manager.
+    Assemble the diffusion matrix for group `g`.
+
+    Parameters
+    ----------
+    g : int
+        The energy group under consideration.
+
+    Returns
+    -------
+    csr_matrix
+        The diffusion matrix for group `g`.
     """
     # ======================================== Loop over cells
     fv: FiniteVolume = self.discretization
     rows, cols, data = [], [], []
     for cell in self.mesh.cells:
-        dr = cell.width
         volume = cell.volume
+        width = cell.width
         xs = self.material_xs[cell.material_id]
         i = fv.map_dof(cell)
 
@@ -38,23 +46,26 @@ def fv_assemble_matrix(self: 'SteadyStateSolver', g: int) -> csr_matrix:
             # ============================== Interior faces
             if face.has_neighbor:
                 nbr_cell = self.mesh.cells[face.neighbor_id]
-                nbr_dr = nbr_cell.width
+                nbr_width = nbr_cell.width
                 nbr_xs = self.material_xs[nbr_cell.material_id]
                 j = fv.map_dof(nbr_cell)
 
-                # Median-mesh cell width
-                eff_dr = 0.5 * (dr + nbr_dr)
-
                 # Diffusion coefficients
-                diff_coeff = xs.diffusion_coeff[g]
-                nbr_diff_coeff = nbr_xs.diffusion_coeff[g]
+                D_p = xs.diffusion_coeff[g]
+                D_n = nbr_xs.diffusion_coeff[g]
 
-                # Effective diffusion coefficient
-                tmp = dr / diff_coeff + nbr_dr / nbr_diff_coeff
-                eff_diff_coeff = 2.0 * eff_dr / tmp
+                # Node-to-neighbor information
+                d_pn = (cell.centroid - nbr_cell.centroid).norm()
+
+                # Node-to-face information
+                d_pf = (cell.centroid - face.centroid).norm()
+
+                # Face diffusion coefficient
+                w = d_pf / d_pn  # harmonic mean weight
+                D_f = (w / D_p + (1.0 - w) / D_n) ** (-1)
 
                 # ==================== Diffusion term
-                value = eff_diff_coeff / eff_dr * face.area
+                value = D_f / d_pn * face.area
                 rows.extend([i, i])
                 cols.extend([i, j])
                 data.extend([value, -value])
@@ -63,16 +74,17 @@ def fv_assemble_matrix(self: 'SteadyStateSolver', g: int) -> csr_matrix:
             else:
                 bndry_id = -1 * (face.neighbor_id + 1)
                 bc = self.boundaries[bndry_id * self.n_groups + g]
-                diff_coeff = xs.diffusion_coeff[g]
+                D_p = xs.diffusion_coeff[g]
+                d_pf = (cell.centroid - face.centroid).norm()
 
                 # ==================== Boundary conditions
                 value = 0.0
                 if issubclass(type(bc), DirichletBoundary):
-                    value = 2.0 * diff_coeff / dr * face.area
+                    value = D_p / d_pf * face.area
                 elif issubclass(type(bc), RobinBoundary):
                     bc: RobinBoundary = bc
-                    tmp = 2.0 * bc.b * diff_coeff + bc.a * dr
-                    value = 2.0 * bc.a * diff_coeff / tmp * face.area
+                    tmp = bc.a * d_pf - bc.b * D_p
+                    value = bc.a * D_p / tmp * face.area
 
                 rows.append(i)
                 cols.append(i)
@@ -86,16 +98,16 @@ def fv_set_source(self: 'SteadyStateSolver', g: int, phi: ndarray,
                   apply_fission: bool = True,
                   apply_boundaries: bool = True) -> None:
     """
-    Assemble the right-hand side of the multi-group diffusion
-    equation for a finite volume discretization. This includes
-    material sources, scattering sources, and fission sources.
+    Assemble the right-hand side of the diffusion equation.
+    This includes material, scattering, fission, and boundary
+    sources for group `g`.
 
     Parameters
     ----------
     g : int
         The group under consideration
     phi : ndarray
-        A flux vector to use to compute sources.
+        A vector to compute scattering and fission sources with.
     apply_material_source : bool, default True
     apply_scattering : bool, default True
     apply_fission : bool, default True
@@ -149,21 +161,21 @@ def fv_set_source(self: 'SteadyStateSolver', g: int, phi: ndarray,
             if not face.has_neighbor and apply_boundaries:
                 bndry_id = -1 * (face.neighbor_id + 1)
                 bc = self.boundaries[bndry_id * self.n_groups + g]
-                diff_coeff = xs.diffusion_coeff[g]
-                dr = cell.width
+                D_p = xs.diffusion_coeff[g]
+                d_pf = (cell.centroid - face.centroid).norm()
 
                 # ==================== Boundary conditions
                 value = 0.0
                 if issubclass(type(bc), DirichletBoundary):
                     bc: DirichletBoundary = bc
-                    value = 2.0 * diff_coeff / dr * bc.value
+                    value = D_p / d_pf * bc.value
                 elif issubclass(type(bc), NeumannBoundary):
                     bc: NeumannBoundary = bc
                     value = bc.value
                 elif issubclass(type(bc), RobinBoundary):
                     bc: RobinBoundary = bc
-                    tmp = 2.0 * bc.b * diff_coeff + bc.a * dr
-                    value = 2.0 * diff_coeff / tmp * bc.f
+                    tmp = bc.a * d_pf - bc.b * D_p
+                    value = -bc.b * D_p / tmp * bc.f
 
                 self.b[ig] += value * face.area
 
@@ -172,24 +184,23 @@ def fv_compute_precursors(self: 'SteadyStateSolver') -> None:
     """
     Compute the delayed neutron precursor concentration.
     """
-    if self.use_precursors and self.n_precursors > 0:
-        fv: FiniteVolume = self.discretization
-        flux_uk_man = self.flux_uk_man
-        prec_uk_man = self.precursor_uk_man
-        self.precursors *= 0.0
+    fv: FiniteVolume = self.discretization
+    flux_uk_man = self.flux_uk_man
+    prec_uk_man = self.precursor_uk_man
+    self.precursors *= 0.0
 
-        # ======================================== Loop over cells
-        for cell in self.mesh.cells:
-            xs = self.material_xs[cell.material_id]
+    # ======================================== Loop over cells
+    for cell in self.mesh.cells:
+        xs = self.material_xs[cell.material_id]
 
-            # =================================== Loop over precursors
-            for j in range(xs.n_precursors):
-                ij = cell.id * prec_uk_man.total_components + j
-                coeff = \
-                    xs.precursor_yield[j] / xs.precursor_lambda[j]
+        # =================================== Loop over precursors
+        for j in range(xs.n_precursors):
+            ij = cell.id * prec_uk_man.total_components + j
+            coeff = \
+                xs.precursor_yield[j] / xs.precursor_lambda[j]
 
-                # ============================== Loop over groups
-                for g in range(self.n_groups):
-                    ig = fv.map_dof(cell, 0, flux_uk_man, 0, g)
-                    self.precursors[ij] += \
-                        coeff * xs.nu_delayed_sigma_f[g] * self.phi[ig]
+            # ============================== Loop over groups
+            for g in range(self.n_groups):
+                ig = fv.map_dof(cell, 0, flux_uk_man, 0, g)
+                self.precursors[ij] += \
+                    coeff * xs.nu_delayed_sigma_f[g] * self.phi[ig]
