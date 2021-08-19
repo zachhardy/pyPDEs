@@ -21,8 +21,6 @@ class SlabFEView(CellFEView):
 
     Attributes
     ----------
-        Attributes
-    ----------
     degree : int
         The finite element polynomial degree.
     face_node_mapping : List[List[int]]
