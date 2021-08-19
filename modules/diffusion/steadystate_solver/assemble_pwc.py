@@ -1,7 +1,10 @@
 from scipy.sparse import csr_matrix
 from numpy import ndarray
-from typing import TYPE_CHECKING
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from . import SteadyStateSolver
+    
 from pyPDEs.spatial_discretization import (PiecewiseContinuous,
                                            FiniteVolume)
 from pyPDEs.utilities import UnknownManager
@@ -9,13 +12,9 @@ from pyPDEs.utilities.boundaries import (DirichletBoundary,
                                          NeumannBoundary,
                                          RobinBoundary)
 
-if TYPE_CHECKING:
-    from .steadystate_solver import SteadyStateSolver
 
-
-def pwc_assemble_matrix(self: 'SteadyStateSolver', g: int) -> csr_matrix:
-    """
-    Assemble the diffusion matrix for group `g`.
+def pwc_assemble_matrix(self: "SteadyStateSolver", g: int) -> csr_matrix:
+    """Assemble the diffusion matrix for group g.
 
     Parameters
     ----------
@@ -25,7 +24,7 @@ def pwc_assemble_matrix(self: 'SteadyStateSolver', g: int) -> csr_matrix:
     Returns
     -------
     csr_matrix
-        The diffusion matrix for group `g`.
+        The diffusion matrix for group g.
     """
     pwc: PiecewiseContinuous = self.discretization
 
@@ -95,15 +94,15 @@ def pwc_assemble_matrix(self: 'SteadyStateSolver', g: int) -> csr_matrix:
     return csr_matrix((data, (rows, cols)), shape=(pwc.n_nodes,) * 2)
 
 
-def pwc_set_source(self: 'SteadyStateSolver', g: int, phi: ndarray,
+def pwc_set_source(self: "SteadyStateSolver", g: int, phi: ndarray,
                    apply_material_source: bool = True,
                    apply_scattering: bool = True,
                    apply_fission: bool = True,
                    apply_boundaries: bool = True) -> None:
-    """
-    Assemble the right-hand side of the diffusion equation.
-    This includes material, scattering, fission, and boundary
-    sources for group `g`.
+    """Assemble the right-hand side for group g.
+
+    This routine assembles the material source, scattering source,
+    fission source, and boundary source based upon the provided flags.
 
     Parameters
     ----------
@@ -208,10 +207,8 @@ def pwc_set_source(self: 'SteadyStateSolver', g: int, phi: ndarray,
                         self.b[ig] += bc.f / bc.b * view.intS_shapeI[f_id][ni]
 
 
-def pwc_compute_precursors(self: 'SteadyStateSolver') -> None:
-    """
-    Compute the delayed neutron precursor concentration.
-    """
+def pwc_compute_precursors(self: "SteadyStateSolver") -> None:
+    """Compute the delayed neutron precursor concentration."""
     pwc: PiecewiseContinuous = self.discretization
     flux_uk_man = self.flux_uk_man
     prec_uk_man = self.precursor_uk_man
