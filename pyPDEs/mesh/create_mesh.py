@@ -1,3 +1,5 @@
+"""Generators for orthogonal line and quad meshes."""
+
 import numpy as np
 
 from numpy import ndarray
@@ -5,6 +7,8 @@ from typing import List
 
 from .mesh import Mesh, Cell, Face
 from ..utilities import Vector
+
+__all__ = ["create_1d_mesh", "create_2d_mesh"]
 
 
 def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],

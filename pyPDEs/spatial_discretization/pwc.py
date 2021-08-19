@@ -2,27 +2,63 @@ import numpy as np
 from numpy import ndarray
 from typing import List
 
-from .. import SpatialDiscretization
-from ...mesh import Mesh, Cell
-from ...utilities import UnknownManager, Vector
-from ...utilities.quadratures import GaussLegendre
-from .fe_view import CellFEView
-from .fe_slab_view import SlabFEView
+from pyPDEs.spatial_discretization import SpatialDiscretization
+from pyPDEs.mesh import Mesh, Cell
+from pyPDEs.utilities import UnknownManager, Vector
+from pyPDEs.utilities.quadratures import Quadrature, LineQuadrature
+from pyPDEs.spatial_discretization.views.fe_view import CellFEView
+from pyPDEs.spatial_discretization.views.fe_slab_view import SlabFEView
 
 
 class PiecewiseContinuous(SpatialDiscretization):
+    """Piecwise continuous finite element discretization.
+
+    Attributes
+    ----------
+    type : str
+        The discretization type.
+    mesh : Mesh
+        The mesh being discretized.
+    dim : int
+        The dimentsion of the mesh being discretized.
+    coord_sys : {"CARTESIAN", "CYLINDER", "SPHERICAL"}
+        The coordinate system of the mesh.
+    degree : int
+        The finite element polynomial degree.
+    order : int
+        The polynomial order that should be integrated exactly
+        by quadrature formulas.
+    nodes : List[Vector]
+        A list of the node locations that define the
+        discretization.
+    fe_views : List[CellFEView]
+        A list of `CellFEView` objects that contain real-
+        to-reference mapping information, quadrature information,
+        integration routines, etc.. For more information, see
+        the `CellFEView` class or its children.
     """
-    Piecwise continuous finite element discretization.
-    """
+
     def __init__(self, mesh: Mesh, degree: int = 1,
                  order: int = None) -> None:
+        """Piecwise continuous discretization constructor.
+
+        Parameters
+        ----------
+        mesh : Mesh
+        degree : int, default 1
+            The finite element polynomial degree.
+        order : int, default None
+            The polynomial order to integrate exactly with
+            quadrature formulas. If None, this is set to two
+            times the degree in order to integrate
+            varphi_i * varphi_j exactly.
+        """
         super().__init__(mesh)
         self.type = "PWC"
         self.degree: int = degree
-        if not order:
-            order = 2 * degree
-
-        self.quadrature: GaussLegendre = GaussLegendre(order)
+        self.order: int = order
+        if self.order is None:
+            self.order = 2.0 * self.degree
 
         self.nodes: List[Vector] = None
         self.fe_views: List[CellFEView] = None
@@ -32,10 +68,10 @@ class PiecewiseContinuous(SpatialDiscretization):
 
     @property
     def n_nodes(self) -> int:
-        """
-        Get the number of nodes in the piecewise continuous
-        spatial discretization. The number of nodes is obtained
-        by summing object_{d} * (degree - 1)^d for d = 0, ..., dim.
+        """Get the number of nodes in the discretization.
+
+        The number of nodes is obtained by summing
+        object_{d} * (degree - 1)^d for d = 0, ..., dim.
         Object is a reference to the various types of mesh structures.
 
         object_{0} = vertices,
@@ -65,10 +101,7 @@ class PiecewiseContinuous(SpatialDiscretization):
 
     @property
     def grid(self) -> List[float]:
-        """
-        Get the list of nodes that defines the piecewise
-        continuous spatial discretization. These are precomputed
-        in the `PiecewiseContinuous.create_nodes()` routine.
+        """Get the list of nodes that define the discretization.
 
         Returns
         -------
@@ -77,11 +110,11 @@ class PiecewiseContinuous(SpatialDiscretization):
         return self.nodes
 
     def create_nodes(self) -> None:
-        """
-        Define the node locations. For line, quad, and hex
-        meshes, the nodes are defined at the vertices and
-        degree - 1 evenly spaced points between all vertex
-        connections. This amounts to an outer product of
+        """Define the nodes for the discretization.
+
+        For line, quad, and hex meshes, the nodes are defined
+        at the vertices and degree - 1 evenly spaced points between
+        all vertex connections. This amounts to an outer product of
         degree - 1 points in each dimension.
         """
         nodes = []
@@ -122,14 +155,17 @@ class PiecewiseContinuous(SpatialDiscretization):
 
 
     def create_cell_views(self) -> None:
-        """
-        Create the finite element cell views.
-        """
+        """Create the finite element cell views."""
+        quadrature: Quadrature = None
+        face_quadrature: Quadrature = None
+        if self.mesh.type == "LINE":
+            quadrature = LineQuadrature(self.order)
+
         self.fe_views = []
         for cell in self.mesh.cells:
             if cell.cell_type == "SLAB":
                 view: CellFEView = SlabFEView(
-                    self, self.quadrature, cell)
+                    self, quadrature, cell)
                 self.fe_views.append(view)
             else:
                 raise NotImplementedError(
@@ -138,9 +174,7 @@ class PiecewiseContinuous(SpatialDiscretization):
     def map_dof(self, cell: Cell, node: int,
                 unknown_manager: UnknownManager = None,
                 unknown_id: int = 0, component: int = 0) -> int:
-        """
-        Maps a node on a cell to a global DoF index. This is an
-        abstract method that must be implemented in derived classes.
+        """Map a node on a cell to a global DoF index.
 
         Parameters
         ----------
@@ -178,10 +212,7 @@ class PiecewiseContinuous(SpatialDiscretization):
     def map_face_dof(self, cell: Cell, face_id: int, node: int = 0,
                      unknown_manager: UnknownManager = None,
                      unknown_id: int = 0, component: int = 0) -> int:
-        """
-        Maps a node on a face of a cell to a global DoF index.
-        This is an abstract method that must be implemented
-        in derived classes.
+        """Map a node on a face of a cell to a global DoF index.
 
         Parameters
         ----------
@@ -217,14 +248,12 @@ class PiecewiseContinuous(SpatialDiscretization):
     @staticmethod
     def zero_dirichlet_row(row: int, rows: List[int],
                            data: List[float]) -> None:
-        """
-        Utility function for removing non-zero entries from a row
-        of a yet-to-be constructed spare matrix.
+        """Remove non-zero entries from Dirichlet boundary condition rows.
 
         Parameters
         ----------
         row : int
-            The row to zero-out
+            The row to zero-out.
         rows : List[int]
             The current list of rows in the preconstructed
             sparse matrix.

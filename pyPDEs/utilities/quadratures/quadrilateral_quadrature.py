@@ -3,18 +3,37 @@ from .. import Vector
 
 
 class QuadrilateralQuadrature(Quadrature):
-    """
-    Quadrature used for integrating over a quadrilateral.
+    """Quadrature used for integrating over a quadrilateral.
+
     This set is, in effect, an outer product of two sets
     of GaussLegendre.
 
-    Parameters
+    Attributes
     ----------
-    order : int, default 2
+    order : int
         The maximum monomial order the quadrature set
         can integrate exactly.
+    qpoints : List[Vector]
+        The quadrature points in the set.
+    weights : List[float]
+        The quadrature weights.
+    domain : Tuple[float]
+        The minimum and maximum coordinate of the quadrature
+        domain. This is only used for one-dimensional problems
+        to compute the Jacobian.
     """
+
     def __init__(self, order: int = 2) -> None:
+        """QuadrilateralQuadrature constructor.
+
+        Parameters
+        ----------
+        order : int, default 2
+            The maximum monomial order the quadrature set
+            can integrate exactly. For GaussLegendre, the
+            number of points this will yield is
+            n_qpoints = ceil(0.5 * (order + 1).
+        """
         gl_quad = GaussLegendre(order)
         n = gl_quad.n_qpoints
 

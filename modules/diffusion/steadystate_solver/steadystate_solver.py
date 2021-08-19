@@ -356,7 +356,7 @@ class SteadyStateSolver:
             for n in range(len(self.material_xs)):
                 if len(self.material_src) <= n + 1:
                     src = self.material_src[n]
-                    if src.n_components != self.n_groups:
+                    if src.n_groups != self.n_groups:
                         raise AssertionError(
                             "All sources must be compatible with num_groups.")
                 else:
