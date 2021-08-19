@@ -19,8 +19,121 @@ from ..outputs import Outputs
 
 
 class TransientSolver(KEigenvalueSolver):
-    """
-    Transient solver for multi-group diffusion problems.
+    """Transient solver for multi-group diffusion problems.
+
+    Attributes
+    ----------
+    mesh : Mesh
+        The spatial mesh to solve the problem on.
+
+    discretization : SpatialDiscretization
+        The spatial discretization used to solve the problem.
+
+    boundaries : List[Boundary]
+        The boundary conditions imposed on the equations.
+        There should be a boundary condition for each group
+        and boundary. In the list, each boundaries group-wise
+        boundary conditions should be listed next to each other.
+
+    material_xs : List[CrossSections]
+        The cross sections corresponding to the material IDs
+        defined on the cells. There should be as many cross
+        sections as unique material IDs on the mesh.
+
+    material_src : List[MultigroupSource]
+        The multi-group sources corresponding to the material
+        IDs defined on the cells. There should be as many
+        multi-group sources as unique material IDs on the mesh.
+
+    use_precursors : bool
+        A flag for including delayed neutrons.
+    tolerance : float
+        The iterative tolerance for the group-wise solver.
+    max_iterations : int
+        The maximum number of iterations for the group-wise
+        solver to take before exiting.
+
+    b : ndarray (n_nodes * n_groups,)
+        The right-hand side of the linear system to solve.
+    L : List[csr_matrix]
+        The group-wise diffusion operators used to solve the
+        equations group-wise. There are n_groups matrices stored.
+
+    phi : ndarray (n_nodes * n_groups,)
+        The most current scalar flux solution vector.
+    flux_uk_man : UnknownManager
+        An unknown manager tied to the scalar flux solution vector.
+
+    precurosrs : ndarray (n_nodes * max_precursors_per_material,)
+        The delayed neutron precursor concentrations.
+
+        In multi-material problems, this vector stores up to the
+        maximum number of precursors that live on any given material.
+        This implies that material IDs must be used to map the
+        concentration of specific precursor species. This structure
+        is used to prevent very sparse vectors in many materials.
+    precursor_uk_man : UnknownManager
+        An unknown manager tied to the precursor vector.
+
+    k_eff : float
+        The most current k-eigenvalue estimate.
+
+    initial_conditions : list
+        An n_groups in length list of initial conditions.
+        These may take the form of lambda functions,
+        appropriately sized vectors, or a sympy Matrix.
+
+    t_final : float
+        The final simulation time.
+    dt : float
+        The initial, or fixed time step size.
+    stepping_method = {"BACKWARD_EULER", "CRANK_NICHOLSON", "TBDF2"}
+        The time stepping method to use.
+
+    output_frequency : float
+        The intervals in which to write outputs.
+
+    adaptivity : bool
+        A flag for using adaptive time stepping.
+    refine_level : float
+        The relative change in power over a time step at which
+        larger changes in power triggers a time step halving.
+    coarsen_level : float
+        The relative change in power over a time step at which
+        smaller changes in power triggers a time step doubling.
+
+    lag_precursors : bool
+        A flag for using lagged precursors or an implicit substitution.
+
+    power, power_old : float
+        The current and previous time step fission power.
+    energy_per_fission : float
+        A scaling factor to apply to the computed fission rate to
+        match the specified initial power.
+
+    phi_old : ndarray (n_nodes * n_groups,)
+        The scalar flux solution last time step.
+    precursors_old : ndarray (n_nodes, max_precursors_per_material,)
+        The precursor solution last time step.
+
+    b_old : ndarray (n_nodes * n_groups,)
+        The right-hand side contributions from last time step. This
+        is comprised of portions of the time derivative term containing
+        previous solution vectors.
+    M : List[csr_matrix]
+        The inverse velocity mass matrix group-wise. There are
+        n_groups matrices stored for solving group-wise.
+    A : List[List[csr_matrix]]
+        The evolution operators. The outer list is n_groups in
+        length for each group and the inner lists contain all
+        matrices necessary for evolving a group through a time
+        step. The inner list only has more than one entry if
+        TBDF2 time stepping is used.
+
+    outputs : Outputs
+        A support class used for storing simulation results as
+        the simulation progresses and for writing them at its
+        completion.
     """
 
     from .assemble_fv import fv_assemble_mass_matrix
@@ -37,13 +150,11 @@ class TransientSolver(KEigenvalueSolver):
         super().__init__()
         self.initial_conditions: list = None
 
-        self.output_frequency: float = None
-        self.next_output_time: float = None
-        self.max_dt: float = None
-
         self.t_final: float = 0.25
         self.dt: float = 5.0e-3
         self.stepping_method: str = "CRANK_NICHOLSON"
+
+        self.output_frequency: float = None
 
         self.adaptivity: bool = False
         self.refine_level: float = 0.02
@@ -53,7 +164,6 @@ class TransientSolver(KEigenvalueSolver):
 
         self.power: float = 1.0
         self.power_old: float = 1.0
-
         self.energy_per_fission: float = 1.0
 
         self.phi_old: ndarray = None
@@ -66,9 +176,7 @@ class TransientSolver(KEigenvalueSolver):
         self.outputs: Outputs = Outputs()
 
     def initialize(self) -> None:
-        """
-        Initialize the transient multi-group diffusion solver.
-        """
+        """Initialize the transient multi-group diffusion solver."""
         super(KEigenvalueSolver, self).initialize()
 
         self.b_old = np.copy(self.b)
@@ -85,8 +193,6 @@ class TransientSolver(KEigenvalueSolver):
 
         if not self.output_frequency:
             self.output_frequency = self.dt
-        self.next_output_time = self.output_frequency
-        self.max_dt = self.output_frequency
 
         if self.dt > self.max_dt:
             self.dt = self.max_dt
@@ -97,19 +203,18 @@ class TransientSolver(KEigenvalueSolver):
         self.energy_per_fission = self.power / self.compute_power()
 
     def execute(self, verbose: bool = False) -> None:
-        """
-        Execute the transient multi-group diffusion solver.
-        """
+        """Execute the transient multi-group diffusion solver."""
         print("\n***** Executing the transient "
               "multi-group diffusion solver. *****")
 
         # ======================================== Start time stepping
         time, n_steps, dt0 = 0.0, 0, self.dt
+        next_output_time = self.output_frequency
         while time < self.t_final - sys.float_info.epsilon:
 
             # ==================== Force coincidence with output times
-            if time + self.dt > self.next_output_time:
-                self.dt = self.next_output_time - time
+            if time + self.dt > next_output_time:
+                self.dt = next_output_time - time
                 self.assemble_evolution_matrices()
 
             # ==================== Force coincidence with end time
@@ -146,24 +251,24 @@ class TransientSolver(KEigenvalueSolver):
                 self.precursors_old[:] = self.precursors
 
             # ============================== Output solutions
-            if time == self.next_output_time:
+            if time == next_output_time:
                 self.store_outputs(time)
-                self.next_output_time += self.output_frequency
-                if self.next_output_time > self.t_final:
-                    self.next_output_time = self.t_final
+                next_output_time += self.output_frequency
+                if next_output_time > self.t_final:
+                    next_output_time = self.t_final
 
             # ============================== Coarsen time steps
             if self.adaptivity and dP < self.coarsen_level:
                 self.dt *= 2.0
                 self.assemble_evolution_matrices()
-            if self.adaptivity and self.dt > self.max_dt:
-                self.dt = self.max_dt
+            if self.adaptivity and self.dt > self.output_frequency:
+                self.dt = self.output_frequency
                 self.assemble_evolution_matrices()
             if not self.adaptivity:
                 self.dt = dt0
                 self.assemble_evolution_matrices()
 
-
+            # ============================== Print time step summary
             if verbose:
                 print(f"***** Time Step: {n_steps} *****")
                 print(f"Simulation Time:\t{time}")
@@ -175,8 +280,7 @@ class TransientSolver(KEigenvalueSolver):
               "multi-group diffusion solver. *****")
 
     def solve_time_step(self, step: int = 0) -> None:
-        """
-        Solve the system for the n'th step of a time step.
+        """Solve the system for the n'th step of a time step.
 
         Parameters
         ----------
@@ -213,8 +317,8 @@ class TransientSolver(KEigenvalueSolver):
             self.update_precursors(step)
 
     def post_process_time_step(self) -> None:
-        """
-        Perform the post-processing step for a time step.
+        """Post-process the time step results.
+
         For Backward Euler, nothing is done. For Crank Nicholson,
         this computes the next time step value from the previous and
         half time step values. For TBDF-2, this computes the half time
@@ -233,9 +337,7 @@ class TransientSolver(KEigenvalueSolver):
                 self.solve_time_step(step=1)
 
     def set_old_transient_source(self, step: int = 0) -> ndarray:
-        """
-        Assemble the previous time step contributions to the
-        right-hand side.
+        """Assemble the previous time step portion of the right-hand side.
 
         Parameters
         ----------
@@ -264,9 +366,7 @@ class TransientSolver(KEigenvalueSolver):
         return b
 
     def assemble_evolution_matrices(self) -> csr_matrix:
-        """
-        Assemble the list of matrices used for evolving the
-        solution one time step.
+        """Assemble the linear systems for a time step..
 
         Returns
         -------
@@ -288,8 +388,7 @@ class TransientSolver(KEigenvalueSolver):
             self.A.append(matrices)
 
     def assemble_mass_matrix(self, g: int) -> csr_matrix:
-        """
-        Assemble the mass matrix for time stepping for group `g`
+        """ Assemble the mass matrix for time stepping for group g
 
         Parameters
         ----------
@@ -307,11 +406,10 @@ class TransientSolver(KEigenvalueSolver):
 
     def set_transient_source(self: 'TransientSolver', g: int,
                              phi: ndarray, step: int = 0) -> None:
-        """
-        Assemble the right-hand side of the diffusion equation.
-        This includes the previous time step contributions and
-        material, scattering, fission, and boundary sources for
-        group `g`.
+        """Assemble the right-hand side of the linear system for group g.
+
+        This includes previous time step contributions as well as material,
+        scattering, fission, and boundary sources for group g.
 
         Parameters
         ----------
@@ -328,8 +426,7 @@ class TransientSolver(KEigenvalueSolver):
             self.pwc_set_transient_source(g, phi, step)
 
     def update_precursors(self, step: int = 0) -> None:
-        """
-        Solve a precursor time step.
+        """Solve a precursor time step.
 
         Parameters
         ----------
@@ -342,8 +439,11 @@ class TransientSolver(KEigenvalueSolver):
             self.pwc_update_precursors(step)
 
     def compute_power(self) -> float:
-        """
-        Compute the fission power with the most recent scalar flux solution.
+        """Compute the fission power.
+
+        Notes
+        -----
+        This method uses the most current scalar flux solution.
 
         Returns
         -------
@@ -355,9 +455,7 @@ class TransientSolver(KEigenvalueSolver):
             return self.pwc_compute_power()
 
     def effective_dt(self, step: int = 0) -> float:
-        """
-        Compute the effective time step size for the specified
-        step of a time step.
+        """Compute the effective time step.
 
         Parameters
         ----------
@@ -381,9 +479,7 @@ class TransientSolver(KEigenvalueSolver):
                 f"{self.stepping_method} is not implemented.")
 
     def compute_initial_values(self) -> None:
-        """
-        Evaluate the initial conditions.
-        """
+        """Evaluate the initial conditions."""
         if self.initial_conditions is None:
             KEigenvalueSolver.execute(self, verbose=False)
         else:
