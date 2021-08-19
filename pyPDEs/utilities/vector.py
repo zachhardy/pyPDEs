@@ -4,13 +4,26 @@ import numpy as np
 
 
 class Vector:
+    """Class for a 3-dimensional vector.
+
+    Attributes
+    ----------
+    x : float
+        The x-coordinate.
+    y : float
+        The y-coordinate.
+    z : float
+        The z-coordinate.
     """
-    Class for a 3-dimensional vector.
-    """
-    def __init__(self,
-                 x: float = 0.0,
-                 y: float = 0.0,
-                 z: float = 0.0) -> None:
+    def __init__(self, x=0.0, y=0.0, z=0.0) -> None:
+        """Constructor.
+
+        Parameters
+        ----------
+        x : float
+        y : float
+        z : float
+        """
         self.x: float = x
         self.y: float = y
         self.z: float = z
@@ -21,7 +34,7 @@ class Vector:
     def __repr__(self) -> str:
         return f"Vector({self.x}, {self.y}, {self.z})"
 
-    def __add__(self, other: 'Vector') -> 'Vector':
+    def __add__(self, other: "Vector") -> "Vector":
         if not isinstance(other, type(self)):
             cls_name = self.__class__.__name__
             raise TypeError(
@@ -31,7 +44,7 @@ class Vector:
         z = self.z + other.z
         return Vector(x, y, z)
 
-    def __iadd__(self, other: 'Vector') -> 'Vector':
+    def __iadd__(self, other: "Vector") -> "Vector":
         if not isinstance(other, type(self)):
             cls_name = self.__class__.__name__
             raise TypeError(
@@ -41,7 +54,7 @@ class Vector:
         self.z += other.z
         return self
 
-    def __sub__(self, other: 'Vector') -> 'Vector':
+    def __sub__(self, other: "Vector") -> "Vector":
         if not isinstance(other, type(self)):
             cls_name = self.__class__.__name__
             raise TypeError(
@@ -51,7 +64,7 @@ class Vector:
         z = self.z - other.z
         return Vector(x, y, z)
 
-    def __isub__(self, other: 'Vector') -> 'Vector':
+    def __isub__(self, other: "Vector") -> "Vector":
         if not isinstance(other, type(self)):
             cls_name = self.__class__.__name__
             raise TypeError(
@@ -61,7 +74,7 @@ class Vector:
         self.z -= other.z
         return self
 
-    def __mul__(self, other: Union[float, int, 'Vector']) -> 'Vector':
+    def __mul__(self, other: Union[float, int, "Vector"]) -> "Vector":
         if isinstance(other, (float, int)):
             x = other * self.x
             y = other * self.y
@@ -78,7 +91,7 @@ class Vector:
                 f"{cls_name} is allowed.")
         return Vector(x, y, z)
 
-    def __rmul__(self, other: Union[float, int, 'Vector']) -> 'Vector':
+    def __rmul__(self, other: Union[float, int, "Vector"]) -> "Vector":
         if not isinstance(other, (float, int, type(self))):
             cls_name = self.__class__.__name__
             raise TypeError(
@@ -86,7 +99,7 @@ class Vector:
                 f"{cls_name} is allowed.")
         return self * other
 
-    def __imul__(self, other: Union[float, int, 'Vector']) -> 'Vector':
+    def __imul__(self, other: Union[float, int, "Vector"]) -> "Vector":
         if isinstance(other, (float, int)):
             self.x *= other
             self.y *= other
@@ -102,7 +115,7 @@ class Vector:
                 f"{cls_name} is allowed.")
         return self
 
-    def __truediv__(self, other: Union[float, int, 'Vector']) -> 'Vector':
+    def __truediv__(self, other: Union[float, int, "Vector"]) -> "Vector":
         if isinstance(other, (float, int)):
             x = self.x / other
             y = self.y / other
@@ -117,7 +130,7 @@ class Vector:
                 f"Only division by float or {cls_name} is allowed.")
         return Vector(x, y, z)
 
-    def __itruediv__(self, other: Union[float, int, 'Vector']) -> 'Vector':
+    def __itruediv__(self, other: Union[float, int, "Vector"]) -> "Vector":
         if isinstance(other, (float, int)):
             self.x /= other
             self.y /= other
@@ -132,7 +145,7 @@ class Vector:
                 f"Only inplace division by float or {cls_name} is allowed.")
         return self
 
-    def __pow__(self, power: Union[float, int]) -> 'Vector':
+    def __pow__(self, power: Union[float, int]) -> "Vector":
         if not isinstance(power, (float, int)):
             cls_name = self.__class__.__name__
             raise TypeError(
@@ -142,7 +155,7 @@ class Vector:
         z = self.z ** power
         return Vector(x, y, z)
 
-    def __ipow__(self, power: Union[float, int]) -> 'Vector':
+    def __ipow__(self, power: Union[float, int]) -> "Vector":
         if not isinstance(power, (float, int)):
             cls_name = self.__class__.__name__
             raise TypeError(
@@ -152,13 +165,13 @@ class Vector:
         self.z **= power
         return self
 
-    def __abs__(self) -> 'Vector':
+    def __abs__(self) -> "Vector":
         return Vector(abs(self.x), abs(self.y), abs(self.z))
 
-    def __neg__(self) -> 'Vector':
+    def __neg__(self) -> "Vector":
         return Vector(-self.x, -self.y, -self.z)
 
-    def __eq__(self, other: 'Vector') -> bool:
+    def __eq__(self, other: "Vector") -> bool:
         if not isinstance(other, type(self)):
             cls_name = self.__class__.__name__
             raise TypeError(
@@ -168,12 +181,19 @@ class Vector:
         z_eq = self.z == other.z
         return x_eq and y_eq and z_eq
 
-    def __ne__(self, other: 'Vector'):
+    def __ne__(self, other: "Vector"):
         return not self == other
 
-    def dot(self, other: 'Vector') -> float:
-        """
-        Compute the dot product of this with other.
+    def dot(self, other: "Vector") -> float:
+        """Compute the dot product of this with another Vector.
+
+        Parameters
+        ----------
+        other : Vector
+
+        Returns
+        -------
+        float
         """
         if not isinstance(other, type(self)):
             cls_name = self.__class__.__name__
@@ -184,9 +204,16 @@ class Vector:
         dot += self.z * other.z
         return dot
 
-    def cross(self, other: 'Vector') -> 'Vector':
-        """
-        Compute the cross product of this with other.
+    def cross(self, other: "Vector") -> "Vector":
+        """Compute the cross product of this with another Vector.
+
+        Parameters
+        ----------
+        other : Vector
+
+        Returns
+        -------
+        Vector
         """
         if not isinstance(other, type(self)):
             cls_name = self.__class__.__name__
@@ -198,14 +225,21 @@ class Vector:
         return Vector(x, y, z)
 
     def norm(self) -> float:
-        """
-        Compute the norm of this.
+        """Compute the norm of this.
+
+        Returns
+        -------
+        float
         """
         return np.sqrt(self.dot(self))
 
-    def normalize(self) -> 'Vector':
-        """
-        Normalize this vector to unit length
+    def normalize(self) -> "Vector":
+        """Normalize this vector to unit length.
+
+        Returns
+        -------
+        Vector
+            This Vector, but normalized to unit length.
         """
         norm = self.norm()
         self /= norm

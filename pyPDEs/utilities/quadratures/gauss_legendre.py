@@ -7,18 +7,34 @@ from .. import Vector
 
 
 class GaussLegendre(Quadrature):
-    """
-    Gauss-Legendre 1D quadrature.
+    """ Gauss-Legendre 1D quadrature.
 
-    Parameters
+    Attributes
     ----------
-    order : int, default 2
+    order : int
         The maximum monomial order the quadrature set
-        can integrate exactly. For GaussLegendre, the
-        number of points this will yield is
-        `n_qpoints = ceil(0.5 * (order + 1)`.
+        can integrate exactly.
+    qpoints : List[Vector]
+        The quadrature points in the set.
+    weights : List[float]
+        The quadrature weights.
+    domain : Tuple[float]
+        The minimum and maximum coordinate of the quadrature
+        domain. This is only used for one-dimensional problems
+        to compute the Jacobian.
     """
+
     def __init__(self, order: int = 2) -> None:
+        """GaussLegendre constructor.
+
+        Parameters
+        ----------
+        order : int, default 2
+            The maximum monomial order the quadrature set
+            can integrate exactly. For GaussLegendre, the
+            number of points this will yield is
+            `n_qpoints = ceil(0.5 * (order + 1)`.
+        """
         super().__init__(order)
 
         # Get the quadrature points and weights

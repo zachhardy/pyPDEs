@@ -1,7 +1,5 @@
 from .spatial_discretization import SpatialDiscretization
-from .finite_volume.fv import FiniteVolume
-from .finite_element.pwc import PiecewiseContinuous
+from pyPDEs.spatial_discretization.fv import FiniteVolume
+from pyPDEs.spatial_discretization.pwc import PiecewiseContinuous
 
-__all__ = ["SpatialDiscretization",
-           "FiniteVolume",
-           "PiecewiseContinuous"]
+__all__ = ["SpatialDiscretization", "FiniteVolume", "PiecewiseContinuous"]

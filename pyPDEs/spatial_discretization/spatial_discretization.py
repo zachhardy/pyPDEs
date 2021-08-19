@@ -6,15 +6,26 @@ from ..utilities import UnknownManager, Vector
 
 
 class SpatialDiscretization:
-    """
-    Base class for spatial discretizations.
+    """Base class for spatial discretizations.
 
-    Parameters
+    Attributes
     ----------
+    type : str
+        The discretization type.
     mesh : Mesh
-        The geometrical mesh that is being discretized.
+        The mesh being discretized.
+    dim : int
+        The dimentsion of the mesh being discretized.
+    coord_sys : {"CARTESIAN", "CYLINDER", "SPHERICAL"}
+        The coordinate system of the mesh.
     """
     def __init__(self, mesh: 'Mesh') -> None:
+        """SpatialDiscretization constructor.
+
+        Parameters
+        ----------
+        mesh : Mesh
+        """
         self.type: str = None
         self.mesh: Mesh = mesh
         self.dim: int = mesh.dim
@@ -22,9 +33,9 @@ class SpatialDiscretization:
 
     @property
     def n_nodes(self) -> int:
-        """
-        Abstract class to get the number of nodes in a
-        spatial discretization. This method must be implemented
+        """Get the number of nodes in the discretization.
+
+        This is an abstract property and must be implemented
         in derived classes.
 
         Returns
@@ -37,8 +48,10 @@ class SpatialDiscretization:
 
     @property
     def grid(self) -> List[Vector]:
-        """
-        Get the list of nodes that defines this spatial discretization.
+        """Get the list of nodes that define the discretization.
+
+        This is an abstract property and must be implemented
+        in derived classes.
 
         Returns
         -------
@@ -49,8 +62,7 @@ class SpatialDiscretization:
             f"Subclasses must implement to {cls_name}.grid property.")
 
     def n_dofs(self, unknown_manager: UnknownManager = None) -> int:
-        """
-        Get the total number of dofs in the problem.
+        """Get the total number of dofs in the problem.
 
         Parameters
         ----------
@@ -72,9 +84,10 @@ class SpatialDiscretization:
     def map_dof(self, cell: Cell, node: int,
                 unknown_manager: UnknownManager = None,
                 unknown_id: int = 0, component: int = 0) -> int:
-        """
-        Maps a node on a cell to a global DoF index. This is an
-        abstract method that must be implemented in derived classes.
+        """Map a node on a cell to a global DoF index.
+
+        This is an abstract method that must be implemented
+        in derived classes.
 
         Parameters
         ----------
