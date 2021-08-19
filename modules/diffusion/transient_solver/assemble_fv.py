@@ -1,17 +1,16 @@
 from scipy.sparse import csr_matrix
 from numpy import ndarray
+
 from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from . import TransientSolver
 
 from pyPDEs.spatial_discretization import FiniteVolume
 from ..steadystate_solver import SteadyStateSolver
 
-if TYPE_CHECKING:
-    from .transient_solver import TransientSolver
 
-
-def fv_assemble_mass_matrix(self: 'TransientSolver', g: int) -> csr_matrix:
-    """
-    Assemble the mass matrix for time stepping for group `g`
+def fv_assemble_mass_matrix(self: "TransientSolver", g: int) -> csr_matrix:
+    """Assemble the mass matrix for time stepping for group g
 
     Parameters
     ----------
@@ -38,13 +37,12 @@ def fv_assemble_mass_matrix(self: 'TransientSolver', g: int) -> csr_matrix:
     return csr_matrix((data, (rows, cols)), shape=(fv.n_nodes,) * 2)
 
 
-def fv_set_transient_source(self: 'TransientSolver', g: int,
+def fv_set_transient_source(self: "TransientSolver", g: int,
                             phi: ndarray, step: int = 0) -> None:
-    """
-    Assemble the right-hand side of the diffusion equation.
-    This includes the previous time step contributions and
-    material, scattering, fission, and boundary sources for
-    group `g`.
+    """Assemble the right-hand side of the linear system for group g.
+
+    This includes previous time step contributions as well as material,
+    scattering, fission, and boundary sources for group g.
 
     Parameters
     ----------
@@ -121,10 +119,9 @@ def fv_set_transient_source(self: 'TransientSolver', g: int,
     SteadyStateSolver.fv_set_source(self, g, phi, *flags)
 
 
-def fv_update_precursors(self: 'TransientSolver',
+def fv_update_precursors(self: "TransientSolver",
                          step: int = 0) -> None:
-    """
-    Solve a precursor time step.
+    """Solve a precursor time step.
 
     Parameters
     ----------
@@ -163,9 +160,12 @@ def fv_update_precursors(self: 'TransientSolver',
                     xs.nu_delayed_sigma_f[g] * self.phi[ig]
 
 
-def fv_compute_power(self: 'TransientSolver') -> float:
-    """
-    Compute the fission power with the most recent scalar flux solution.
+def fv_compute_power(self: "TransientSolver") -> float:
+    """Compute the fission power.
+
+    Notes
+    -----
+    This method uses the most current scalar flux solution.
 
     Returns
     -------
