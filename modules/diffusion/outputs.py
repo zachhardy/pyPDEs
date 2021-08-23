@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 class Outputs:
     def __init__(self):
         self.grid: List[List[float]] = []
-        self.time: List[float] = []
+        self.times: List[float] = []
         self.power: List[float] = []
         self.flux: List[List[ndarray]] = []
         self.precursors: List[List[ndarray]] = []
@@ -27,7 +27,7 @@ class Outputs:
         if time == 0.0:
             self.store_grid(solver.discretization)
 
-        self.time.append(time)
+        self.times.append(time)
 
         self.power.append(solver.power)
 
@@ -48,7 +48,7 @@ class Outputs:
             os.system(f"rm -r {path}/*")
 
         time_path = os.path.join(path, "times.txt")
-        np.savetxt(time_path, self.time)
+        np.savetxt(time_path, self.times)
 
         grid_path = os.path.join(path, "grid.txt")
         np.savetxt(grid_path, self.grid)
@@ -79,7 +79,7 @@ class Outputs:
 
     def reset(self):
         self.grid.clear()
-        self.time.clear()
+        self.times.clear()
         self.power.clear()
         self.flux.clear()
         self.precursors.clear()
