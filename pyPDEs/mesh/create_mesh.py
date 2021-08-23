@@ -15,8 +15,7 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
                    material_ids: List[int] = None,
                    coord_sys: str = "CARTESIAN",
                    verbose: bool = False) -> Mesh:
-    """
-    Create a 1D non-uniform mesh.
+    """Create a 1D non-uniform mesh.
 
     Parameters
     ----------
@@ -114,17 +113,16 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
 
         # ======================================== Verbose printout
         if verbose:
-            print("***** Summary of the 1D mesh:\n")
+            print("\n***** Summary of the 1D mesh:\n")
             print(f"Number of Cells:\t{mesh.n_cells}")
             print(f"Number of Faces:\t{mesh.n_faces}")
-            print(f"Number of Vertices:\t{mesh.n_vertices}\n")
+            print(f"Number of Vertices:\t{mesh.n_vertices}")
     return mesh
 
 
 def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
                    verbose: bool = False) -> Mesh:
-    """
-    Create a 2D mesh from x and y vertex locations.
+    """Create a 2D mesh from x and y vertex locations.
 
     Parameters
     ----------
@@ -227,9 +225,9 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
 
     # ======================================== Verbose printout
     if verbose:
-        print("***** Summary of the 2D mesh:\n")
+        print("\n***** Summary of the 2D mesh:\n")
         print(f"Number of Cells:\t{mesh.n_cells}")
         print(f"Number of Faces:\t{mesh.n_faces}")
-        print(f"Number of Vertices:\t{mesh.n_vertices}\n")
+        print(f"Number of Vertices:\t{mesh.n_vertices}")
 
     return mesh
