@@ -176,7 +176,8 @@ class TransientSolver(KEigenvalueSolver):
         self.outputs: Outputs = Outputs()
 
     def initialize(self) -> None:
-        """Initialize the transient multi-group diffusion solver."""
+        """Initialize the transient multi-group diffusion solver.
+        """
         super(KEigenvalueSolver, self).initialize()
 
         self.b_old = np.copy(self.b)
@@ -203,7 +204,8 @@ class TransientSolver(KEigenvalueSolver):
         self.energy_per_fission = self.power / self.compute_power()
 
     def execute(self, verbose: bool = False) -> None:
-        """Execute the transient multi-group diffusion solver."""
+        """Execute the transient multi-group diffusion solver.
+        """
         print("\n***** Executing the transient "
               "multi-group diffusion solver. *****")
 
@@ -276,8 +278,6 @@ class TransientSolver(KEigenvalueSolver):
                 print(f"System Power:\t\t{self.power}\n")
 
         self.dt = dt0  # reset dt to original
-        print("\n***** Done executing transient "
-              "multi-group diffusion solver. *****")
 
     def solve_time_step(self, step: int = 0) -> None:
         """Solve the system for the n'th step of a time step.
