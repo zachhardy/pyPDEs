@@ -126,8 +126,9 @@ class SteadyStateSolver:
         return sum([xs.n_precursors for xs in self.material_xs])
 
     def initialize(self) -> None:
-        """Initialize the steady state diffusion solver."""
-        self.check_inputs()
+        """Initialize the steady state diffusion solver.
+        """
+        self._check_inputs()
         sd = self.discretization
 
         # ======================================== Initialize flux
@@ -160,9 +161,11 @@ class SteadyStateSolver:
             self.L.append(self.assemble_matrix(g))
 
     def execute(self, verbose: bool = False) -> None:
-        """Execute the steady-state diffusion solver."""
+        """Execute the steady-state diffusion solver.
+        """
+
         print("\n***** Executing steady-state "
-              "multi-group diffusion solver *****\n")
+              "multi-group diffusion solver *****")
         n_grps = self.n_groups
         phi_ell = np.zeros(self.phi.shape)
         phi_change = 1.0
@@ -200,8 +203,6 @@ class SteadyStateSolver:
         msg += f"\nFinal Change:\t\t{phi_change:.3e}"
         msg += f"\n# of Iterations:\t{nit}"
         print(msg)
-        print("\n***** Done executing steady-state "
-              "multi-group diffusion solver. *****\n")
 
     def assemble_matrix(self, g: int) -> csr_matrix:
         """Assemble the diffusion matrix for group g.
@@ -250,7 +251,8 @@ class SteadyStateSolver:
             self.pwc_set_source(g, phi, *flags)
 
     def compute_precursors(self) -> None:
-        """Compute the delayed neutron precursor concentration."""
+        """Compute the delayed neutron precursor concentration.
+        """
         if self.use_precursors:
             if isinstance(self.discretization, FiniteVolume):
                 self.fv_compute_precursors()
@@ -343,8 +345,7 @@ class SteadyStateSolver:
             ax.grid(True)
         plt.tight_layout()
 
-    def check_inputs(self) -> None:
-        """Check the inputs provided to the solver."""
+    def _check_inputs(self) -> None:
         self._check_mesh()
         self._check_discretization()
         self._check_boundaries()

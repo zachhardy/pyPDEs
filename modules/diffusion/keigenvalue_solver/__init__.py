@@ -78,8 +78,7 @@ class KEigenvalueSolver(SteadyStateSolver):
         self.k_eff = 1.0
 
     def execute(self, verbose: bool = False) -> None:
-        """
-        Execute the k-eigenvalue diffusion solver.
+        """Execute the k-eigenvalue diffusion solver.
         """
         print("\n***** Executing the k-eigenvalue "
               "multi-group diffusion solver.")
@@ -154,8 +153,6 @@ class KEigenvalueSolver(SteadyStateSolver):
         msg += f"\nFinal Phi Change:\t\t{phi_change:.3e}"
         msg += f"\n# of Iterations:\t\t{nit}"
         print(msg)
-        print("\n***** Done executing k-eigenvalue "
-              "multi-group diffusion solver. *****")
 
     def compute_fission_production(self) -> float:
         """
