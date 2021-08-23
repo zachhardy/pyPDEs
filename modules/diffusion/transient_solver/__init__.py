@@ -136,15 +136,15 @@ class TransientSolver(KEigenvalueSolver):
         completion.
     """
 
-    from .assemble_fv import fv_assemble_mass_matrix
-    from .assemble_fv import fv_set_transient_source
-    from .assemble_fv import fv_update_precursors
-    from .assemble_fv import fv_compute_power
+    from ._assemble_fv import fv_assemble_mass_matrix
+    from ._assemble_fv import fv_set_transient_source
+    from ._assemble_fv import fv_update_precursors
+    from ._assemble_fv import fv_compute_power
 
-    from .assemble_pwc import pwc_assemble_mass_matrix
-    from .assemble_pwc import pwc_set_transient_source
-    from .assemble_pwc import pwc_update_precursors
-    from .assemble_pwc import pwc_compute_power
+    from ._assemble_pwc import pwc_assemble_mass_matrix
+    from ._assemble_pwc import pwc_set_transient_source
+    from ._assemble_pwc import pwc_update_precursors
+    from ._assemble_pwc import pwc_compute_power
 
     def __init__(self) -> None:
         super().__init__()

@@ -70,8 +70,8 @@ class KEigenvalueSolver(SteadyStateSolver):
         The most current k-eigenvalue estimate.
     """
 
-    from .assemble_fv import fv_compute_fission_production
-    from .assemble_pwc import pwc_compute_fission_production
+    from ._assemble_fv import fv_compute_fission_production
+    from ._assemble_pwc import pwc_compute_fission_production
 
     def __init__(self) -> None:
         super().__init__()

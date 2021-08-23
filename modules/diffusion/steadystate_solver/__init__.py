@@ -75,13 +75,13 @@ class SteadyStateSolver:
         An unknown manager tied to the precursor vector.
     """
 
-    from .assemble_fv import fv_assemble_matrix
-    from .assemble_fv import fv_set_source
-    from .assemble_fv import fv_compute_precursors
+    from ._assemble_fv import fv_assemble_matrix
+    from ._assemble_fv import fv_set_source
+    from ._assemble_fv import fv_compute_precursors
 
-    from .assemble_pwc import pwc_assemble_matrix
-    from .assemble_pwc import pwc_set_source
-    from .assemble_pwc import pwc_compute_precursors
+    from ._assemble_pwc import pwc_assemble_matrix
+    from ._assemble_pwc import pwc_set_source
+    from ._assemble_pwc import pwc_compute_precursors
 
     def __init__(self) -> None:
         self.mesh: Mesh = None
