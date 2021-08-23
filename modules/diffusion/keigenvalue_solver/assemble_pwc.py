@@ -1,17 +1,18 @@
 from numpy import ndarray
 from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from . import KEigenvalueSolver
 
 from pyPDEs.spatial_discretization import PiecewiseContinuous
 from pyPDEs.utilities import UnknownManager
 
-if TYPE_CHECKING:
-    from .keigenvalue_solver import KEigenvalueSolver
 
+def pwc_compute_fission_production(self: "KEigenvalueSolver") -> float:
+    """Compute the neutron production rate from fission.
 
-def pwc_compute_fission_production(self: 'KEigenvalueSolver') -> float:
-    """
-    Compute the fission production from the most recent
-    solution vector.
+    Notes
+    -----
+    This routine uses the most up-to-date scalar flux solution.
 
     Returns
     -------

@@ -48,13 +48,13 @@ class Outputs:
             os.system(f"rm -r {path}/*")
 
         time_path = os.path.join(path, "times.txt")
-        np.savetxt(time_path, self.time, fmt="%.6g")
+        np.savetxt(time_path, self.time)
 
         grid_path = os.path.join(path, "grid.txt")
-        np.savetxt(grid_path, self.grid, fmt="%.6g")
+        np.savetxt(grid_path, self.grid)
 
         power_path = os.path.join(path, "power.txt")
-        np.savetxt(power_path, self.power, fmt="%.6e")
+        np.savetxt(power_path, self.power)
 
         flux_dirpath = os.path.join(path, "flux")
         if not os.path.isdir(flux_dirpath):
