@@ -162,12 +162,13 @@ class SteadyStateSolver:
 
             # Print summary
             if converged:
-                msg = "\n***** Solver Converged *****"
+                msg = "***** Solver Converged *****"
             else:
-                msg = "!!!!! WARNING: Solver NOT Converged !!!!!"
-            msg += f"\nFinal Change:\t\t{phi_change:.3e}"
-            msg += f"\n# of Iterations:\t{nit}"
-            print(msg)
+                msg = "***** WARNING: Solver NOT Converged *****"
+            header = "*" * len(msg)
+            print("\n".join(["", header, msg, header]))
+            print(f"Final Change:\t\t{phi_change:.3e}")
+            print(f"# of Iterations:\t{nit}\n")
 
     def assemble_diffusion_matrix(self) -> csr_matrix:
         """Assemble the multi-group diffusion matrix.
