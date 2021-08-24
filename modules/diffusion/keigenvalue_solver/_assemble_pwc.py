@@ -1,10 +1,11 @@
 from numpy import ndarray
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from . import KEigenvalueSolver
 
 from pyPDEs.spatial_discretization import PiecewiseContinuous
 from pyPDEs.utilities import UnknownManager
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from . import KEigenvalueSolver
 
 
 def _pwc_compute_fission_production(self: "KEigenvalueSolver") -> float:
