@@ -46,15 +46,13 @@ class SteadyStateSolver:
         self.tolerance: float = 1.0e-8
         self.max_iterations: int = 500
 
-        self.use_groupwise_solver: bool = True
+        self.use_groupwise_solver: bool = False
 
         self.L: csr_matrix = None
         self.S: csr_matrix = None
         self.F: csr_matrix = None
-        # self.Lg: List[csr_matrix] = []
 
         self.b: ndarray = None
-
         self.phi: ndarray = None
         self.flux_uk_man: UnknownManager = UnknownManager()
 
@@ -126,7 +124,7 @@ class SteadyStateSolver:
         # Solve the full multi-group system
         if not self.use_groupwise_solver:
             self.b *= 0.0
-            self.set_source(True, True, False, False)
+            self.set_source()
             A = self.L - self.S - self.F
             self.phi = spsolve(A, self.b)
 
@@ -143,7 +141,8 @@ class SteadyStateSolver:
                 # Solve group-wise
                 for g in range(n_grps):
                     self.b *= 0.0
-                    self.set_source()
+                    self.set_source(apply_scattering_source=True,
+                                    apply_fission_source=True)
                     self.phi[g::n_grps] = spsolve(self.Lg(g), self.bg(g))
 
                 # Check convergence
@@ -206,6 +205,39 @@ class SteadyStateSolver:
         else:
             return self._pwc_assemble_fission_matrix()
 
+    def set_source(self,
+                   apply_material_source: bool = True,
+                   apply_boundary_source: bool = True,
+                   apply_scattering_source: bool = False,
+                   apply_fission_source: bool = False) -> None:
+        """Assemble the right-hand side.
+
+        This routine assembles the material source, scattering source,
+        fission source, and boundary source based upon the provided flags.
+
+        Parameters
+        ----------
+        apply_material_source : bool, default True
+        apply_boundary_source : bool, default True
+        apply_scattering_source : bool, default False
+        apply_fission_source : bool, default False
+        """
+        flags = (apply_material_source, apply_boundary_source,
+                 apply_scattering_source, apply_fission_source)
+        if isinstance(self.discretization, FiniteVolume):
+            self._fv_set_source(*flags)
+        else:
+            self._pwc_set_source(*flags)
+
+    def compute_precursors(self) -> None:
+        """Compute the delayed neutron precursor concentration.
+        """
+        if self.use_precursors:
+            if isinstance(self.discretization, FiniteVolume):
+                self._fv_compute_precursors()
+            else:
+                self._pwc_compute_precursors()
+
     def Lg(self, g: int) -> csr_matrix:
         """Get the `g`'th group's diffusion matrix.
 
@@ -241,41 +273,6 @@ class SteadyStateSolver:
             ni = g * self.discretization.n_nodes
             nf = (g + 1) * self.discretization.n_nodes
             return self.b[ni:nf]
-
-    def set_source(self,
-                   apply_material_source: bool = True,
-                   apply_boundary_source: bool = True,
-                   apply_scattering_source: bool = True,
-                   apply_fission_source: bool = True) -> None:
-        """Assemble the right-hand side for group `g`.
-
-        This routine assembles the material source, scattering source,
-        fission source, and boundary source based upon the provided flags.
-
-        Parameters
-        ----------
-        g : int
-            The group under consideration
-        apply_material_source : bool, default True
-        apply_boundary_source : bool, default True
-        apply_scattering_source : bool, default True
-        apply_fission_source : bool, default True
-        """
-        flags = (apply_material_source, apply_boundary_source,
-                 apply_scattering_source, apply_fission_source)
-        if isinstance(self.discretization, FiniteVolume):
-            self._fv_set_source(*flags)
-        else:
-            self._pwc_set_source(*flags)
-
-    def compute_precursors(self) -> None:
-        """Compute the delayed neutron precursor concentration.
-        """
-        if self.use_precursors:
-            if isinstance(self.discretization, FiniteVolume):
-                self._fv_compute_precursors()
-            else:
-                self._pwc_compute_precursors()
 
     def plot_solution(self, title: str = None) -> None:
         """Plot the solution, including the precursors, if used.

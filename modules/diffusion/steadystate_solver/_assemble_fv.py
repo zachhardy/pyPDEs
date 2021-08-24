@@ -1,14 +1,13 @@
 from scipy.sparse import csr_matrix
 from numpy import ndarray
 
-from typing import TYPE_CHECKING
-
 from pyPDEs.spatial_discretization import FiniteVolume
 from pyPDEs.utilities import UnknownManager
 from pyPDEs.utilities.boundaries import (DirichletBoundary,
                                          NeumannBoundary,
                                          RobinBoundary)
 
+from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from . import SteadyStateSolver
 
@@ -176,21 +175,19 @@ def _fv_assemble_fission_matrix(
 def _fv_set_source(self: "SteadyStateSolver",
                   apply_material_source: bool = True,
                   apply_boundary_source: bool = True,
-                  apply_scattering_source: bool = True,
-                  apply_fission_source: bool = True) -> None:
-    """Assemble the right-hand side for group `g`.
+                  apply_scattering_source: bool = False,
+                  apply_fission_source: bool = False) -> None:
+    """Assemble the right-hand side.
 
     This routine assembles the material source, scattering source,
     fission source, and boundary source based upon the provided flags.
 
     Parameters
     ----------
-    g : int
-        The group under consideration
     apply_material_source : bool, default True
     apply_boundary_source : bool, default True
-    apply_scattering_source : bool, default True
-    apply_fission_source : bool, default True
+    apply_scattering_source : bool, default False
+    apply_fission_source : bool, default False
     """
     fv: FiniteVolume = self.discretization
     uk_man: UnknownManager = self.flux_uk_man
