@@ -144,8 +144,7 @@ class SteadyStateSolver:
                 for g in range(n_grps):
                     self.b *= 0.0
                     self.set_source()
-                    self.phi[g::n_grps] = \
-                        spsolve(self.Lg(g), self.bg(g))
+                    self.phi[g::n_grps] = spsolve(self.Lg(g), self.bg(g))
 
                 # Check convergence
                 phi_change = norm(self.phi - phi_ell)
