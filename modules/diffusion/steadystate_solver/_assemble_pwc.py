@@ -12,226 +12,382 @@ from pyPDEs.utilities.boundaries import (DirichletBoundary,
                                          NeumannBoundary,
                                          RobinBoundary)
 
+def _pwc_assemble_diffusion_matrix(
+        self: "SteadyStateSolver") -> csr_matrix:
+    """Assemble the multi-group diffusion matrix.
 
-def pwc_assemble_matrix(self: "SteadyStateSolver", g: int) -> csr_matrix:
-    """Assemble the diffusion matrix for group g.
-
-    Parameters
-    ----------
-    g : int
-        The energy group under consideration.
+    This routine does not include fission or scattering
+    terms.
 
     Returns
     -------
     csr_matrix
-        The diffusion matrix for group g.
     """
     pwc: PiecewiseContinuous = self.discretization
+    uk_man: UnknownManager = self.flux_uk_man
 
-    # ======================================== Loop over cells
+    # Loop over cells
     rows, cols, data = [], [], []
     for cell in self.mesh.cells:
         view = pwc.fe_views[cell.id]
         xs = self.material_xs[cell.material_id]
 
-        # =================================== Loop over test functions
+        # Loop over test functions
         for i in range(view.n_nodes):
-            ii = pwc.map_dof(cell, i)
 
-            # ============================== Loop over trial functions
-            for k in range(view.n_nodes):
-                kk = pwc.map_dof(cell, k)
-                mass_ik = view.intV_shapeI_shapeJ[i][k]
-                stiff_ik = view.intV_gradI_gradJ[i][k]
+            # Loop over groups
+            for g in range(self.n_groups):
+                ig = pwc.map_dof(cell, i, uk_man, 0, g)
 
-                # ==================== Reaction + diffusion term
-                value = xs.sigma_t[g] * mass_ik
-                value += xs.diffusion_coeff[g] * stiff_ik
-                rows.append(ii)
-                cols.append(kk)
-                data.append(value)
+                # Loop over trial functions
+                for j in range(view.n_nodes):
+                    jg = pwc.map_dof(cell, j, uk_man, 0, g)
 
-        # ======================================== Loop over faces
-        #                                          stop on boundaries
+                    mass_ij = view.intV_shapeI_shapeJ[i][j]
+                    stiff_ij = view.intV_gradI_gradJ[i][j]
+
+                    # Diffusion + reaction term
+                    value = xs.sigma_t[g] * mass_ij + \
+                            xs.diffusion_coeff[g] * stiff_ij
+                    rows.append(ig)
+                    cols.append(jg)
+                    data.append(value)
+
+        # Loop over faces
         for f_id, face in enumerate(cell.faces):
+
+            # Boundary terms
             if not face.has_neighbor:
                 bndry_id = -1 * (face.neighbor_id + 1)
-                bc = self.boundaries[bndry_id * self.n_groups + g]
 
-                # ========================= Dirichlet boundary
-                if issubclass(type(bc), DirichletBoundary):
+                # Loop over groups
+                for g in range(self.n_groups):
+                    bc = self.boundaries[bndry_id * self.n_groups + g]
 
-                    # ==================== Loop over face nodes
-                    n_face_nodes = len(view.face_node_mapping[f_id])
-                    for fi in range(n_face_nodes):
-                        ii = pwc.map_face_dof(cell, f_id, fi)
-                        pwc.zero_dirichlet_row(ii, rows, data)
-                        rows.append(ii)
-                        cols.append(ii)
-                        data.append(1.0)
+                    # Dirichlet boundary
+                    if issubclass(type(bc), DirichletBoundary):
 
-                # ============================== Robin boundary
-                elif issubclass(type(bc), RobinBoundary):
-                    bc: RobinBoundary = bc
+                        # Loop over face nodes
+                        n_face_nodes = len(view.face_node_mapping[f_id])
+                        for fi in range(n_face_nodes):
+                            ig = pwc.map_face_dof(
+                                cell, f_id, fi, uk_man, 0, g)
 
-                    # ==================== Loop over face nodes
-                    n_face_nodes = len(view.face_node_mapping[f_id])
-                    for fi in range(n_face_nodes):
-                        ni = view.face_node_mapping[f_id][fi]
-                        ii = pwc.map_face_dof(cell, f_id, fi)
+                            pwc.zero_dirichlet_row(ig, rows, data)
+                            rows.append(ig)
+                            cols.append(ig)
+                            data.append(1.0)
 
-                        # =============== Loop over face nodes
-                        for fj in range(n_face_nodes):
-                            nj = view.face_node_mapping[f_id][fj]
-                            jj = pwc.map_face_dof(cell, f_id, fj)
+                    # Robin boundary
+                    elif issubclass(type(bc), RobinBoundary):
+                        bc: RobinBoundary = bc
 
-                            value = bc.a / bc.b
-                            value *= view.intS_shapeI_shapeJ[f_id][ni][nj]
-                            rows.append(ii)
-                            cols.append(jj)
-                            data.append(value)
+                        # Loop over face nodes
+                        n_face_nodes = len(view.face_node_mapping[f_id])
+                        for fi in range(n_face_nodes):
+                            ni = view.face_node_mapping[f_id][fi]
+                            ig = pwc.map_face_dof(
+                                cell, f_id, fi, uk_man, 0, g)
 
-    return csr_matrix((data, (rows, cols)), shape=(pwc.n_nodes,) * 2)
+                            # Loop over face nodes
+                            for fj in range(n_face_nodes):
+                                nj = view.face_node_mapping[f_id][fj]
+                                jg = pwc.map_face_dof(
+                                    cell, f_id, fj, uk_man, 0, g)
+
+                                face_mass_ij = \
+                                    view.intS_shapeI_shapeJ[f_id][ni][nj]
+
+                                value = bc.a / bc.b * face_mass_ij
+                                rows.append(ig)
+                                cols.append(jg)
+                                data.append(value)
+
+    n_dofs = pwc.n_dofs(uk_man)
+    return csr_matrix((data, (rows, cols)), shape=(n_dofs,) * 2)
 
 
-def pwc_set_source(self: "SteadyStateSolver", g: int, phi: ndarray,
-                   apply_material_source: bool = True,
-                   apply_scattering: bool = True,
-                   apply_fission: bool = True,
-                   apply_boundaries: bool = True) -> None:
-    """Assemble the right-hand side for group g.
+def _pwc_assemble_scattering_matrix(
+        self: "SteadyStateSolver") -> csr_matrix:
+    """Assemble the multi-group scattering matrix.
+
+    Returns
+    -------
+    csr_matrix
+    """
+    pwc: PiecewiseContinuous = self.discretization
+    uk_man: UnknownManager = self.flux_uk_man
+
+    # Loop over cells
+    rows, cols, data = [], [], []
+    for cell in self.mesh.cells:
+        view = pwc.fe_views[cell.id]
+        xs = self.material_xs[cell.material_id]
+
+        # Loop over test functions
+        for i in range(view.n_nodes):
+
+            # Loop over groups
+            for g in range(self.n_groups):
+                ig = pwc.map_dof(cell, i, uk_man, 0, g)
+
+                # Loop over trial functions
+                for j in range(view.n_nodes):
+                    mass_ij = view.intV_shapeI_shapeJ[i][j]
+
+                    # Loop over groups
+                    for gp in range(self.n_groups):
+                        jgp = pwc.map_dof(cell, j, uk_man, 0, gp)
+
+                        value = xs.sigma_tr[gp][g] * mass_ij
+                        rows.append(ig)
+                        cols.append(jgp)
+                        data.append(value)
+
+        # Loop over faces
+        for f_id, face in enumerate(cell.faces):
+
+            # Boundary terms
+            if not face.has_neighbor:
+                bndry_id = -1 * (face.neighbor_id + 1)
+
+                # Loop over groups
+                for g in range(self.n_groups):
+                    bc = self.boundaries[bndry_id * self.n_groups + g]
+
+                    # Dirichlet boundary
+                    if issubclass(type(bc), DirichletBoundary):
+
+                        # Loop over face nodes
+                        n_face_nodes = len(view.face_node_mapping[f_id])
+                        for fi in range(n_face_nodes):
+                            ig = pwc.map_face_dof(
+                                cell, f_id, fi, uk_man, 0, g)
+                            pwc.zero_dirichlet_row(ig, rows, data)
+
+    n_dofs = pwc.n_dofs(uk_man)
+    return csr_matrix((data, (rows, cols)), shape=(n_dofs,) * 2)
+
+
+def _pwc_assemble_fission_matrix(
+        self: "SteadyStateSolver") -> csr_matrix:
+    """Assemble the multi-group scattering matrix.
+
+    Returns
+    -------
+    csr_matrix
+    """
+    pwc: PiecewiseContinuous = self.discretization
+    uk_man: UnknownManager = self.flux_uk_man
+
+    # Loop over cells
+    rows, cols, data = [], [], []
+    for cell in self.mesh.cells:
+        view = pwc.fe_views[cell.id]
+        xs = self.material_xs[cell.material_id]
+
+        # Loop over test functions
+        for i in range(view.n_nodes):
+
+            # Loop over groups
+            for g in range(self.n_groups):
+                ig = pwc.map_dof(cell, i, uk_man, 0, g)
+
+                # Loop over trial functions
+                for j in range(view.n_nodes):
+                    mass_ij = view.intV_shapeI_shapeJ[i][j]
+
+                    # Loop over groups
+                    for gp in range(self.n_groups):
+                        jgp = pwc.map_dof(cell, j, uk_man, 0, gp)
+
+                        # Total fission
+                        if not self.use_precursors:
+                            coeff = xs.chi[g] * xs.nu_sigma_f[gp]
+                        else:
+                            # Prompt fission
+                            coeff = xs.chi_prompt[g] * \
+                                    xs.nu_prompt_sigma_f[gp]
+
+                            # Delayed fission
+                            for p in range(xs.n_precursors):
+                                coeff += xs.chi_delayed[g][p] * \
+                                         xs.precursor_yield[p] * \
+                                         xs.nu_delayed_sigma_f[gp]
+
+                        value = coeff * mass_ij
+                        rows.append(ig)
+                        cols.append(jgp)
+                        data.append(value)
+
+        # Loop over faces
+        for f_id, face in enumerate(cell.faces):
+
+            # Boundary terms
+            if not face.has_neighbor:
+                bndry_id = -1 * (face.neighbor_id + 1)
+
+                # Loop over groups
+                for g in range(self.n_groups):
+                    bc = self.boundaries[bndry_id * self.n_groups + g]
+
+                    # Dirichlet boundary
+                    if issubclass(type(bc), DirichletBoundary):
+
+                        # Loop over face nodes
+                        n_face_nodes = len(view.face_node_mapping[f_id])
+                        for fi in range(n_face_nodes):
+                            ig = pwc.map_face_dof(
+                                cell, f_id, fi, uk_man, 0, g)
+                            pwc.zero_dirichlet_row(ig, rows, data)
+
+    n_dofs = pwc.n_dofs(uk_man)
+    return csr_matrix((data, (rows, cols)), shape=(n_dofs,) * 2)
+
+
+def _pwc_set_source(self: "SteadyStateSolver",
+                  apply_material_source: bool = True,
+                  apply_boundary_source: bool = True,
+                  apply_scattering_source: bool = True,
+                  apply_fission_source: bool = True) -> None:
+    """Assemble the right-hand side for group `g`.
 
     This routine assembles the material source, scattering source,
     fission source, and boundary source based upon the provided flags.
 
     Parameters
     ----------
-    g : int
-        The group under consideration
-    phi : ndarray
-        A vector to compute scattering and fission sources with.
     apply_material_source : bool, default True
-    apply_scattering : bool, default True
-    apply_fission : bool, default True
-    apply_boundaries : bool, default True
+    apply_boundary_source : bool, default True
+    apply_scattering_source : bool, default True
+    apply_fission_source : bool, default True
     """
     pwc: PiecewiseContinuous = self.discretization
     uk_man: UnknownManager = self.flux_uk_man
 
-    # ============================================= Loop over cells
+    # Loop over cells
     for cell in self.mesh.cells:
         view = pwc.fe_views[cell.id]
         xs = self.material_xs[cell.material_id]
-        src = self.material_src[cell.material_id].values[g]
+        src = self.material_src[cell.material_id]
 
-        # ======================================== Loop over test functions
+        # Loop over test functions
         for i in range(view.n_nodes):
-            ig = pwc.map_dof(cell, i, uk_man, 0, g)
+            intV_shapeI = view.intV_shapeI[i]
 
-            # ==================== Material source
-            if apply_material_source:
-                self.b[ig] += src * view.intV_shapeI[i]
+            # Loop over groups
+            for g in range(self.n_groups):
+                ig = pwc.map_dof(cell, i, uk_man, 0, g)
 
-            # =================================== Loop over trial fucntions
-            for k in range(view.n_nodes):
-                mass_ik = view.intV_shapeI_shapeJ[i][k]
+                # Material source
+                if apply_material_source:
+                    self.b[ig] += src.values[g] * intV_shapeI
 
-                # ============================== Loop over groups
-                for gp in range(self.n_groups):
-                    kgp = pwc.map_dof(cell, k, uk_man, 0, gp)
+                # Loop over trial functions
+                for j in range(view.n_nodes):
+                    mass_ij = view.intV_shapeI_shapeJ[i][j]
 
-                    # ==================== Scattering source
-                    if apply_scattering:
-                        self.b[ig] += \
-                            xs.sigma_tr[gp][g] * phi[kgp] * mass_ik
+                    # Loop over groups
+                    for gp in range(self.n_groups):
+                        jgp = pwc.map_dof(cell, j, uk_man, 0, gp)
 
-                    # ==================== Fission source
-                    if apply_fission:
-                        # Without delayed neutrons
-                        if not self.use_precursors:
-                            self.b[ig] += xs.chi[g] * \
-                                          xs.nu_sigma_f[gp] * \
-                                          phi[kgp] * mass_ik
+                        coeff = 0.0  # total transfer coefficient
 
-                        # With delayed neutrons
-                        else:
-                            # =============== Prompt fission
-                            self.b[ig] += xs.chi_prompt[g] * \
-                                          xs.nu_prompt_sigma_f[gp] * \
-                                          phi[kgp] * mass_ik
+                        # Scattering source
+                        if apply_scattering_source:
+                            coeff += xs.sigma_tr[gp][g]
 
-                            # =============== Delayed fission
-                            for j in range(xs.n_precursors):
-                                self.b[ig] += xs.chi_delayed[g][j] * \
-                                              xs.precursor_yield[j] * \
-                                              xs.nu_delayed_sigma_f[gp] * \
-                                              phi[kgp] * mass_ik
+                        # Fission source
+                        if apply_fission_source:
+                            # Total fission
+                            if not self.use_precursors:
+                                coeff += xs.chi[g] * xs.nu_sigma_f[gp]
+                            else:
+                                # Prompt fission
+                                coeff += xs.chi_prompt[g] * \
+                                         xs.nu_prompt_sigma_f[gp]
 
-        # ======================================== Loop over faces
-        #                                          Stop on boundaries
+                                # Delayed fission
+                                for j in range(xs.n_precursors):
+                                    coeff += xs.chi_delayed[g][j] * \
+                                             xs.precursor_yield[j] * \
+                                             xs.nu_delayed_sigma_f[gp]
+
+                        self.b[ig] += coeff * self.phi[jgp] * mass_ij
+
+        # Loop over faces
         for f_id, face in enumerate(cell.faces):
-            if not face.has_neighbor and apply_boundaries:
+
+            # Boundary conditions
+            if not face.has_neighbor and apply_boundary_source:
                 bndry_id = -1 * (face.neighbor_id + 1)
-                bc = self.boundaries[bndry_id * self.n_groups + g]
 
-                # ============================== Dirichlet boundary
-                if issubclass(type(bc), DirichletBoundary):
-                    bc: DirichletBoundary = bc
+                # Loop over groups
+                for g in range(self.n_groups):
+                    bc = self.boundaries[bndry_id * self.n_groups + g]
 
-                    # ==================== Loop over face nodes
-                    n_face_nodes = len(view.face_node_mapping[f_id])
-                    for fi in range(n_face_nodes):
-                        ig = pwc.map_face_dof(cell, f_id, fi, uk_man, 0, g)
-                        self.b[ig] = bc.value
+                    # Dirichlet boundary
+                    if issubclass(type(bc), DirichletBoundary):
+                        bc: DirichletBoundary = bc
 
-                # ============================== Neumann boundary
-                elif issubclass(type(bc), NeumannBoundary):
-                    bc: NeumannBoundary = bc
+                        # Loop over face nodes
+                        n_face_nodes = len(view.face_node_mapping[f_id])
+                        for fi in range(n_face_nodes):
+                            ig = pwc.map_face_dof(cell, f_id, fi, uk_man, 0, g)
+                            self.b[ig] = bc.value
 
-                    # ==================== Loop over face nodes
-                    n_face_nodes = len(view.face_node_mapping[f_id])
-                    for fi in range(n_face_nodes):
-                        ni = view.face_node_mapping[f_id][fi]
-                        ig = pwc.map_face_dof(cell, f_id, fi, uk_man, 0, g)
-                        self.b[ig] += bc.value * view.intS_shapeI[f_id][ni]
+                    # Neumann boundary
+                    elif issubclass(type(bc), NeumannBoundary):
+                        bc: NeumannBoundary = bc
 
-                # ============================== Robin boundary
-                elif issubclass(type(bc), RobinBoundary):
-                    bc: RobinBoundary = bc
+                        # Loop over face nodes
+                        n_face_nodes = len(view.face_node_mapping[f_id])
+                        for fi in range(n_face_nodes):
+                            ni = view.face_node_mapping[f_id][fi]
+                            ig = pwc.map_face_dof(cell, f_id, fi, uk_man, 0, g)
 
-                    # ==================== Loop over face nodes
-                    n_face_nodes = len(view.face_node_mapping[f_id])
-                    for fi in range(n_face_nodes):
-                        ni = view.face_node_mapping[f_id][fi]
-                        ig = pwc.map_face_dof(cell, f_id, fi, uk_man, 0, g)
-                        self.b[ig] += bc.f / bc.b * view.intS_shapeI[f_id][ni]
+                            intS_shapeI = view.intS_shapeI[f_id][ni]
+                            self.b[ig] += bc.value * intS_shapeI
+
+                    # Robin boundary
+                    elif issubclass(type(bc), RobinBoundary):
+                        bc: RobinBoundary = bc
+
+                        # Loop over face nodes
+                        n_face_nodes = len(view.face_node_mapping[f_id])
+                        for fi in range(n_face_nodes):
+                            ni = view.face_node_mapping[f_id][fi]
+                            ig = pwc.map_face_dof(cell, f_id, fi, uk_man, 0, g)
+
+                            intS_shapeI = view.intS_shapeI[f_id][ni]
+                            self.b[ig] += bc.f / bc.b * intS_shapeI
 
 
-def pwc_compute_precursors(self: "SteadyStateSolver") -> None:
+def _pwc_compute_precursors(self: "SteadyStateSolver") -> None:
     """Compute the delayed neutron precursor concentration."""
     pwc: PiecewiseContinuous = self.discretization
     flux_uk_man = self.flux_uk_man
     prec_uk_man = self.precursor_uk_man
-    self.precursors *= 0.0
 
-    # ======================================== Loop over cells
+    # Loop over cells
+    self.precursors *= 0.0
     for cell in self.mesh.cells:
+        volume = cell.volume
         view = pwc.fe_views[cell.id]
         xs = self.material_xs[cell.material_id]
 
-        # =================================== Loop over precursors
-        for j in range(xs.n_precursors):
-            ij = cell.id * prec_uk_man.total_components + j
-            coeff = \
-                xs.precursor_yield[j] / xs.precursor_lambda[j]
+        # Loop over precursors
+        for p in range(xs.n_precursors):
+            dof = cell.id * prec_uk_man.total_components + p
+            coeff =  xs.precursor_yield[p] / xs.precursor_lambda[p]
 
-            # ============================== Loop over nodes
+            # Loop over nodes
             for i in range(view.n_nodes):
                 intV_shapeI = view.intV_shapeI[i]
 
-                # ========================= Loop over groups
+                # Loop over groups
                 for g in range(self.n_groups):
                     ig = pwc.map_dof(cell, i, flux_uk_man, 0, g)
-                    self.precursors[ij] += \
+                    self.precursors[dof] += \
                         coeff * xs.nu_delayed_sigma_f[g] * \
                         self.phi[ig] * intV_shapeI / cell.volume

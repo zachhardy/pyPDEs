@@ -19,69 +19,19 @@ from pyPDEs.utilities.boundaries import Boundary
 
 class SteadyStateSolver:
     """Class for solving multigroup diffusion problems.
-
-    Attributes
-    ----------
-    mesh : Mesh
-        The spatial mesh to solve the problem on.
-
-    discretization : SpatialDiscretization
-        The spatial discretization used to solve the problem.
-
-    boundaries : List[Boundary]
-        The boundary conditions imposed on the equations.
-        There should be a boundary condition for each group
-        and boundary. In the list, each boundaries group-wise
-        boundary conditions should be listed next to each other.
-
-    material_xs : List[CrossSections]
-        The cross sections corresponding to the material IDs
-        defined on the cells. There should be as many cross
-        sections as unique material IDs on the mesh.
-
-    material_src : List[MultigroupSource]
-        The multi-group sources corresponding to the material
-        IDs defined on the cells. There should be as many
-        multi-group sources as unique material IDs on the mesh.
-
-    use_precursors : bool
-        A flag for including delayed neutrons.
-    tolerance : float
-        The iterative tolerance for the group-wise solver.
-    max_iterations : int
-        The maximum number of iterations for the group-wise
-        solver to take before exiting.
-
-    b : ndarray (n_nodes * n_groups,)
-        The right-hand side of the linear system to solve.
-    L : List[csr_matrix]
-        The group-wise diffusion operators used to solve the
-        equations group-wise. There are n_groups matrices stored.
-
-    phi : ndarray (n_nodes * n_groups,)
-        The most current scalar flux solution vector.
-    flux_uk_man : UnknownManager
-        An unknown manager tied to the scalar flux solution vector.
-
-    precurosrs : ndarray (n_nodes * max_precursors_per_material,)
-        The delayed neutron precursor concentrations.
-
-        In multi-material problems, this vector stores up to the
-        maximum number of precursors that live on any given material.
-        This implies that material IDs must be used to map the
-        concentration of specific precursor species. This structure
-        is used to prevent very sparse vectors in many materials.
-    precursor_uk_man : UnknownManager
-        An unknown manager tied to the precursor vector.
     """
 
-    from ._assemble_fv import fv_assemble_matrix
-    from ._assemble_fv import fv_set_source
-    from ._assemble_fv import fv_compute_precursors
+    from ._assemble_fv import _fv_assemble_diffusion_matrix
+    from ._assemble_fv import _fv_assemble_scattering_matrix
+    from ._assemble_fv import _fv_assemble_fission_matrix
+    from ._assemble_fv import _fv_set_source
+    from ._assemble_fv import _fv_compute_precursors
 
-    from ._assemble_pwc import pwc_assemble_matrix
-    from ._assemble_pwc import pwc_set_source
-    from ._assemble_pwc import pwc_compute_precursors
+    from ._assemble_pwc import _pwc_assemble_diffusion_matrix
+    from ._assemble_pwc import _pwc_assemble_scattering_matrix
+    from ._assemble_pwc import _pwc_assemble_fission_matrix
+    from ._assemble_pwc import _pwc_set_source
+    from ._assemble_pwc import _pwc_compute_precursors
 
     def __init__(self) -> None:
         self.mesh: Mesh = None
@@ -96,8 +46,14 @@ class SteadyStateSolver:
         self.tolerance: float = 1.0e-8
         self.max_iterations: int = 500
 
+        self.use_groupwise_solver: bool = True
+
+        self.L: csr_matrix = None
+        self.S: csr_matrix = None
+        self.F: csr_matrix = None
+        # self.Lg: List[csr_matrix] = []
+
         self.b: ndarray = None
-        self.L: List[csr_matrix] = None
 
         self.phi: ndarray = None
         self.flux_uk_man: UnknownManager = UnknownManager()
@@ -131,13 +87,13 @@ class SteadyStateSolver:
         self._check_inputs()
         sd = self.discretization
 
-        # ======================================== Initialize flux
+        # Initialize flux
         self.flux_uk_man.clear()
         self.flux_uk_man.add_unknown(self.n_groups)
         flux_dofs = sd.n_dofs(self.flux_uk_man)
         self.phi = np.zeros(flux_dofs)
 
-        # ======================================== Initialize precursors
+        # Initialize precursors
         if self.use_precursors:
             # Determine the max precursors per material
             max_precursors = 0
@@ -154,80 +110,144 @@ class SteadyStateSolver:
             else:
                 self.use_precursors = False
 
-        # ======================================== Initialize system storage
+        #  Initialize system storage
         self.b = np.zeros(flux_dofs)
-        self.L = []
-        for g in range(self.n_groups):
-            self.L.append(self.assemble_matrix(g))
+
+        self.L = self.assemble_diffusion_matrix()
+        self.S = self.assemble_scattering_matrix()
+        self.F = self.assemble_fission_matrix()
 
     def execute(self, verbose: bool = False) -> None:
         """Execute the steady-state diffusion solver.
         """
-
         print("\n***** Executing steady-state "
               "multi-group diffusion solver *****")
-        n_grps = self.n_groups
-        phi_ell = np.zeros(self.phi.shape)
-        phi_change = 1.0
 
-        # ======================================== Start iterating
-        converged = False
-        for nit in range(self.max_iterations):
-
-            # =================================== Solve group-wise
+        # Solve the full multi-group system
+        if not self.use_groupwise_solver:
             self.b *= 0.0
-            for g in range(n_grps):
-                self.set_source(g, self.phi)
-                self.phi[g::n_grps] = \
-                    spsolve(self.L[g], self.b[g::n_grps])
+            self.set_source(True, True, False, False)
+            A = self.L - self.S - self.F
+            self.phi = spsolve(A, self.b)
 
-            # =================================== Check convergence
-            phi_change = norm(self.phi - phi_ell)
-            phi_ell[:] = self.phi
-
-            if verbose:
-                print(f"===== Iteration {nit} Change = {phi_change:.3e}")
-
-            if phi_change <= self.tolerance:
-                converged = True
-                break
-
-        # ======================================== Compute precursors
-        self.compute_precursors()
-
-        # ======================================== Print summary
-        if converged:
-            msg = "\n***** Solver Converged *****"
+        # Solve the system group-wise
         else:
-            msg = "!!!!! WARNING: Solver NOT Converged !!!!!"
-        msg += f"\nFinal Change:\t\t{phi_change:.3e}"
-        msg += f"\n# of Iterations:\t{nit}"
-        print(msg)
+            n_grps = self.n_groups
+            phi_ell = np.zeros(self.phi.shape)
+            phi_change = 1.0
 
-    def assemble_matrix(self, g: int) -> csr_matrix:
-        """Assemble the diffusion matrix for group g.
+            # Start iterating
+            converged = False
+            for nit in range(self.max_iterations):
 
-        Parameters
-        ----------
-        g : int
-            The energy group under consideration.
+                # Solve group-wise
+                for g in range(n_grps):
+                    self.b *= 0.0
+                    self.set_source()
+                    self.phi[g::n_grps] = \
+                        spsolve(self.Lg(g), self.bg(g))
+
+                # Check convergence
+                phi_change = norm(self.phi - phi_ell)
+                phi_ell[:] = self.phi
+
+                if verbose:
+                    print(f"===== Iteration {nit} Change = {phi_change:.3e}")
+
+                if phi_change <= self.tolerance:
+                    converged = True
+                    break
+
+            # Compute precursors
+            self.compute_precursors()
+
+            # Print summary
+            if converged:
+                msg = "\n***** Solver Converged *****"
+            else:
+                msg = "!!!!! WARNING: Solver NOT Converged !!!!!"
+            msg += f"\nFinal Change:\t\t{phi_change:.3e}"
+            msg += f"\n# of Iterations:\t{nit}"
+            print(msg)
+
+    def assemble_diffusion_matrix(self) -> csr_matrix:
+        """Assemble the multi-group diffusion matrix.
 
         Returns
         -------
         csr_matrix
-            The diffusion matrix for group g.
         """
         if isinstance(self.discretization, FiniteVolume):
-            return self.fv_assemble_matrix(g)
+            return self._fv_assemble_diffusion_matrix()
         else:
-            return self.pwc_assemble_matrix(g)
+            return self._pwc_assemble_diffusion_matrix()
 
-    def set_source(self, g: int, phi: ndarray,
-                  apply_material_source: bool = True,
-                  apply_scattering: bool = True,
-                  apply_fission: bool = True,
-                  apply_boundaries: bool = True) -> None:
-        """Assemble the right-hand side for group g.
+    def assemble_scattering_matrix(self) -> csr_matrix:
+        """Assemble the multi-group scattering matrix.
+
+        Returns
+        -------
+        csr_matrix
+        """
+        if isinstance(self.discretization, FiniteVolume):
+            return self._fv_assemble_scattering_matrix()
+        else:
+            return self._pwc_assemble_scattering_matrix()
+
+    def assemble_fission_matrix(self) -> csr_matrix:
+        """Assemble the multi-group fission matrix.
+
+        Returns
+        -------
+        csr_matrix
+        """
+        if isinstance(self.discretization, FiniteVolume):
+            return self._fv_assemble_fission_matrix()
+        else:
+            return self._pwc_assemble_fission_matrix()
+
+    def Lg(self, g: int) -> csr_matrix:
+        """Get the `g`'th group's diffusion matrix.
+
+        Parameters
+        ----------
+        g : int
+
+        Returns
+        -------
+        csr_matrix
+        """
+        if self.flux_uk_man.storage_method == "NODAL":
+            return self.L[g::self.n_groups, g::self.n_groups]
+        else:
+            ni = g * self.discretization.n_nodes
+            nf = (g + 1) * self.discretization.n_nodes
+            return self.L[ni:nf, ni:nf]
+
+    def bg(self, g: int) -> ndarray:
+        """Get the `g`'th group's right-hand side.
+
+        Parameters
+        ----------
+        g : int
+
+        Returns
+        -------
+        ndarray
+        """
+        if self.flux_uk_man.storage_method == "NODAL":
+            return self.b[g::self.n_groups]
+        else:
+            ni = g * self.discretization.n_nodes
+            nf = (g + 1) * self.discretization.n_nodes
+            return self.b[ni:nf]
+
+    def set_source(self,
+                   apply_material_source: bool = True,
+                   apply_boundary_source: bool = True,
+                   apply_scattering_source: bool = True,
+                   apply_fission_source: bool = True) -> None:
+        """Assemble the right-hand side for group `g`.
 
         This routine assembles the material source, scattering source,
         fission source, and boundary source based upon the provided flags.
@@ -236,28 +256,26 @@ class SteadyStateSolver:
         ----------
         g : int
             The group under consideration
-        phi : ndarray
-            A vector to compute scattering and fission sources with.
         apply_material_source : bool, default True
-        apply_scattering : bool, default True
-        apply_fission : bool, default True
-        apply_boundaries : bool, default True
+        apply_boundary_source : bool, default True
+        apply_scattering_source : bool, default True
+        apply_fission_source : bool, default True
         """
-        flags = (apply_material_source, apply_scattering,
-                 apply_fission, apply_boundaries)
+        flags = (apply_material_source, apply_boundary_source,
+                 apply_scattering_source, apply_fission_source)
         if isinstance(self.discretization, FiniteVolume):
-            self.fv_set_source(g, phi, *flags)
+            self._fv_set_source(*flags)
         else:
-            self.pwc_set_source(g, phi, *flags)
+            self._pwc_set_source(*flags)
 
     def compute_precursors(self) -> None:
         """Compute the delayed neutron precursor concentration.
         """
         if self.use_precursors:
             if isinstance(self.discretization, FiniteVolume):
-                self.fv_compute_precursors()
+                self._fv_compute_precursors()
             else:
-                self.pwc_compute_precursors()
+                self._pwc_compute_precursors()
 
     def plot_solution(self, title: str = None) -> None:
         """Plot the solution, including the precursors, if used.
