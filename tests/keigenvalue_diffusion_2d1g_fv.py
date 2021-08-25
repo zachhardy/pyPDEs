@@ -11,6 +11,7 @@ from time import time
 
 from modules.diffusion import *
 
+# Create mesh, assign material IDs
 x_verts = np.linspace(0.0, 10.0, 81)
 y_verts = np.linspace(0.0, 10.0, 81)
 
@@ -27,20 +28,23 @@ for cell in mesh.cells:
     else:
         cell.material_id = 1
 
+# Create discretizations
 discretization = FiniteVolume(mesh)
 
+# Create cross sections and sources
 xs_fuel = CrossSections()
 xs_fuel.read_from_xs_file("xs/fuel_1g.cxs")
+src_fuel = MultiGroupSource(np.ones(xs_fuel.n_groups))
 
 xs_refl = CrossSections()
 xs_refl.read_from_xs_file("xs/reflector_1g.cxs")
-
-src_fuel = MultiGroupSource(np.ones(xs_fuel.n_groups))
 src_refl = MultiGroupSource(np.zeros(xs_refl.n_groups))
 
+# Create boundary conditions
 boundaries = [ReflectiveBoundary(), VacuumBoundary(),
               VacuumBoundary(), ReflectiveBoundary()]
 
+# Initialize solver and attach objects
 solver = KEigenvalueSolver()
 solver.mesh = mesh
 solver.discretization = discretization
@@ -48,9 +52,11 @@ solver.boundaries = boundaries
 solver.material_xs = [xs_fuel, xs_refl]
 solver.material_src = [src_fuel, src_refl]
 
+# Set options
 solver.max_iterations = 2500
 solver.tolerance = 1.0e-6
 
+# Run the problem
 solver.initialize()
 solver.execute()
 solver.plot_solution()

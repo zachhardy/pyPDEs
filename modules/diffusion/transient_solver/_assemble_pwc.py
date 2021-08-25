@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from . import TransientSolver
 
 
-def _pwc_assemble_mass_matrix(self: "TransientSolver") -> csr_matrix:
+def _pwc_mass_matrix(self: "TransientSolver") -> csr_matrix:
     """Assemble the multi-group mass matrix.
 
     Returns
@@ -64,7 +64,7 @@ def _pwc_assemble_mass_matrix(self: "TransientSolver") -> csr_matrix:
     return csr_matrix((data, (rows, rows)), shape=(n_dofs,) * 2)
 
 
-def _pwc_assemble_transient_fission_matrix(
+def _pwc_transient_fission_matrix(
         self: "TransientSolver", step: int = 0) -> csr_matrix:
     """Assemble the transient multi-group fission matrix.
 

@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from . import SteadyStateSolver
 
-def _pwc_assemble_diffusion_matrix(
+def _pwc_diffusion_matrix(
         self: "SteadyStateSolver") -> csr_matrix:
     """Assemble the multi-group diffusion matrix.
 
@@ -107,7 +107,7 @@ def _pwc_assemble_diffusion_matrix(
     return csr_matrix((data, (rows, cols)), shape=(n_dofs,) * 2)
 
 
-def _pwc_assemble_scattering_matrix(
+def _pwc_scattering_matrix(
         self: "SteadyStateSolver") -> csr_matrix:
     """Assemble the multi-group scattering matrix.
 
@@ -169,7 +169,7 @@ def _pwc_assemble_scattering_matrix(
     return csr_matrix((data, (rows, cols)), shape=(n_dofs,) * 2)
 
 
-def _pwc_assemble_fission_matrix(
+def _pwc_fission_matrix(
         self: "SteadyStateSolver") -> csr_matrix:
     """Assemble the multi-group scattering matrix.
 

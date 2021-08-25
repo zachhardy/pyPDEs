@@ -20,14 +20,14 @@ class TransientSolver(KEigenvalueSolver):
     """Transient solver for multi-group diffusion problems.
     """
 
-    from ._assemble_fv import _fv_assemble_mass_matrix
-    from ._assemble_fv import _fv_assemble_transient_fission_matrix
+    from ._assemble_fv import _fv_mass_matrix
+    from ._assemble_fv import _fv_transient_fission_matrix
     from ._assemble_fv import _fv_set_transient_source
     from ._assemble_fv import _fv_update_precursors
     from ._assemble_fv import _fv_compute_power
 
-    from ._assemble_pwc import _pwc_assemble_mass_matrix
-    from ._assemble_pwc import _pwc_assemble_transient_fission_matrix
+    from ._assemble_pwc import _pwc_mass_matrix
+    from ._assemble_pwc import _pwc_transient_fission_matrix
     from ._assemble_pwc import _pwc_set_transient_source
     from ._assemble_pwc import _pwc_update_precursors
     from ._assemble_pwc import _pwc_compute_power
@@ -52,13 +52,12 @@ class TransientSolver(KEigenvalueSolver):
         self.power_old: float = 1.0
         self.energy_per_fission: float = 1.0
 
-        self.phi_old: ndarray = None
-        self.precursors_old: ndarray = None
-
-        self.b_old: ndarray = None
         self.M: csr_matrix = None
         self.A: List[csr_matrix] = None
-        self.Ft: List[csr_matrix] = None
+
+        self.b_old: ndarray = None
+        self.phi_old: ndarray = None
+        self.precursors_old: ndarray = None
 
         self.outputs: Outputs = Outputs()
 
@@ -67,36 +66,44 @@ class TransientSolver(KEigenvalueSolver):
         """
         super(KEigenvalueSolver, self).initialize()
 
+        # Set output frequency, if not set
         if not self.output_frequency:
             self.output_frequency = self.dt
 
+        # Ensure dt <= output frequency
         if self.dt > self.output_frequency:
             self.dt = self.output_frequency
 
+        # Initialize vectors
         self.b_old = np.copy(self.b)
         self.phi_old = np.copy(self.phi)
         if self.use_precursors:
             self.precursors_old = np.copy(self.precursors)
 
-        self.M = self.assemble_mass_matrix()
-
+        # Assemble relevant matrices
+        self.M = self.mass_matrix()
         self.assemble_evolution_matrices()
+
+        # Compute the initial conditions
         self.compute_initial_values()
 
+        # Compute the effective energy per fission
+        self.energy_per_fission = self.power / self.compute_power()
+
+        # Initialize outputs
         self.outputs.reset()
         self.store_outputs(0.0)
-
-        self.energy_per_fission = self.power / self.compute_power()
 
     def execute(self, verbose: bool = False) -> None:
         """Execute the transient multi-group diffusion solver.
         """
         print("\n***** Executing the transient "
               "multi-group diffusion solver. *****")
+        power_old = self.power
+        next_output_time = self.output_frequency
 
         # Start time stepping
         time, n_steps, dt0 = 0.0, 0, self.dt
-        next_output_time = self.output_frequency
         while time < self.t_final - sys.float_info.epsilon:
 
             # Force coincidence with output times
@@ -115,7 +122,7 @@ class TransientSolver(KEigenvalueSolver):
             self.power = self.compute_power()
 
             # Refinements, if adaptivity is on
-            dP = abs(self.power - self.power_old) / self.power_old
+            dP = abs(self.power - power_old) / power_old
             while self.adaptivity and dP > self.refine_level:
 
                 # Reset the solutions
@@ -132,7 +139,7 @@ class TransientSolver(KEigenvalueSolver):
 
                 # Compute the new power, dP
                 self.power = self.compute_power()
-                dP = abs(self.power - self.power_old) / self.power_old
+                dP = abs(self.power - power_old) / power_old
 
             # Increment time
             time += self.dt
@@ -185,8 +192,8 @@ class TransientSolver(KEigenvalueSolver):
         if not self.use_groupwise_solver:
             self.b = self.set_old_transient_source(step)
             self.set_transient_source(step)
-            A = self.A[step] - self.S - self.Ft[step]
-            self.phi = spsolve(A, self.b)
+            # A = self.A[step] - self.S - self.Ft[step]
+            self.phi = spsolve(self.A[step], self.b)
 
         else:
             n_grps = self.n_groups
@@ -263,11 +270,13 @@ class TransientSolver(KEigenvalueSolver):
         return b
 
     def assemble_evolution_matrices(self) -> csr_matrix:
-        """Assemble the linear systems for a time step..
+        """Assemble the linear systems for a time step.
+
         Returns
         -------
         csr_matrix
         """
+        # Base evolution matrix
         if self.stepping_method == "BACKWARD_EULER":
             self.A = [self.L + self.M / self.dt]
         elif self.stepping_method == "CRANK_NICHOLSON":
@@ -276,12 +285,13 @@ class TransientSolver(KEigenvalueSolver):
             self.A = [self.L + 4.0 * self.M / self.dt,
                       self.L + 3.0 * self.M / self.dt]
 
-        self.Ft = [self.assemble_transient_fission_matrix(0)]
-        if self.stepping_method == "TBDF2":
-            F = self.assemble_transient_fission_matrix(1)
-            self.Ft.append(F)
+        # Subtract scattering + fission for block solving
+        if not self.use_groupwise_solver:
+            for i in range(len(self.A)):
+                Ft = self.transient_fission_matrix(i)
+                self.A[i] -= self.S + Ft
 
-    def assemble_mass_matrix(self) -> csr_matrix:
+    def mass_matrix(self) -> csr_matrix:
         """Assemble the multi-group mass matrix.
 
         Returns
@@ -289,11 +299,11 @@ class TransientSolver(KEigenvalueSolver):
         csr_matrix
         """
         if isinstance(self.discretization, FiniteVolume):
-            return self._fv_assemble_mass_matrix()
+            return self._fv_mass_matrix()
         else:
-            return self._pwc_assemble_mass_matrix()
+            return self._pwc_mass_matrix()
 
-    def assemble_transient_fission_matrix(self, step: int = 0) -> csr_matrix:
+    def transient_fission_matrix(self, step: int = 0) -> csr_matrix:
         """Assemble the transient multi-group fission matrix.
 
         Returns
@@ -301,9 +311,9 @@ class TransientSolver(KEigenvalueSolver):
         csr_matrix
         """
         if isinstance(self.discretization, FiniteVolume):
-            return self._fv_assemble_transient_fission_matrix(step)
+            return self._fv_transient_fission_matrix(step)
         else:
-            return self._pwc_assemble_transient_fission_matrix(step)
+            return self._pwc_transient_fission_matrix(step)
 
     def set_transient_source(
             self: "TransientSolver", step: int = 0,
@@ -427,7 +437,8 @@ class TransientSolver(KEigenvalueSolver):
                 f"{self.stepping_method} is not implemented.")
 
     def compute_initial_values(self) -> None:
-        """Evaluate the initial conditions."""
+        """Evaluate the initial conditions.
+        """
         if self.initial_conditions is None:
             KEigenvalueSolver.execute(self, verbose=False)
         else:

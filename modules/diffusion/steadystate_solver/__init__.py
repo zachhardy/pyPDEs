@@ -21,15 +21,15 @@ class SteadyStateSolver:
     """Class for solving multigroup diffusion problems.
     """
 
-    from ._assemble_fv import _fv_assemble_diffusion_matrix
-    from ._assemble_fv import _fv_assemble_scattering_matrix
-    from ._assemble_fv import _fv_assemble_fission_matrix
+    from ._assemble_fv import _fv_diffusion_matrix
+    from ._assemble_fv import _fv_scattering_matrix
+    from ._assemble_fv import _fv_fission_matrix
     from ._assemble_fv import _fv_set_source
     from ._assemble_fv import _fv_compute_precursors
 
-    from ._assemble_pwc import _pwc_assemble_diffusion_matrix
-    from ._assemble_pwc import _pwc_assemble_scattering_matrix
-    from ._assemble_pwc import _pwc_assemble_fission_matrix
+    from ._assemble_pwc import _pwc_diffusion_matrix
+    from ._assemble_pwc import _pwc_scattering_matrix
+    from ._assemble_pwc import _pwc_fission_matrix
     from ._assemble_pwc import _pwc_set_source
     from ._assemble_pwc import _pwc_compute_precursors
 
@@ -111,9 +111,10 @@ class SteadyStateSolver:
         #  Initialize system storage
         self.b = np.zeros(flux_dofs)
 
-        self.L = self.assemble_diffusion_matrix()
-        self.S = self.assemble_scattering_matrix()
-        self.F = self.assemble_fission_matrix()
+        self.L = self.diffusion_matrix()
+        if not self.use_groupwise_solver:
+            self.S = self.scattering_matrix()
+            self.F = self.fission_matrix()
 
     def execute(self, verbose: bool = False) -> None:
         """Execute the steady-state diffusion solver.
@@ -123,10 +124,10 @@ class SteadyStateSolver:
 
         # Solve the full multi-group system
         if not self.use_groupwise_solver:
+            # Solve the system
             self.b *= 0.0
             self.set_source()
-            A = self.L - self.S - self.F
-            self.phi = spsolve(A, self.b)
+            self.phi = spsolve(self.L - self.S - self.F, self.b)
 
         # Solve the system group-wise
         else:
@@ -169,7 +170,7 @@ class SteadyStateSolver:
             print(f"Final Change:\t\t{phi_change:.3e}")
             print(f"# of Iterations:\t{nit}\n")
 
-    def assemble_diffusion_matrix(self) -> csr_matrix:
+    def diffusion_matrix(self) -> csr_matrix:
         """Assemble the multi-group diffusion matrix.
 
         Returns
@@ -177,11 +178,11 @@ class SteadyStateSolver:
         csr_matrix
         """
         if isinstance(self.discretization, FiniteVolume):
-            return self._fv_assemble_diffusion_matrix()
+            return self._fv_diffusion_matrix()
         else:
-            return self._pwc_assemble_diffusion_matrix()
+            return self._pwc_diffusion_matrix()
 
-    def assemble_scattering_matrix(self) -> csr_matrix:
+    def scattering_matrix(self) -> csr_matrix:
         """Assemble the multi-group scattering matrix.
 
         Returns
@@ -189,11 +190,11 @@ class SteadyStateSolver:
         csr_matrix
         """
         if isinstance(self.discretization, FiniteVolume):
-            return self._fv_assemble_scattering_matrix()
+            return self._fv_scattering_matrix()
         else:
-            return self._pwc_assemble_scattering_matrix()
+            return self._pwc_scattering_matrix()
 
-    def assemble_fission_matrix(self) -> csr_matrix:
+    def fission_matrix(self) -> csr_matrix:
         """Assemble the multi-group fission matrix.
 
         Returns
@@ -201,9 +202,9 @@ class SteadyStateSolver:
         csr_matrix
         """
         if isinstance(self.discretization, FiniteVolume):
-            return self._fv_assemble_fission_matrix()
+            return self._fv_fission_matrix()
         else:
-            return self._pwc_assemble_fission_matrix()
+            return self._pwc_fission_matrix()
 
     def set_source(self,
                    apply_material_source: bool = True,
