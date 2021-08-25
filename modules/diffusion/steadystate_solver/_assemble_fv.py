@@ -77,7 +77,7 @@ def _fv_assemble_diffusion_matrix(
                     D_p = xs.diffusion_coeff[g]
                     d_pf = (cell.centroid - face.centroid).norm()
 
-                    # ==================== Boundary conditions
+                    # Boundary conditions
                     value = 0.0
                     if issubclass(type(bc), DirichletBoundary):
                         value = D_p / d_pf * face.area
