@@ -49,8 +49,10 @@ class TransientSolver(KEigenvalueSolver):
         self.lag_precursors: bool = False
 
         self.power: float = 1.0
-        self.power_old: float = 1.0
         self.energy_per_fission: float = 1.0
+
+        self.use_feedback: bool = False
+        self.feedback_coeff: float = -1.0e-3
 
         self.M: csr_matrix = None
         self.A: List[csr_matrix] = None
@@ -101,6 +103,7 @@ class TransientSolver(KEigenvalueSolver):
               "multi-group diffusion solver. *****")
         power_old = self.power
         next_output_time = self.output_frequency
+        sigma_t0 = self.material_xs[0].sigma_t
 
         # Start time stepping
         time, n_steps, dt0 = 0.0, 0, self.dt
@@ -141,13 +144,20 @@ class TransientSolver(KEigenvalueSolver):
                 self.power = self.compute_power()
                 dP = abs(self.power - power_old) / power_old
 
+            # Add feedback
+            if self.use_feedback:
+                f = 1.0 - self.feedback_coeff * self.power
+                self.material_xs[0].sigma_t = f * sigma_t0
+                self.L = self.diffusion_matrix()
+                self.assemble_evolution_matrices()
+
             # Increment time
             time += self.dt
             n_steps += 1
 
             # Reset vectors
             self.phi_old[:] = self.phi
-            self.power_old = self.power
+            power_old = self.power
             if self.use_precursors:
                 self.precursors_old[:] = self.precursors
 

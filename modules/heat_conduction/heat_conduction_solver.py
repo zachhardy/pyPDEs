@@ -53,8 +53,8 @@ class HeatConductionSolver:
 
         # Solve linear problem
         if all([not callable(k) for k in self.k]):
-            A = self.assemble_matrix()
-            b = self.assemble_source()
+            A = self.diffusion_matrix()
+            b = self.set_source()
             self.u = spsolve(A, b)
 
         # Solve nonlinear problem
@@ -106,8 +106,8 @@ class HeatConductionSolver:
         for nit in range(self.nonlinear_max_iterations):
 
             # Solve the system
-            A = self.assemble_matrix()
-            b = self.assemble_source()
+            A = self.diffusion_matrix()
+            b = self.set_source()
             self.u = spsolve(A, b)
 
             # Check convergence
@@ -207,8 +207,8 @@ class HeatConductionSolver:
         -------
         ndarray
         """
-        A = self.assemble_matrix()
-        b = self.assemble_source()
+        A = self.diffusion_matrix()
+        b = self.set_source()
         return A @ u - b
 
     def jacobian(self, u: ndarray, r: ndarray,
@@ -262,7 +262,7 @@ class HeatConductionSolver:
             J = LinearOperator((n_nodes,) * 2, matvec=jacobian_action)
         return J
 
-    def assemble_matrix(self) -> csr_matrix:
+    def diffusion_matrix(self) -> csr_matrix:
         """Assemble the heat conduction matrix.
 
         Returns
@@ -346,7 +346,7 @@ class HeatConductionSolver:
                                 data.append(value)
         return csr_matrix((data, (rows, cols)), shape=(pwc.n_nodes,) * 2)
 
-    def assemble_source(self) -> ndarray:
+    def set_source(self) -> ndarray:
         """Assemble the right-hand side.
 
         Returns

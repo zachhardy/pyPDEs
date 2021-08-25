@@ -39,9 +39,10 @@ solver.initial_conditions = \
 # Set options
 solver.use_precursors = True
 solver.lag_precursors = False
+solver.adaptivity = True
 
 # Set time stepping options
-solver.t_final = 0.1
+solver.t_final = 0.2
 solver.dt = 2.0e-3
 solver.stepping_method = "TBDF2"
 
@@ -49,4 +50,9 @@ solver.stepping_method = "TBDF2"
 solver.initialize()
 solver.execute(verbose=True)
 solver.plot_solution(title="Final Solution")
+
+times = solver.outputs.times
+power = solver.outputs.power
+plt.figure()
+plt.plot(times, power, "-*b")
 plt.show()
