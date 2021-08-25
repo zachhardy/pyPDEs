@@ -14,37 +14,24 @@ discretization = FiniteVolume(mesh)
 xs = CrossSections()
 xs.read_from_xs_file('xs/three_grp.cxs', density=0.05)
 
-src = MultiGroupSource(np.zeros(xs.n_groups))
+src = MultiGroupSource(np.ones(xs.n_groups))
 
 boundaries = []
 boundaries.extend([ReflectiveBoundary()] * xs.n_groups)
 boundaries.extend([ZeroFluxBoundary()] * xs.n_groups)
 
-solver = TransientSolver()
+solver = SteadyStateSolver()
 solver.mesh = mesh
 solver.discretization = discretization
 solver.boundaries = boundaries
 solver.material_xs = [xs]
 solver.material_src = [src]
 
-solver.use_precursors = True
-solver.lag_precursors = False
+solver.use_precursors = False
 solver.use_groupwise_solver = False
-
-solver.t_final = 0.1
-solver.dt = 2.0e-3
-solver.stepping_method = "TBDF2"
-
-
-solver.initial_conditions = \
-    [lambda r: 1.0 - r ** 2 / mesh.vertices[-1].z ** 2,
-     lambda r: 1.0 - r ** 2 / mesh.vertices[-1].z ** 2,
-     lambda r: 0.0 * r]
+solver.max_iterations = 1000
 
 solver.initialize()
-
-# print(solver.F)
-# sys.exit()
 solver.execute(verbose=True)
 solver.plot_solution(title="Final Solution")
 plt.show()
