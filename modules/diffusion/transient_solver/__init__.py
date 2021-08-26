@@ -54,6 +54,11 @@ class TransientSolver(KEigenvalueSolver):
         self.use_feedback: bool = False
         self.feedback_coeff: float = -1.0e-3
 
+        self.density: float = 19.0  # g / cc
+        self.spec_heat: float = 0.12  # J / g-K
+        self.volume: float = 0.0  # cc
+        self.temperature: float = 293.0  # K
+
         self.M: csr_matrix = None
         self.A: List[csr_matrix] = None
 
@@ -67,6 +72,9 @@ class TransientSolver(KEigenvalueSolver):
         """Initialize the transient multi-group diffusion solver.
         """
         super(KEigenvalueSolver, self).initialize()
+
+        # Compute mesh volume
+        self.volume = sum([c.volume for c in self.mesh.cells])
 
         # Set output frequency, if not set
         if not self.output_frequency:
@@ -102,6 +110,7 @@ class TransientSolver(KEigenvalueSolver):
         print("\n***** Executing the transient "
               "multi-group diffusion solver. *****")
         power_old = self.power
+        initial_temperature = self.temperature
         next_output_time = self.output_frequency
         sigma_t0 = self.material_xs[0].sigma_t
 
@@ -144,9 +153,14 @@ class TransientSolver(KEigenvalueSolver):
                 self.power = self.compute_power()
                 dP = abs(self.power - power_old) / power_old
 
+            # Compute new temperature
+            c = self.density * self.spec_heat * self.volume
+            self.temperature += self.power * self.dt / c
+
             # Add feedback
             if self.use_feedback:
-                f = 1.0 - self.feedback_coeff * self.power
+                dT = self.temperature - initial_temperature
+                f = 1.0 - self.feedback_coeff * dT
                 self.material_xs[0].sigma_t = f * sigma_t0
                 self.L = self.diffusion_matrix()
                 self.assemble_evolution_matrices()
@@ -184,7 +198,8 @@ class TransientSolver(KEigenvalueSolver):
                 print(f"***** Time Step: {n_steps} *****")
                 print(f"Simulation Time:\t{time}")
                 print(f"Time Step Size:\t\t{self.dt}")
-                print(f"System Power:\t\t{self.power}\n")
+                print(f"System Power:\t\t{self.power}")
+                print(f"Temperature:\t\t{self.temperature}\n")
 
         self.dt = dt0  # reset dt to original
 
@@ -451,6 +466,8 @@ class TransientSolver(KEigenvalueSolver):
         """
         if self.initial_conditions is None:
             KEigenvalueSolver.execute(self, verbose=False)
+            import time
+            time.sleep(2.0)
         else:
             n_grps = self.n_groups
             n_prec = self.n_precursors
