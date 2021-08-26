@@ -168,7 +168,7 @@ class SteadyStateSolver:
             header = "*" * len(msg)
             print("\n".join(["", header, msg, header]))
             print(f"Final Change:\t\t{phi_change:.3e}")
-            print(f"# of Iterations:\t{nit}\n")
+            print(f"# of Iterations:\t{nit}")
 
     def diffusion_matrix(self) -> csr_matrix:
         """Assemble the multi-group diffusion matrix.

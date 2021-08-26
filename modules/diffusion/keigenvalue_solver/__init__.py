@@ -114,7 +114,7 @@ class KEigenvalueSolver(SteadyStateSolver):
         print(f"Final k Effective:\t\t{self.k_eff:.6g}")
         print(f"Final k Effective Change:\t{k_eff_change:3e}")
         print(f"Final Phi Change:\t\t{phi_change:.3e}")
-        print(f"# of Iterations:\t\t{nit}\n")
+        print(f"# of Iterations:\t\t{nit}")
 
     def compute_fission_production(self) -> float:
         """Compute the fission production.
