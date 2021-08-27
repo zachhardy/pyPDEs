@@ -466,8 +466,6 @@ class TransientSolver(KEigenvalueSolver):
         """
         if self.initial_conditions is None:
             KEigenvalueSolver.execute(self, verbose=False)
-            import time
-            time.sleep(2.0)
         else:
             n_grps = self.n_groups
             n_prec = self.n_precursors
