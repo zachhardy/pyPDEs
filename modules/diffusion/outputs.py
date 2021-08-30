@@ -44,8 +44,6 @@ class Outputs:
     def write_outputs(self, path: str = ".") -> None:
         if not os.path.isdir(path):
             os.makedirs(path)
-        if len(os.listdir(path)) > 0:
-            os.system(f"rm -r {path}/*")
 
         time_path = os.path.join(path, "times.txt")
         np.savetxt(time_path, self.times)
