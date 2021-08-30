@@ -25,8 +25,10 @@ class KEigenvalueSolver(SteadyStateSolver):
     def execute(self, verbose: bool = False) -> None:
         """Execute the k-eigenvalue diffusion solver.
         """
-        print("\n***** Executing the k-eigenvalue "
-              "multi-group diffusion solver.")
+        if verbose:
+            print("\n***** Executing the k-eigenvalue "
+                  "multi-group diffusion solver.")
+
         uk_man = self.flux_uk_man
         num_dofs = self.discretization.n_dofs(uk_man)
         n_grps = self.n_groups
@@ -110,11 +112,13 @@ class KEigenvalueSolver(SteadyStateSolver):
         else:
             msg = "***** WARNING: k-Eigenvalue Solver NOT Converged *****"
         header = "*" * len(msg)
-        print("\n".join(["", header, msg, header]))
-        print(f"Final k Effective:\t\t{self.k_eff:.6g}")
-        print(f"Final k Effective Change:\t{k_eff_change:3e}")
-        print(f"Final Phi Change:\t\t{phi_change:.3e}")
-        print(f"# of Iterations:\t\t{nit}")
+
+        if verbose or not converged:
+            print("\n".join(["", header, msg, header]))
+            print(f"Final k Effective:\t\t{self.k_eff:.6g}")
+            print(f"Final k Effective Change:\t{k_eff_change:3e}")
+            print(f"Final Phi Change:\t\t{phi_change:.3e}")
+            print(f"# of Iterations:\t\t{nit}")
 
     def compute_fission_production(self) -> float:
         """Compute the fission production.

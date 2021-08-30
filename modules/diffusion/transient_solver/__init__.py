@@ -107,8 +107,10 @@ class TransientSolver(KEigenvalueSolver):
     def execute(self, verbose: bool = False) -> None:
         """Execute the transient multi-group diffusion solver.
         """
-        print("\n***** Executing the transient "
-              "multi-group diffusion solver. *****")
+        if verbose:
+            print("\n***** Executing the transient "
+                  "multi-group diffusion solver. *****")
+
         power_old = self.power
         initial_temperature = self.temperature
         next_output_time = self.output_frequency

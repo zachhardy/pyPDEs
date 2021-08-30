@@ -119,8 +119,9 @@ class SteadyStateSolver:
     def execute(self, verbose: bool = False) -> None:
         """Execute the steady-state diffusion solver.
         """
-        print("\n***** Executing steady-state "
-              "multi-group diffusion solver *****")
+        if verbose:
+            print("\n***** Executing steady-state "
+                  "multi-group diffusion solver *****")
 
         # Solve the full multi-group system
         if not self.use_groupwise_solver:
@@ -166,9 +167,11 @@ class SteadyStateSolver:
             else:
                 msg = "***** WARNING: Solver NOT Converged *****"
             header = "*" * len(msg)
-            print("\n".join(["", header, msg, header]))
-            print(f"Final Change:\t\t{phi_change:.3e}")
-            print(f"# of Iterations:\t{nit}")
+
+            if verbose or not converged:
+                print("\n".join(["", header, msg, header]))
+                print(f"Final Change:\t\t{phi_change:.3e}")
+                print(f"# of Iterations:\t{nit}")
 
     def diffusion_matrix(self) -> csr_matrix:
         """Assemble the multi-group diffusion matrix.
