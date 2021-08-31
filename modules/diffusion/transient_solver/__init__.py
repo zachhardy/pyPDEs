@@ -118,7 +118,7 @@ class TransientSolver(KEigenvalueSolver):
 
         # Start time stepping
         time, n_steps, dt0 = 0.0, 0, self.dt
-        while time < self.t_final - sys.float_info.epsilon:
+        while time < self.t_final:
 
             # Force coincidence with output times
             if time + self.dt > next_output_time:
@@ -126,7 +126,8 @@ class TransientSolver(KEigenvalueSolver):
                 self.assemble_evolution_matrices()
 
             # Force coincidence with end time
-            if time + self.dt > self.t_final:
+            if time + self.dt > self.t_final or\
+                    abs(time + self.dt - self.t_final) < 1.0e-12:
                 self.dt = self.t_final - time
                 self.assemble_evolution_matrices()
 
