@@ -69,7 +69,7 @@ class Outputs:
             if not os.path.isdir(precursor_dirpath):
                 os.makedirs(precursor_dirpath)
             if len(os.listdir(precursor_dirpath)) > 0:
-                os.system(f"rm - r {precursor_dirpath}/*")
+                os.system(f"rm -r {precursor_dirpath}/*")
 
             for j in range(len(self.precursors[0])):
                 filepath = os.path.join(precursor_dirpath, f"j{j}.txt")

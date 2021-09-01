@@ -22,10 +22,10 @@ class KEigenvalueSolver(SteadyStateSolver):
         super().__init__()
         self.k_eff = 1.0
 
-    def execute(self, verbose: bool = False) -> None:
+    def execute(self, verbose: int = 0) -> None:
         """Execute the k-eigenvalue diffusion solver.
         """
-        if verbose:
+        if verbose > 0:
             print("\n***** Executing the k-eigenvalue "
                   "multi-group diffusion solver.")
 
@@ -88,7 +88,7 @@ class KEigenvalueSolver(SteadyStateSolver):
             phi_ell[:] = self.phi
 
             # Print iteration summary
-            if verbose:
+            if verbose > 1:
                 print(f"\n===== Iteration {nit} =====\n"
                       f"{'k_eff':<15} = {self.k_eff:.6g}\n"
                       f"{'k_eff Change':<15} = {k_eff_change:.3e}\n"
