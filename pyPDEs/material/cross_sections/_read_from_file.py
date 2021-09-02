@@ -59,12 +59,12 @@ def read_from_xs_file(self, filename: str, density: float = 1.0) -> None:
     with open(filename) as file:
         lines = file.readlines()
 
-        # ======================================== Go through file
+        # Go through file
         line_num = 0
         while line_num < len(lines):
             line = lines[line_num].split()
 
-            # ======================================== Skip empty lines
+            # Skip empty lines
             while len(line) == 0:
                 line_num += 1
                 line = lines[line_num].split()
@@ -81,6 +81,9 @@ def read_from_xs_file(self, filename: str, density: float = 1.0) -> None:
             if line[0] == "SIGMA_T_BEGIN":
                 read_1d_xs("SIGMA_T", self.sigma_t, lines, line_num)
                 self.sigma_t *= density
+
+            if line[0] == "DIFFUSION_COEFF_BEGIN":
+                read_1d_xs("DIFFUSION_COEFF", self.D, lines, line_num)
 
             if line[0] == "SIGMA_F_BEGIN":
                 read_1d_xs("SIGMA_F", self.sigma_f, lines, line_num)
@@ -117,8 +120,8 @@ def read_from_xs_file(self, filename: str, density: float = 1.0) -> None:
                 read_1d_xs("INV_VELOCITY", self.inv_velocity, lines, line_num)
 
             if line[0] == "TRANSFER_MOMENTS_BEGIN":
-                read_transfer_matrix("TRANSFER_MOMENTS", self.sigma_tr, lines, line_num)
-                self.sigma_tr *= density
+                read_transfer_matrix("TRANSFER_MOMENTS", self.transfer_matrix, lines, line_num)
+                self.transfer_matrix *= density
 
             if line[0] == "PRECURSOR_LAMBDA_BEGIN":
                 read_1d_xs("PRECURSOR_LAMBDA", self.precursor_lambda, lines, line_num)
@@ -133,5 +136,5 @@ def read_from_xs_file(self, filename: str, density: float = 1.0) -> None:
 
             line_num += 1
 
-    # ================================================== Compute other xs
+    # Compute other xs
     self.finalize_xs()

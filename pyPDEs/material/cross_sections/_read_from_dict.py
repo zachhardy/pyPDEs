@@ -29,7 +29,7 @@ def read_from_xs_dict(
     self.has_precursors = self.n_precursors > 0
     self.reset_delayed_xs()
 
-    # ======================================== Get general xs
+    # Get general xs
     sig_t = xs.get("sigma_t")
     if not sig_t:
         raise KeyError("sigma_t must be provided.")
@@ -38,16 +38,30 @@ def read_from_xs_dict(
             "sigma_t is incompatible with num_groups.")
     self.sigma_t = density * np.array(sig_t)
 
-    sig_tr = xs.get("sigma_tr")
-    if not sig_tr:
-        raise KeyError(
-            "sigma_tr must be provided")
-    if len(sig_tr) != len(sig_tr[0]) != self.n_groups:
-        raise ValueError(
-            "sigma_tr is incompatible with num_groups.")
-    self.sigma_tr = density * np.array(sig_tr)
+    if "sigma_a" in xs:
+        sig_a = xs.get("sigma_a")
+        if len(sig_a) != self.n_groups:
+            raise ValueError(
+                "sigma_a is not compatible with num_groups.")
+        self.sigma_a = density * np.array(sig_a)
 
-    # ======================================== Get fission xs
+    if "D" in xs:
+        D = xs.get("D")
+        if len(D) != self.n_groups:
+            raise ValueError(
+                "D is not compatible with num_groups.")
+        self.D = np.array(D)
+
+    transfer_matrix = xs.get("transfer_matrix")
+    if not transfer_matrix:
+        raise KeyError(
+            "transfer_matrix must be provided")
+    if len(transfer_matrix) != len(transfer_matrix[0]) != self.n_groups:
+        raise ValueError(
+            "transfer_matrix is incompatible with num_groups.")
+    self.transfer_matrix = density * np.array(transfer_matrix)
+
+    # Get fission xs
     sig_f = xs.get("sigma_f")
     if sig_f:
         self.is_fissile = True
@@ -57,7 +71,7 @@ def read_from_xs_dict(
                 "sigma_f is incompatible with num_groups.")
         self.sigma_f = density * np.array(sig_f)
 
-        # ============================== Get total fission xs
+        # Get total fission xs
         chi = xs.get("chi")
         if not chi and not self.has_precursors:
             raise KeyError(
@@ -80,7 +94,7 @@ def read_from_xs_dict(
                     "nu is incompatible with num_groups.")
             self.nu = np.array(nu)
 
-        # ============================== Get prompt fission xs
+        # Get prompt fission xs
         chi_p = xs.get("chi_prompt")
         if not chi_p and self.has_precursors:
             raise KeyError(
@@ -103,7 +117,7 @@ def read_from_xs_dict(
                     "nu_prompt is incompatible with num_groups.")
             self.nu_prompt = np.array(nu_p)
 
-        # ======================================== Delayed fission xs
+        # Delayed fission xs
         if self.has_precursors:
             p_decay = xs.get("precursor_lambda")
             if not p_decay:
@@ -146,7 +160,7 @@ def read_from_xs_dict(
                 chi_dj = np.array(chi_d[:, j])
                 self.chi_delayed[:, j] = chi_dj / np.sum(chi_dj)
 
-    # ======================================== Inverse velocity term
+    # Inverse velocity term
     inv_vel = xs.get("inv_velocity")
     if inv_vel:
         if len(inv_vel) != self.n_groups:
@@ -154,5 +168,5 @@ def read_from_xs_dict(
                 "inv_velocity is incompatible with num_groups.")
         self.inv_velocity = np.array(inv_vel)
 
-    # ================================================== Compute other xs
+    # Compute other xs
     self.finalize_xs()

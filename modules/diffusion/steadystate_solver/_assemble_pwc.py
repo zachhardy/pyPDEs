@@ -48,7 +48,7 @@ def _pwc_diffusion_matrix(
 
                     # Diffusion + reaction term
                     value = xs.sigma_t[g] * mass_ij + \
-                            xs.diffusion_coeff[g] * stiff_ij
+                            xs.D[g] * stiff_ij
                     rows.append(ig)
                     cols.append(jg)
                     data.append(value)
@@ -139,7 +139,7 @@ def _pwc_scattering_matrix(
                     for gp in range(self.n_groups):
                         jgp = pwc.map_dof(cell, j, uk_man, 0, gp)
 
-                        value = xs.sigma_tr[gp][g] * mass_ij
+                        value = xs.transfer_matrix[gp][g] * mass_ij
                         rows.append(ig)
                         cols.append(jgp)
                         data.append(value)
@@ -295,7 +295,7 @@ def _pwc_set_source(self: "SteadyStateSolver",
 
                         # Scattering source
                         if apply_scattering_source:
-                            coeff += xs.sigma_tr[gp][g]
+                            coeff += xs.transfer_matrix[gp][g]
 
                         # Fission source
                         if apply_fission_source:

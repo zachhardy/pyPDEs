@@ -51,8 +51,8 @@ def _fv_diffusion_matrix(
                     jg = fv.map_dof(nbr_cell, 0, uk_man, 0, g)
 
                     # Diffusion coeffients
-                    D_p = xs.diffusion_coeff[g]
-                    D_n = nbr_xs.diffusion_coeff[g]
+                    D_p = xs.D[g]
+                    D_n = nbr_xs.D[g]
 
                     # Node-to-neighbor/face information
                     d_pn = (cell.centroid - nbr_cell.centroid).norm()
@@ -74,7 +74,7 @@ def _fv_diffusion_matrix(
                     bndry_id = -1 * (face.neighbor_id + 1)
                     bc = self.boundaries[bndry_id * self.n_groups + g]
 
-                    D_p = xs.diffusion_coeff[g]
+                    D_p = xs.D[g]
                     d_pf = (cell.centroid - face.centroid).norm()
 
                     # Boundary conditions
@@ -117,7 +117,7 @@ def _fv_scattering_matrix(
             for gp in range(self.n_groups):
                 igp = fv.map_dof(cell, 0, uk_man, 0, gp)
 
-                value = xs.sigma_tr[gp][g] * volume
+                value = xs.transfer_matrix[gp][g] * volume
                 rows.append(ig)
                 cols.append(igp)
                 data.append(value)
@@ -214,7 +214,7 @@ def _fv_set_source(self: "SteadyStateSolver",
 
                 # Scattering source
                 if apply_scattering_source:
-                    coeff += xs.sigma_tr[gp][g]
+                    coeff += xs.transfer_matrix[gp][g]
 
                 # Fission source
                 if apply_fission_source:
@@ -246,7 +246,7 @@ def _fv_set_source(self: "SteadyStateSolver",
                 for g in range(self.n_groups):
                     bc = self.boundaries[bndry_id * self.n_groups + g]
                     ig = fv.map_dof(cell, 0, uk_man, 0, g)
-                    D_p = xs.diffusion_coeff[g]
+                    D_p = xs.D[g]
 
                     # Boundary conditions
                     value = 0.0
