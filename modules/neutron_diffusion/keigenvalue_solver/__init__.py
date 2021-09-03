@@ -1,40 +1,41 @@
 import sys
-
 import numpy as np
 
 from numpy.linalg import norm
 from scipy.sparse.linalg import spsolve
 
-from pyPDEs.spatial_discretization import (FiniteVolume,
-                                           PiecewiseContinuous)
+from pyPDEs.spatial_discretization import *
 
-from modules.diffusion import SteadyStateSolver
+from .. import SteadyStateSolver
 
 
 class KEigenvalueSolver(SteadyStateSolver):
-    """Class for solving a multi-group k-eigenvalue problem.
+    """Class for solving a k-eigenvalue multigroup diffusion problems.
     """
 
-    from ._assemble_fv import _fv_compute_fission_production
-    from ._assemble_pwc import _pwc_compute_fission_production
-
     def __init__(self) -> None:
+        """Class constructor.
+        """
         super().__init__()
-        self.k_eff = 1.0
+        self.k_eff: float = 1.0
+
+        # Iterative parameters
+        self.tolerance: float = 1.0e-8
+        self.max_iterations: int = 500
 
     def execute(self, verbose: int = 0) -> None:
-        """Execute the k-eigenvalue diffusion solver.
-        """
-        if verbose > 0:
-            print("\n***** Executing the k-eigenvalue "
-                  "multi-group diffusion solver.")
+        """Execute the k-eigenvalue multigroup diffusion solver.
 
-        uk_man = self.flux_uk_man
-        num_dofs = self.discretization.n_dofs(uk_man)
+        Parameters
+        ----------
+        verbose : int, default 0
+        """
+        uk_man = self.phi_uk_man
+        n_dofs = self.discretization.n_dofs(uk_man)
         n_grps = self.n_groups
 
         # Initialize with unit flux
-        self.phi = np.ones(num_dofs)
+        self.phi[:] = 1.0
         phi_ell = np.copy(self.phi)
 
         # Initialize book-keeping parameters
@@ -43,38 +44,17 @@ class KEigenvalueSolver(SteadyStateSolver):
         k_eff_ell = k_eff_change = 1.0
         phi_change = 1.0
 
-        # Start iterating
-        nit = 0
-        converged = False
+        # Assemble matrices
+        F = self.Fp + self.Fd  # Total fission matrix
+        A = self.L - self.S  # Diffusion - scattering matrix
+
+        # Start iterative
+        nit, converged = 0, False
         for nit in range(self.max_iterations):
-
-            # Solve group-wise
-            if self.use_groupwise_solver:
-                # Loop over groups
-                for g in range(self.n_groups):
-                    # Precompute the fission source
-                    self.b *= 0.0
-                    self.set_source(False, False, False, True)
-                    self.b /= self.k_eff
-
-                    # Add in the scattering + bpundary source
-                    self.set_source(False, True, True, False)
-
-                    # Solve group system
-                    self.phi[g::n_grps] = spsolve(self.Lg(g), self.bg(g))
-
-            # Solve block system
-            else:
-                # Precompute fission source
-                self.b *= 0.0
-                self.set_source(False, False, False, True)
-                self.b /= self.k_eff
-
-                # Add in the boundary source
-                self.set_source(False, True, False, False)
-
-                # Solve full system
-                self.phi = spsolve(self.L - self.S, self.b)
+            # Set fission source and solve
+            b = F @ self.phi / self.k_eff
+            self.apply_vector_bcs(b)
+            self.phi = spsolve(A, b)
 
             # Update k-eigenvalue
             production = self.compute_fission_production()
@@ -113,7 +93,7 @@ class KEigenvalueSolver(SteadyStateSolver):
             msg = "***** WARNING: k-Eigenvalue Solver NOT Converged *****"
         header = "*" * len(msg)
 
-        if verbose or not converged:
+        if verbose > 0 or not converged:
             print("\n".join(["", header, msg, header]))
             print(f"Final k Effective:\t\t{self.k_eff:.6g}")
             print(f"Final k Effective Change:\t{k_eff_change:3e}")
@@ -127,7 +107,19 @@ class KEigenvalueSolver(SteadyStateSolver):
         -------
         float
         """
-        if isinstance(self.discretization, FiniteVolume):
-            return self._fv_compute_fission_production()
-        else:
-            return self._pwc_compute_fission_production()
+        fv: FiniteVolume = self.discretization
+        uk_man = self.phi_uk_man
+
+        # Loop over cells
+        production = 0.0
+        for cell in self.mesh.cells:
+            volume = cell.volume
+            xs = self.material_xs[cell.material_id]
+
+            # Loop over groups
+            for g in range(self.n_groups):
+                ig = fv.map_dof(cell, 0, uk_man, 0, g)
+                production += xs.nu_sigma_f[g] * self.phi[ig] * volume
+        return production
+
+

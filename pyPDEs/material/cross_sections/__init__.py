@@ -41,9 +41,6 @@ class CrossSections(MaterialProperty):
         self.precursor_lambda: ndarray = None
         self.precursor_yield: ndarray = None
 
-        self.beta: ndarray = None
-        self.beta_total: float = 0
-
     @property
     def nu_sigma_f(self) -> ndarray:
         """Get total nu times the fission cross sections.
@@ -88,9 +85,6 @@ class CrossSections(MaterialProperty):
         if sum(nu_p) > 0.0 and sum(nu_d) > 0.0:
             self.nu = nu_p + nu_d
 
-        self.beta = nu_d / self.nu * self.precursor_yield
-        self.beta_total = sum(self.beta)
-
     def reset_groupwise_xs(self) -> None:
         """Reset the general and prompt cross sections.
         """
@@ -114,5 +108,3 @@ class CrossSections(MaterialProperty):
         self.chi_delayed = np.zeros((self.n_groups, self.n_precursors))
         self.precursor_lambda = np.zeros(self.n_precursors)
         self.precursor_yield = np.zeros(self.n_precursors)
-        self.beta = np.zeros(self.n_precursors)
-        self.beta_total = 0.0
