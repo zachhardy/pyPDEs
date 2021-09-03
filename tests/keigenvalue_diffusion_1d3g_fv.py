@@ -6,7 +6,7 @@ from pyPDEs.spatial_discretization import *
 from pyPDEs.material import CrossSections, MultiGroupSource
 from pyPDEs.utilities.boundaries import *
 
-from modules.diffusion import *
+from modules.neutron_diffusion import *
 
 # Create mesh and discretization
 mesh = create_1d_mesh([0.0, 6.0], [100], coord_sys="SPHERICAL")
@@ -35,6 +35,6 @@ solver.use_precursors = False
 
 # Run the problem
 solver.initialize()
-solver.execute(verbose=True)
+solver.execute(verbose=1)
 solver.plot_solution(title="Final Solution")
 plt.show()

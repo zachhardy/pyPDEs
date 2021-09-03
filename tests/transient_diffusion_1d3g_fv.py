@@ -6,7 +6,7 @@ from pyPDEs.spatial_discretization import *
 from pyPDEs.material import CrossSections, MultiGroupSource
 from pyPDEs.utilities.boundaries import *
 
-from modules.diffusion import *
+from modules.neutron_diffusion import *
 
 # Create mesh and discretization
 mesh = create_1d_mesh([0.0, 6.0], [100], coord_sys="SPHERICAL")
@@ -31,9 +31,10 @@ solver.material_xs = [xs]
 solver.material_src = [src]
 
 # Create and attach initial conditions
+rf = mesh.vertices[-1].z
 solver.initial_conditions = \
-    [lambda r: 1.0 - r ** 2 / mesh.vertices[-1].z ** 2,
-     lambda r: 1.0 - r ** 2 / mesh.vertices[-1].z ** 2,
+    [lambda r: 1.0 - r ** 2 / rf ** 2,
+     lambda r: 1.0 - r ** 2 / rf ** 2,
      lambda r: 0.0 * r]
 
 # Set options
@@ -43,15 +44,11 @@ solver.lag_precursors = False
 # Set time stepping options
 solver.t_final = 0.1
 solver.dt = 2.0e-3
-solver.stepping_method = "TBDF2"
+solver.method = "TBDF2"
 
 # Run the problem
 solver.initialize()
-solver.execute(verbose=True)
-solver.plot_solution(title="Final Solution")
 
-times = solver.outputs.times
-power = solver.outputs.power
-plt.figure()
-plt.plot(times, power, "-*b")
+solver.execute(verbose=1)
+solver.plot_solution(title="Final Solution")
 plt.show()
