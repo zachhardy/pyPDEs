@@ -225,7 +225,7 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
 
     # ======================================== Verbose printout
     if verbose:
-        print("\n***** Summary of the 2D mesh:\n")
+        print("\n***** Summary of the 2D mesh *****")
         print(f"Number of Cells:\t{mesh.n_cells}")
         print(f"Number of Faces:\t{mesh.n_faces}")
         print(f"Number of Vertices:\t{mesh.n_vertices}")

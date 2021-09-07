@@ -9,17 +9,17 @@ from pyPDEs.material import CrossSections, MultiGroupSource
 from pyPDEs.utilities.boundaries import *
 from time import time
 
-from modules.diffusion import *
+from modules.neutron_diffusion import *
 
 # Create mesh, assign material IDs
-x_verts = np.linspace(0.0, 10.0, 81)
-y_verts = np.linspace(0.0, 10.0, 81)
+x_verts = np.linspace(0.0, 10.0, 41)
+y_verts = np.linspace(0.0, 10.0, 41)
 
 t0 = time()
 mesh = create_2d_mesh(x_verts, y_verts, verbose=True)
 print(f"\nMesh creation time:\t{time() - t0} s")
 
-fuel_dim = 7.5
+fuel_dim = 9.0
 for cell in mesh.cells:
     vids = cell.vertex_ids
     c = cell.centroid
@@ -54,10 +54,10 @@ solver.material_src = [src_fuel, src_refl]
 
 # Set options
 solver.max_iterations = 2500
-solver.tolerance = 1.0e-6
+solver.tolerance = 1.0e-8
 
 # Run the problem
 solver.initialize()
-solver.execute()
+solver.execute(verbose=1)
 solver.plot_solution()
 plt.show()
