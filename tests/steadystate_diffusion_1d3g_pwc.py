@@ -6,7 +6,7 @@ from pyPDEs.spatial_discretization import *
 from pyPDEs.material import CrossSections, MultiGroupSource
 from pyPDEs.utilities.boundaries import *
 
-from modules.diffusion import *
+from modules.neutron_diffusion import *
 
 # Create mesh and discretization
 mesh = create_1d_mesh([0.0, 6.0], [100], coord_sys="SPHERICAL")
@@ -18,9 +18,8 @@ xs.read_from_xs_file('xs/three_grp.cxs', density=0.05)
 src = MultiGroupSource(np.ones(xs.n_groups))
 
 # Create boundary conditions
-boundaries = []
-boundaries.extend([ReflectiveBoundary()] * xs.n_groups)
-boundaries.extend([ZeroFluxBoundary()] * xs.n_groups)
+boundaries = [ReflectiveBoundary(xs.n_groups),
+              ZeroFluxBoundary(xs.n_groups)]
 
 # Initialize solver and attach objects
 solver = SteadyStateSolver()
@@ -35,6 +34,6 @@ solver.use_precursors = False
 
 # Run the problem
 solver.initialize()
-solver.execute(verbose=True)
+solver.execute()
 solver.plot_solution(title="Final Solution")
 plt.show()

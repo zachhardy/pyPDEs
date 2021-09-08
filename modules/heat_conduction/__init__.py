@@ -4,7 +4,7 @@ from numpy import ndarray
 
 from scipy.sparse.linalg import spsolve
 from scipy.sparse.linalg import gmres, LinearOperator
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, lil_matrix
 
 from matplotlib import pyplot as plt
 
@@ -21,6 +21,13 @@ SolverOutput = Tuple[bool, int, float]
 class HeatConductionSolver:
     """Class for solving heat conduction problems.
     """
+
+    from ._pwc import (assemble_matrix,
+                       assemble_rhs,
+                       apply_matrix_bcs,
+                       apply_vector_bcs)
+
+    from ._plotting import plot_solution
 
     def __init__(self) -> None:
         self.mesh: Mesh = None
@@ -41,7 +48,7 @@ class HeatConductionSolver:
     def initialize(self) -> None:
         """Initialize the heat conduction solver.
         """
-        self.check_inputs()
+        self._check_inputs()
         sd = self.discretization
         self.u = np.zeros(sd.n_nodes)
 
@@ -53,8 +60,8 @@ class HeatConductionSolver:
 
         # Solve linear problem
         if all([not callable(k) for k in self.k]):
-            A = self.diffusion_matrix()
-            b = self.set_source()
+            A = self.assemble_matrix()
+            b = self.assemble_rhs()
             self.u = spsolve(A, b)
 
         # Solve nonlinear problem
@@ -106,8 +113,8 @@ class HeatConductionSolver:
         for nit in range(self.nonlinear_max_iterations):
 
             # Solve the system
-            A = self.diffusion_matrix()
-            b = self.set_source()
+            A = self.assemble_matrix()
+            b = self.assemble_rhs()
             self.u = spsolve(A, b)
 
             # Check convergence
@@ -207,8 +214,8 @@ class HeatConductionSolver:
         -------
         ndarray
         """
-        A = self.diffusion_matrix()
-        b = self.set_source()
+        A = self.assemble_matrix()
+        b = self.assemble_rhs()
         return A @ u - b
 
     def jacobian(self, u: ndarray, r: ndarray,
@@ -262,171 +269,7 @@ class HeatConductionSolver:
             J = LinearOperator((n_nodes,) * 2, matvec=jacobian_action)
         return J
 
-    def diffusion_matrix(self) -> csr_matrix:
-        """Assemble the heat conduction matrix.
-
-        Returns
-        -------
-        csr_matrix
-        """
-        pwc: PiecewiseContinuous = self.discretization
-
-        # Loop over cells
-        rows, cols, data = [], [], []
-        for cell in self.mesh.cells:
-            view = pwc.fe_views[cell.id]
-
-            # Evaluate the conductivity
-            k = self.k[cell.material_id]
-            if callable(k):
-                u = self.u[view.node_ids]
-                uq = view.get_function_values(u)
-                k = k(uq)
-            else:
-                k = np.array([k] * view.n_qpoints)
-
-            # Loop over quadrature
-            for qp in range(view.n_qpoints):
-                jxw = view.jxw[qp]
-
-                # Loop over test functions
-                for i in range(view.n_nodes):
-                    ii = pwc.map_dof(cell, i)
-                    grad_i = view.grad_shape_values[i][qp]
-
-                    # Loop over trial functions
-                    for j in range(view.n_nodes):
-                        jj = pwc.map_dof(cell, j)
-                        grad_j = view.grad_shape_values[j][qp]
-
-                        value = k[qp] * grad_i.dot(grad_j) * jxw
-                        rows.append(ii)
-                        cols.append(jj)
-                        data.append(value)
-
-            # Loop over faces
-            for f_id, face in enumerate(cell.faces):
-                if not face.has_neighbor:
-                    bndry_id = -1 * (face.neighbor_id + 1)
-                    bc = self.boundaries[bndry_id]
-
-                    # Dirichlet boundary
-                    if issubclass(type(bc), DirichletBoundary):
-
-                        # Loop over face nodes
-                        n_face_nodes = len(view.face_node_mapping[f_id])
-                        for fi in range(n_face_nodes):
-                            ii = pwc.map_face_dof(cell, f_id, fi)
-                            pwc.zero_dirichlet_row(ii, rows, data)
-                            rows.append(ii)
-                            cols.append(ii)
-                            data.append(1.0)
-
-                    # Robin boundary
-                    elif issubclass(type(bc), RobinBoundary):
-                        bc: RobinBoundary = bc
-
-                        # Loop over face nodes
-                        n_face_nodes = len(view.face_node_mapping[f_id])
-                        for fi in range(n_face_nodes):
-                            ni = view.face_node_mapping[f_id][fi]
-                            ii = pwc.map_face_dof(cell, f_id, fi)
-
-                            # Loop over face nodes
-                            for fj in range(n_face_nodes):
-                                nj = view.face_node_mapping[f_id][fj]
-                                jj = pwc.map_face_dof(cell, f_id, fj)
-
-                                intS_mass_ij = \
-                                    view.intS_shapeI_shapeJ[f_id][ni][nj]
-
-                                value = bc.a / bc.b * intS_mass_ij
-                                rows.append(ii)
-                                cols.append(jj)
-                                data.append(value)
-        return csr_matrix((data, (rows, cols)), shape=(pwc.n_nodes,) * 2)
-
-    def set_source(self) -> ndarray:
-        """Assemble the right-hand side.
-
-        Returns
-        -------
-        ndarray
-        """
-        pwc: PiecewiseContinuous = self.discretization
-
-        # Loop over cells
-        b = np.zeros(pwc.n_nodes)
-        for cell in self.mesh.cells:
-            view = pwc.fe_views[cell.id]
-            q = self.q[cell.material_id]
-
-            # Loop test functions
-            for i in range(view.n_nodes):
-                ii = pwc.map_dof(cell, i)
-
-                # Loop over quadrature
-                for qp in range(view.n_qpoints):
-                    b[ii] += q * view.shape_values[i][qp] * view.jxw[qp]
-
-            # Loop over faces
-            for f_id, face in enumerate(cell.faces):
-                if not face.has_neighbor:
-                    bndry_id = -1 * (face.neighbor_id + 1)
-                    bc = self.boundaries[bndry_id]
-
-                    # Dirichlet boundary
-                    if issubclass(type(bc), DirichletBoundary):
-                        bc: DirichletBoundary = bc
-
-                        # Loop over face nodes
-                        n_face_nodes = len(view.face_node_mapping[f_id])
-                        for fi in range(n_face_nodes):
-                            ii = pwc.map_face_dof(cell, f_id, fi)
-                            b[ii] = bc.value
-
-                    # Neumann boundary
-                    elif issubclass(type(bc), NeumannBoundary):
-                        bc: NeumannBoundary = bc
-
-                        # Loop over face nodes
-                        n_face_nodes = len(view.face_node_mapping[f_id])
-                        for fi in range(n_face_nodes):
-                            ni = view.face_node_mapping[f_id][fi]
-                            ii = pwc.map_face_dof(cell, f_id, fi)
-                            b[ii] += bc.value * view.intS_shapeI[f_id][ni]
-
-                    # Robin boundary
-                    elif issubclass(type(bc), RobinBoundary):
-                        bc: RobinBoundary = bc
-
-                        # Loop over face nodes
-                        n_face_nodes = len(view.face_node_mapping[f_id])
-                        for fi in range(n_face_nodes):
-                            ni = view.face_node_mapping[f_id][fi]
-                            ii = pwc.map_face_dof(cell, f_id, fi)
-                            b[ii] += bc.f / bc.b * view.intS_shapeI[f_id][ni]
-        return b
-
-    def plot_solution(self, title: str = None) -> None:
-        """Plot the currently stored solution.
-
-        Parameters
-        ----------
-        title : str, default None
-            A title for the figure.s
-        """
-        grid = self.discretization.grid
-        if title:
-            plt.title(title)
-        plt.xlabel("Location")
-        plt.ylabel(r"T(r)")
-        plt.plot(grid, self.u, '-ob', label='Temperature')
-        plt.legend()
-        plt.grid(True)
-        plt.tight_layout()
-
-    def check_inputs(self) -> None:
+    def _check_inputs(self) -> None:
         """Check the inputs of the solver.
         """
         self._check_mesh()
@@ -455,8 +298,7 @@ class HeatConductionSolver:
                 "No boundary conditions are attached to the solver.")
         elif len(self.boundaries) != 2:
             raise NotImplementedError(
-                "There can only be 2 * n_groups boundary conditions "
-                "for 1D problems.")
+                "There can only be 2 boundary conditions for 1D problems.")
 
     def _check_materials(self) -> None:
         mat_ids = [c.material_id for c in self.mesh.cells]

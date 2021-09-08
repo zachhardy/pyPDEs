@@ -2,13 +2,11 @@ __all__ = ["Boundary", "DirichletBoundary", "NeumannBoundary",
            "RobinBoundary", "ReflectiveBoundary", "MarshakBoundary",
            "VacuumBoundary", "ZeroFluxBoundary"]
 
+from typing import List
+
+
 class Boundary:
     """Generic boundary.
-
-    Attributes
-    ----------
-    type : str
-        The type of boundary.
     """
 
     def __init__(self) -> None:
@@ -21,27 +19,26 @@ class DirichletBoundary(Boundary):
     This imposes that the solution take a
     fixed value at the boundary.
 
-    ..math:: u(x_b) = f^d
-
-    Attributes
-    ----------
-    type : str
-        The type of boundary.
-    value : float
-        The boundary value.
+    ..math:: u(x_b) = f^d.
     """
 
-    def __init__(self, value: float) -> None:
+    def __init__(self, values: List[float],
+                 n_components: int = 1) -> None:
         """Constructor.
 
         Parameters
         ----------
-        value : float
-            The boundary value.
+        values : List[float]
+            The boundary value, or values.
+        n_components : int, default 1
+            The number of components
         """
         super().__init__()
         self.type = "DIRICHLET"
-        self.value: float = value
+
+        if isinstance(values, float):
+            values = [values] * n_components
+        self.values: List[float] = values
 
 
 class NeumannBoundary(Boundary):
@@ -51,24 +48,23 @@ class NeumannBoundary(Boundary):
     a fixed value at the boundary.
 
     ..math:: \grad u(x_b) = f^n
-
-    Attributes
-    ----------
-    type : str
-        The type of boundary.
-    value : float
-        The boundary value.
     """
 
-    def __init__(self, value: float) -> None:
+    def __init__(self, values: List[float],
+                 n_components: int = 1) -> None:
         """Constructor.
 
         Parameters
         ----------
-        value : float
+        values : List[float]
+        n_components : int, default 1
+            The number of components.
         """
         self.type = "NEUMANN"
-        self.value: float = value
+
+        if isinstance(values, float):
+            values = [values] * n_components
+        self.values: List[float] = values
 
 
 class RobinBoundary(Boundary):
@@ -80,50 +76,51 @@ class RobinBoundary(Boundary):
     fixed value at the boundary.
 
     ..math:: a u(x_b) + b \grad u(x_b) = f^r
-
-    Attributes
-    ----------
-    type : str
-        The type of boundary.
-    a : float
-        The coefficient for the solution term
-    b : float
-        The coefficient for the gradient term
-    f : float
-        The source term.
     """
 
-    def __init__(self, a: float, b: float, f: float) -> None:
+    def __init__(self, a: List[float], b: List[float],
+                 f: List[float], n_components: int = 1) -> None:
         """Constructor.
 
         Parameters
         ----------
-        a : float
-        b : float
-        f : float
+        a : List[float]
+        b : List[float]
+        f : List[float]
+        n_components : int, default 1
+            The number of components.
         """
         super().__init__()
         self.type = "ROBIN"
-        self.a: float = a
-        self.b: float = b
-        self.f: float = f
+
+        if isinstance(a, float):
+            a = [a] * n_components
+        self.a: List[float] = a
+
+        if isinstance(b, float):
+            b = [b] * n_components
+        self.b: List[float] = b
+
+        if isinstance(f, float):
+            f = [f] * n_components
+        self.f: List[float] = f
 
 
 class ReflectiveBoundary(NeumannBoundary):
     """Reflective boundary.
 
     This imposes a zero Neumann boundary.
-
-    Attributes
-    ----------
-    type : str
-        The type of boundary.
-    value : float
-        The boundary value.
     """
 
-    def __init__(self) -> None:
-        super().__init__(0.0)
+    def __init__(self, n_components: int = 1) -> None:
+        """Constructor.
+
+        Parameters
+        ----------
+        n_components : int, default 1
+            The number of components.
+        """
+        super().__init__(0.0, n_components)
 
 
 class MarshakBoundary(RobinBoundary):
@@ -134,19 +131,8 @@ class MarshakBoundary(RobinBoundary):
     The coefficients are: a = -0.5, b = 1.0, and
     f = 2.0 * f^m, where f^m is the incident current
     at the boundary.
-
-    Attributes
-    ----------
-    type : str
-        The type of boundary.
-    a : float
-        The coefficient for the solution term
-    b : float
-        The coefficient for the gradient term
-    f : float
-        The source term.
     """
-    def __init__(self, j_hat: float) -> None:
+    def __init__(self, j_hat: List[float], n_components: int = 1) -> None:
         """
         Constructor.
 
@@ -156,8 +142,13 @@ class MarshakBoundary(RobinBoundary):
             The incident current. This gets multiplied
             by two as part of the defintion of a Marshak
             boundary condition.
+        n_components : int, default 1
+            The number of components.
         """
-        super().__init__(-0.5, 1.0, 2.0 * j_hat)
+        if isinstance(j_hat, float):
+            f = [j_hat] * n_components
+        f = [2.0 * f[i] for i in range(len(f))]
+        super().__init__(-0.5, 1.0, f, n_components)
 
 
 class VacuumBoundary(MarshakBoundary):
@@ -165,35 +156,31 @@ class VacuumBoundary(MarshakBoundary):
 
     This imposes a Marshak boundary with a
     zero incident current.
-
-    Attributes
-    ----------
-    type : str
-        The type of boundary.
-    a : float
-        The coefficient for the solution term
-    b : float
-        The coefficient for the gradient term
-    f : float
-        The source term. This is
     """
 
-    def __init__(self) -> None:
-        super().__init__(0.0)
+    def __init__(self, n_components: int = 1) -> None:
+        """Constructor.
+
+        Parameters
+        ----------
+        n_components : int, default 1
+            The number of components.
+        """
+        super().__init__(0.0, n_components)
 
 
 class ZeroFluxBoundary(DirichletBoundary):
     """Zero flux boundary.
 
     This imposes a zero Dirichlet boundary.
-
-    Attributes
-    ----------
-    type : str
-        The type of boundary.
-    value : float
-        The boundary value.
     """
 
-    def __init__(self) -> None:
-        super().__init__(0.0)
+    def __init__(self, n_components: int = 1) -> None:
+        """Constructor.
+
+        Parameters
+        ----------
+        n_components : int, default 1
+            The number of components.
+        """
+        super().__init__(0.0, n_components)

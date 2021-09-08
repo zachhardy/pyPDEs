@@ -2,6 +2,7 @@ import sys
 import numpy as np
 
 from numpy.linalg import norm
+from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 
 from pyPDEs.spatial_discretization import *
@@ -44,16 +45,14 @@ class KEigenvalueSolver(SteadyStateSolver):
         k_eff_ell = k_eff_change = 1.0
         phi_change = 1.0
 
-        # Assemble matrices
-        F = self.Fp + self.Fd  # Total fission matrix
-        A = self.L - self.S  # Diffusion - scattering matrix
+        # Assemble the matrix
+        A = self.assemble_matrix()
 
         # Start iterative
         nit, converged = 0, False
         for nit in range(self.max_iterations):
             # Set fission source and solve
-            b = F @ self.phi / self.k_eff
-            self.apply_vector_bcs(b)
+            b = self.assemble_rhs()
             self.phi = spsolve(A, b)
 
             # Update k-eigenvalue
@@ -100,6 +99,14 @@ class KEigenvalueSolver(SteadyStateSolver):
             print(f"Final Phi Change:\t\t{phi_change:.3e}")
             print(f"# of Iterations:\t\t{nit}")
 
+    def assemble_matrix(self) -> csr_matrix:
+        A = self.L - self.S
+        return self.apply_matrix_bcs(A)
+
+    def assemble_rhs(self) -> csr_matrix:
+        b = (self.Fp + self.Fd) @ self.phi / self.k_eff
+        return self.apply_vector_bcs(b)
+
     def compute_fission_production(self) -> float:
         """Compute the fission production.
 
@@ -107,19 +114,4 @@ class KEigenvalueSolver(SteadyStateSolver):
         -------
         float
         """
-        fv: FiniteVolume = self.discretization
-        uk_man = self.phi_uk_man
-
-        # Loop over cells
-        production = 0.0
-        for cell in self.mesh.cells:
-            volume = cell.volume
-            xs = self.material_xs[cell.material_id]
-
-            # Loop over groups
-            for g in range(self.n_groups):
-                ig = fv.map_dof(cell, 0, uk_man, 0, g)
-                production += xs.nu_sigma_f[g] * self.phi[ig] * volume
-        return production
-
-
+        return np.sum((self.Fp + self.Fd) @ self.phi)

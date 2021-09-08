@@ -20,6 +20,18 @@ class TransientSolver(KEigenvalueSolver):
     """Class for solving transinet multigroup diffusion problems.
     """
 
+    from ._fv import (_fv_mass_matrix,
+                      _fv_precursor_substitution_matrix,
+                      _fv_old_precursor_source,
+                      _fv_update_precursors,
+                      _fv_compute_power)
+
+    from ._pwc import (_pwc_mass_matrix,
+                       _pwc_precursor_substitution_matrix,
+                       _pwc_old_precursor_source,
+                       _pwc_update_precursors,
+                       _pwc_compute_power)
+
     def __init__(self) -> None:
         """Class constructor.
         """
@@ -88,7 +100,7 @@ class TransientSolver(KEigenvalueSolver):
 
         # Precompute matrices
         self.M: csr_matrix = self.mass_matrix()
-        self.A: List[csr_matrix] = self.evolution_matrices()
+        self.A: List[csr_matrix] = self.assemble_transient_matrices()
 
         # Compute the initial conditions
         self.compute_initial_values()
@@ -115,13 +127,13 @@ class TransientSolver(KEigenvalueSolver):
             # Force coincidence with output time
             if time + self.dt > next_output:
                 self.dt = next_output - time
-                self.A = self.evolution_matrices()
+                self.A = self.assemble_transient_matrices()
 
             # Force coincidence with t_final
             if time + self.dt > self.t_final or \
                     abs(time + self.dt - self.t_final) < 1.0e-12:
                 self.dt = self.t_final - time
-                self.A = self.evolution_matrices()
+                self.A = self.assemble_transient_matrices()
 
             # Solve time step
             self.solve_time_step()
@@ -138,7 +150,7 @@ class TransientSolver(KEigenvalueSolver):
 
                 # Half the time step
                 self.dt /= 2.0
-                self.A = self.evolution_matrices()
+                self.A = self.assemble_transient_matrices()
 
                 # Take the reduced time step
                 self.solve_time_step()
@@ -159,7 +171,7 @@ class TransientSolver(KEigenvalueSolver):
                 f = 1.0 + self.feedback_coeff * (sqrt_T - sqrt_T_initial)
                 self.material_xs[0].sigma_t[0] = f * sigma_t_0
                 self.L = self.diffusion_matrix()
-                self.A = self.evolution_matrices()
+                self.A = self.assemble_transient_matrices()
 
             # Increment time
             time += self.dt
@@ -184,10 +196,10 @@ class TransientSolver(KEigenvalueSolver):
                     self.dt *= 2.0
                     if self.dt > self.output_frequency:
                         self.dt = self.output_frequency
-                    self.A = self.evolution_matrices()
+                    self.A = self.assemble_transient_matrices()
             elif self.dt != dt_initial:
                 self.dt = dt_initial
-                self.A = self.evolution_matrices()
+                self.A = self.assemble_transient_matrices()
 
             # Print time step summary
             if verbose:
@@ -207,8 +219,7 @@ class TransientSolver(KEigenvalueSolver):
         m : int, default 0
             The step in a multi-step method.
         """
-        b = self.set_source() + self.set_old_source(m)
-        self.apply_vector_bcs(b)
+        b = self.assemble_transient_rhs(m)
         self.phi = spsolve(self.A[m], b)
         self.update_precursors(m)
 
@@ -228,12 +239,11 @@ class TransientSolver(KEigenvalueSolver):
                 self.precursors = 2.0*self.precursors - self.precursors_old
 
             if self.method == "TBDF2":
-                b = self.set_source() + self.set_old_source(m=1)
-                self.apply_vector_bcs(b)
+                b = self.assemble_transient_rhs(m=1)
                 self.phi = spsolve(self.A[1], b)
                 self.update_precursors(m=1)
 
-    def evolution_matrices(self) -> List[csr_matrix]:
+    def assemble_transient_matrices(self) -> List[csr_matrix]:
         """Assemble the multigroup evolution matrix for each step `m`.
 
         Returns
@@ -252,9 +262,14 @@ class TransientSolver(KEigenvalueSolver):
             raise NotImplementedError(f"{self.method} is not implemented.")
 
         for m in range(len(A)):
-            Ft = self.transient_fission_matrix(m)
-            A[m] -= self.S + self.Fp + Ft
+            D = self.precursor_substitution_matrix(m)
+            A[m] -= self.S + self.Fp + D
+            A[m] = self.apply_matrix_bcs(A[m])
         return A
+
+    def assemble_transient_rhs(self, m: int = 0) -> ndarray:
+        b = self.set_source() + self.set_old_source(m)
+        return self.apply_vector_bcs(b)
 
     def mass_matrix(self) -> csr_matrix:
         """Assemble the multigroup mass matrix.
@@ -263,28 +278,13 @@ class TransientSolver(KEigenvalueSolver):
         -------
         csr_matrix (n_cells * n_groups,) * 2
         """
-        fv: FiniteVolume = self.discretization
-        uk_man = self.phi_uk_man
+        if isinstance(self.discretization, FiniteVolume):
+            return self._fv_mass_matrix()
+        elif isinstance(self.discretization, PiecewiseContinuous):
+            return self._pwc_mass_matrix()
 
-        # Loop over cells
-        rows, data = [], []
-        for cell in self.mesh.cells:
-            volume = cell.volume
-            xs = self.material_xs[cell.material_id]
-
-            # Loop over groups
-            for g in range(self.n_groups):
-                ig = fv.map_dof(cell, 0, uk_man, 0, g)
-
-                # Inverse velocity term
-                value = xs.inv_velocity[g] * volume
-                rows.append(ig)
-                data.append(value)
-        return csr_matrix((data, (rows, rows)),
-                          shape=(fv.n_dofs(uk_man),) * 2)
-
-    def transient_fission_matrix(self, m: int = 0) -> csr_matrix:
-        """Assemble the transient multigroup fission matrix for step `m`.
+    def precursor_substitution_matrix(self, m: int = 0) -> csr_matrix:
+        """Assemble the transient precursor substitution matrix for step `m`.
 
         Parameters
         ----------
@@ -295,41 +295,10 @@ class TransientSolver(KEigenvalueSolver):
         -------
         csr_matrix (n_cells * n_groups,) * 2
         """
-        fv: FiniteVolume = self.discretization
-        uk_man = self.phi_uk_man
-
-        # Construct if using precursors and not lagging
-        rows, cols, data = [], [], []
-        if self.use_precursors and not self.lag_precursors:
-            eff_dt = self.effective_time_step(m)
-
-             # Loop over cells
-            for cell in self.mesh.cells:
-                volume = cell.volume
-                xs = self.material_xs[cell.material_id]
-
-                # Loop over precursors
-                for j in range(self.n_precursors):
-                    # Loop over groups
-                    for g in range(self.n_groups):
-                        ig = fv.map_dof(cell, 0, uk_man, 0, g)
-
-                        # Coefficient for delayed fission term
-                        coeff = xs.chi_delayed[g][j] * xs.precursor_lambda[j]
-                        coeff /= 1.0 + eff_dt * xs.precursor_lambda[j]
-                        coeff *= eff_dt * xs.precursor_yield[j]
-
-                        # Loop over groups
-                        for gp in range(self.n_groups):
-                            igp = fv.map_dof(cell, 0, uk_man, 0, gp)
-
-                            # Delayed fission term
-                            value = coeff * xs.nu_delayed_sigma_f[gp] * volume
-                            rows.append(ig)
-                            cols.append(igp)
-                            data.append(value)
-        return csr_matrix((data, (rows, cols)),
-                          shape=(fv.n_dofs(uk_man),) * 2)
+        if isinstance(self.discretization, FiniteVolume):
+            return self._fv_precursor_substitution_matrix(m)
+        elif isinstance(self.discretization, PiecewiseContinuous):
+            return self._pwc_precursor_substitution_matrix(m)
 
     def set_old_source(self, m: int = 0) -> ndarray:
         """Assemble the right-hand side with terms from last time step.
@@ -353,41 +322,26 @@ class TransientSolver(KEigenvalueSolver):
             b = self.M / self.dt @ (4.0 * self.phi - self.phi_old)
 
         # Add old time step precursors
-        if self.use_precursors:
-            fv: FiniteVolume = self.discretization
-            phi_uk_man = self.phi_uk_man
-            c_uk_man = self.precursor_uk_man
-            eff_dt = self.effective_time_step(m)
-
-            # Loop over cells
-            for cell in self.mesh.cells:
-                volume = cell.volume
-                xs = self.material_xs[cell.material_id]
-
-                # Loop over groups
-                for g in range(self.n_groups):
-                    ig = fv.map_dof(cell, 0, phi_uk_man, 0, g)
-
-                    # Loop over precursors
-                    for j in range(xs.n_precursors):
-                        ij = fv.map_dof(cell, 0, c_uk_man, 0, j)
-
-                        # Get precursors at this DoF
-                        cj = self.precursors[ij]
-                        cj_old = self.precursors_old[ij]
-
-                        # Coefficient for precursor term
-                        coeff = xs.chi_delayed[g][j] * xs.precursor_lambda[j]
-                        if not self.lag_precursors:
-                            coeff /= 1.0 + eff_dt * xs.precursor_lambda[j]
-
-                        # Old precursor contributions
-                        if m == 0 or self.lag_precursors:
-                            b[ig] += coeff * cj_old * volume
-                        elif m == 1:
-                            tmp = (4.0 * cj - cj_old) / 3.0
-                            b[ig] += coeff * tmp * volume
+        b += self.old_precursor_source(m)
         return b
+
+    def old_precursor_source(self, m: int = 0) -> ndarray:
+        """Assemble the delayed terms from the last time step for step `m`.
+
+        Parameters
+        ----------
+        m : int, default 0
+            The step in a multi-step method.
+
+        Returns
+        -------
+        ndarray (n_cells * n_groups)
+        """
+        if self.use_precursors:
+            if isinstance(self.discretization, FiniteVolume):
+                return self._fv_old_precursor_source(m)
+            elif isinstance(self.discretization, PiecewiseContinuous):
+                return self._pwc_old_precursor_source(m)
 
     def update_precursors(self, m: int = 0) -> None:
         """Update the precursors after a time step.
@@ -398,42 +352,10 @@ class TransientSolver(KEigenvalueSolver):
             The step in a multi-step method.
         """
         if self.use_precursors:
-            fv: FiniteVolume = self.discretization
-            phi_uk_man = self.phi_uk_man
-            c_uk_man = self.precursor_uk_man
-            eff_dt = self.effective_time_step(m)
-
-            # Loop over cells
-            for cell in self.mesh.cells:
-                xs = self.material_xs[cell.material_id]
-
-                # Compute delayed fission rate
-                f_d = 0.0
-                for g in range(self.n_groups):
-                    ig = fv.map_dof(cell, 0, phi_uk_man, 0, g)
-                    f_d += xs.nu_delayed_sigma_f[g] * self.phi[ig]
-
-                # Loop over precursors
-                for j in range(xs.n_precursors):
-                    ij = fv.map_dof(cell, 0, c_uk_man, 0, j)
-
-                    # Get the precursors at this DoF
-                    cj = self.precursors[ij]
-                    cj_old = self.precursors_old[ij]
-
-                    # Coefficient for RHS
-                    coeff = (1.0 + eff_dt * xs.precursor_lambda[j])**(-1)
-
-                    # Old precursor contributions
-                    if m == 0:
-                        self.precursors[ij] = coeff * cj_old
-                    else:
-                        tmp = (4.0 * cj - cj_old) / 3.0
-                        self.precursors[ij] = coeff * tmp
-
-                    # Delayed fission contribution
-                    coeff = eff_dt * xs.precursor_yield[j]
-                    self.precursors[ij] += coeff * f_d
+            if isinstance(self.discretization, FiniteVolume):
+                self._fv_update_precursors(m)
+            elif isinstance(self.discretization, PiecewiseContinuous):
+                self._pwc_update_precursors(m)
 
     def compute_power(self) -> float:
         """Compute the fission power in the system.
@@ -442,20 +364,10 @@ class TransientSolver(KEigenvalueSolver):
         -------
         float
         """
-        fv: FiniteVolume = self.discretization
-        uk_man = self.phi_uk_man
-
-        # Loop over cells
-        power = 0.0
-        for cell in self.mesh.cells:
-            volume = cell.volume
-            xs = self.material_xs[cell.material_id]
-
-            # Loop over groups
-            for g in range(self.n_groups):
-                ig = fv.map_dof(cell, 0, uk_man, 0, g)
-                power += xs.sigma_f[g] * self.phi[ig] * volume
-        return power * self.E_fission
+        if isinstance(self.discretization, FiniteVolume):
+            return self._fv_compute_power()
+        elif isinstance(self.discretization, PiecewiseContinuous):
+            return self._pwc_compute_power()
 
     def effective_time_step(self, m: int = 0) -> float:
         """Compute the effective time step for step `m`.

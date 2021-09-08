@@ -18,9 +18,8 @@ xs.read_from_xs_file('xs/three_grp.cxs', density=0.05)
 src = MultiGroupSource(np.zeros(xs.n_groups))
 
 # Create boundary conditions
-boundaries = []
-boundaries.extend([ReflectiveBoundary()] * xs.n_groups)
-boundaries.extend([ZeroFluxBoundary()] * xs.n_groups)
+boundaries = [ReflectiveBoundary(xs.n_groups),
+              ZeroFluxBoundary(xs.n_groups)]
 
 # Initialize solver and attach objects
 solver = TransientSolver()
