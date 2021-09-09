@@ -14,7 +14,7 @@ discretization = PiecewiseContinuous(mesh, degree=2)
 
 # Create cross sections and sources
 xs = CrossSections()
-xs.read_from_xs_file('xs/three_grp.cxs', density=0.05)
+xs.read_from_xs_file('xs/three_grp_us.cxs', density=0.05)
 src = MultiGroupSource(np.zeros(xs.n_groups))
 
 # Create boundary conditions
