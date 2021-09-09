@@ -4,7 +4,7 @@ using a finite volume spatial discretization.
 """
 import numpy as np
 
-from numpy import ndarray
+from numpy import ndarray, sqrt
 from scipy.sparse import csr_matrix, lil_matrix
 
 from pyPDEs.spatial_discretization import FiniteVolume
@@ -12,6 +12,35 @@ from pyPDEs.spatial_discretization import FiniteVolume
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from . import TransientSolver
+
+
+def _fv_feedback_matrix(self: "TransientSolver") -> csr_matrix:
+    """Assemble the feedback matrix.
+
+    Returns
+    -------
+    csr_matrix (n_cells * n_groups,) * 2
+    """
+    fv: FiniteVolume = self.discretization
+    uk_man = self.phi_uk_man
+
+    T = self.temperature
+    T0 = self.initial_temperature
+
+    # Loop over cells
+    A = lil_matrix((fv.n_dofs(uk_man),) * 2)
+    for cell in self.mesh.cells:
+        volume = cell.volume
+        xs = self.material_xs[cell.material_id]
+
+        # Compute feedback coefficient
+        f = self.feedback_coeff * (sqrt(T[cell.id]) - sqrt(T0))
+
+        # Loop over groups
+        for g in range(self.n_groups):
+            ig = fv.map_dof(cell, 0, uk_man, 0, g)
+            A[ig, ig] += xs.sigma_t[g] * f * volume
+    return A.tocsr()
 
 
 def _fv_mass_matrix(self: "TransientSolver") -> csr_matrix:
@@ -171,6 +200,25 @@ def _fv_update_precursors(self: "TransientSolver", m: int = 0) -> None:
             self.precursors[ip] = coeff * (c_old + eff_dt*gamma_p * f_d)
 
 
+def _fv_compute_fission_rate(self: "TransientSolver") -> None:
+    """Compute the point-wise fission rate.
+    """
+    fv: FiniteVolume = self.discretization
+    uk_man = self.phi_uk_man
+
+    # Loop over cells
+    self.fission_rate *= 0.0
+    for cell in self.mesh.cells:
+        volume = cell.volume
+        xs = self.material_xs[cell.material_id]
+
+        # Loop over groups
+        for g in range(self.n_groups):
+            ig = fv.map_dof(cell, 0, uk_man, 0, g)
+            self.fission_rate[cell.id] += \
+                xs.sigma_f[g] * self.phi[ig]
+
+
 def _fv_compute_power(self: "TransientSolver") -> float:
     """Compute the fission power in the system.
 
@@ -191,4 +239,4 @@ def _fv_compute_power(self: "TransientSolver") -> float:
         for g in range(self.n_groups):
             ig = fv.map_dof(cell, 0, uk_man, 0, g)
             power += xs.sigma_f[g] * self.phi[ig] * volume
-    return power * self.E_fission
+    return power * self.energy_per_fission

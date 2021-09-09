@@ -15,6 +15,42 @@ if TYPE_CHECKING:
     from . import TransientSolver
 
 
+def _pwc_feedback_matrix(self: "TransientSolver") -> csr_matrix:
+    """Assemble the feedback matrix.
+
+    Returns
+    -------
+    csr_matrix (n_cells * n_groups,) * 2
+    """
+    pwc: PiecewiseContinuous = self.discretization
+    uk_man = self.phi_uk_man
+
+    T = self.temperature
+    T0 = self.initial_temperature
+
+    # Loop over cells
+    A = lil_matrix((fv.n_dofs(uk_man),) * 2)
+    for cell in self.mesh.cells:
+        view = pwc.fe_views[cell.id]
+        xs = self.material_xs[cell.material_id]
+
+        # Compute feedback coefficient
+        f = self.feedback_coeff * (sqrt(T[cell.id]) - sqrt(T0))
+
+        # Loop over groups
+        for g in range(self.n_groups):
+            sig_t = xs.sigma_t[g]
+
+            # Loop over nodes
+            for i in range(view.n_nodes):
+                ig = pwc.map_dof(cell, i, uk_man, 0, g)
+                for j in range(view.n_nodes):
+                    jg = pwc.map_dof(cell, j, uk_man, 0, g)
+                    mass_ij = view.intV_shapeI_shapeJ[i][j]
+                    A[ig, jg] += sig_t * f * mass_ij
+    return A.tocsr()
+
+
 def _pwc_mass_matrix(self: "TransientSolver",
                      lumped: bool = True) -> csr_matrix:
     """Assemble the multigroup mass matrix.
@@ -201,6 +237,32 @@ def _pwc_update_precursors(self: "TransientSolver", m: int = 0) -> None:
             self.precursors[ip] = coeff * (c_old + eff_dt*gamma_p * f_d)
 
 
+def _pwc_compute_fission_rate(self: "TransientSolver") -> None:
+    """Compute the point-wise fission rate.
+    """
+    pwc: PiecewiseContinuous = self.discretization
+    uk_man = self.phi_uk_man
+
+    # Loop over cells
+    self.fission_rate *= 0.0
+    for cell in self.mesh.cells:
+        volume = cell.volume
+        view = pwc.fe_views[cell.id]
+        xs = self.material_xs[cell.material_id]
+
+        # Loop over nodes
+        for i in range(view.n_nodes):
+            intV_shapeI = view.intV_shapeI[i]
+
+            # Loop over groups
+            for g in range(self.n_groups):
+                ig = pwc.map_dof(cell, i, uk_man, 0, g)
+                self.fission_rate[cell.id] += \
+                    xs.sigma_f[g]*self.phi[ig] * intV_shapeI/volume
+
+
+
+
 def _pwc_compute_power(self: "TransientSolver") -> float:
     """Compute the fission power in the system.
 
@@ -225,4 +287,4 @@ def _pwc_compute_power(self: "TransientSolver") -> float:
             for i in range(view.n_nodes):
                 ig = pwc.map_dof(cell, i, uk_man, 0, g)
                 power += sig_f * self.phi[ig] * view.intV_shapeI[i]
-    return power * self.E_fission
+    return power * self.energy_per_fission
