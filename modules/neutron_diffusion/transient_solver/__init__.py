@@ -1,5 +1,7 @@
 import os
 import sys
+import time
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -20,16 +22,20 @@ class TransientSolver(KEigenvalueSolver):
     """Class for solving transinet multigroup diffusion problems.
     """
 
-    from ._fv import (_fv_mass_matrix,
+    from ._fv import (_fv_feedback_matrix,
+                      _fv_mass_matrix,
                       _fv_precursor_substitution_matrix,
                       _fv_old_precursor_source,
                       _fv_update_precursors,
+                      _fv_compute_fission_rate,
                       _fv_compute_power)
 
-    from ._pwc import (_pwc_mass_matrix,
+    from ._pwc import (_pwc_feedback_matrix,
+                       _pwc_mass_matrix,
                        _pwc_precursor_substitution_matrix,
                        _pwc_old_precursor_source,
                        _pwc_update_precursors,
+                       _pwc_compute_fission_rate,
                        _pwc_compute_power)
 
     def __init__(self) -> None:
@@ -52,61 +58,70 @@ class TransientSolver(KEigenvalueSolver):
         self.lag_precursors: bool = False
 
         # Power related parameters
-        self.power: float = 1.0
-        self.E_fission: float = 1.0
+        self.power: float = 1.0  # W
+        self.power_old: float = 1.0
+        self.energy_per_fission: float = 3.2e-11  # J / fission
 
         # Feedback related parameters
         self.use_feedback: bool = False
         self.feedback_coeff: float = 1.0e-3
 
         # Heat generation parameters
-        self.T: float = 300.0  # K
-        self.mass_density: float = 19.0  # g/cc
+        self.density: float = 19.0  # g/cc
         self.specific_heat: float = 0.12  # J/g-K
-        self.domain_volume: float = 0.0  # cc
 
         # Output options
-        self.output_frequency: float = 0.0
+        self.output_frequency: float = None
         self.outputs: Outputs = Outputs()
 
         # Precomputed mass matrix storage
         self.M: csr_matrix = None
-        self.A: List[csr_matrix] = None
 
         # Previous time step solutions
         self.phi_old: ndarray = None
         self.precursors_old: ndarray = None
 
+        # Fission rate
+        self.fission_rate: ndarray = None
+        self.fission_rate_old: ndarray = None
+
+        # Temperatures
+        self.initial_temperature: float = 300.0
+        self.temperature: ndarray = None
+        self.temperature_old: ndarray = None
+
+
     def initialize(self) -> None:
         """Initialize the solver.
         """
-        super(KEigenvalueSolver, self).initialize()
-
-        # Compute the mesh volume
-        self.domain_volume = 0.0
-        for cell in self.mesh.cells:
-            self.domain_volume += cell.volume
+        KEigenvalueSolver.initialize(self)
+        KEigenvalueSolver.execute(self, verbose=1)
+        time.sleep(2.5)
 
         # Set/check output frequency
-        if not self.output_frequency:
-            self.output_frequency = self.dt
-        if self.dt > self.output_frequency:
-            self.dt = self.output_frequency
+        self._check_time_step()
 
-        # Initialize old time solutions
+        # Initalize old vectors
         self.phi_old = np.copy(self.phi)
-        if self.use_precursors:
-            self.precursors_old = np.copy(self.precursors)
+        self.precursors_old = np.copy(self.precursors)
 
-        # Precompute matrices
-        self.M: csr_matrix = self.mass_matrix()
-        self.A: List[csr_matrix] = self.assemble_transient_matrices()
+        # Initialize fission rate vectors
+        self.fission_rate = np.zeros(self.mesh.n_cells)
+        self.fission_rate_old = np.copy(self.fission_rate)
 
-        # Compute the initial conditions
+        # Initialize temperature vectors
+        T0 = self.initial_temperature
+        self.temperature = T0 * np.ones(self.mesh.n_cells)
+        self.temperature_old = T0 * np.ones(self.mesh.n_cells)
+
+        # Evaluate initial conditions
         self.compute_initial_values()
 
-        # Define energy per fission
-        self.E_fission = self.power / self.compute_power()
+        # Set the old power to set initial power
+        self.power_old = self.power
+
+        # Precompute matrices
+        self.M = self.mass_matrix()
 
     def execute(self, verbose: int = 0) -> None:
         """Execute the transient multigroup diffusion solver.
@@ -115,103 +130,84 @@ class TransientSolver(KEigenvalueSolver):
         ----------
         verbose : int, default 0
         """
-        power_old = self.power
-        T_initial = self.T
         next_output = self.output_frequency
-        sigma_t_0 = self.material_xs[0].sigma_t
 
         # Time stepping loop
-        time, n_steps, dt_initial = 0.0, 0, self.dt
-        while time < self.t_final:
+        t, n_steps, dt_initial = 0.0, 0, self.dt
+        while t < self.t_final:
 
             # Force coincidence with output time
-            if time + self.dt > next_output:
-                self.dt = next_output - time
-                self.A = self.assemble_transient_matrices()
+            if t + self.dt > next_output:
+                self.dt = next_output - t
 
             # Force coincidence with t_final
-            if time + self.dt > self.t_final or \
-                    abs(time + self.dt - self.t_final) < 1.0e-12:
-                self.dt = self.t_final - time
-                self.A = self.assemble_transient_matrices()
+            if t + self.dt > self.t_final - 1.0e-12:
+                self.dt = self.t_final - t
 
             # Solve time step
             self.solve_time_step()
-            self.post_process_time_step()
             self.power = self.compute_power()
 
             # Refinements, if adaptivity is used
-            dP = abs(self.power - power_old) / power_old
-            while self.adaptivity and dP > self.refine_level:
-
-                # Reset solutions
-                self.phi[:] = self.phi_old
-                self.precursors[:] = self.precursors_old
-
-                # Half the time step
-                self.dt /= 2.0
-                self.A = self.assemble_transient_matrices()
-
-                # Take the reduced time step
-                self.solve_time_step()
-                self.post_process_time_step()
-                self.power = self.compute_power()
-
-                # Compute new change in power
-                dP = abs(self.power - power_old) / power_old
-
-            # Compute new temperature
-            mass = self.mass_density * self.domain_volume
-            self.T += self.power * self.dt / (mass * self.specific_heat)
-
-            # Add feedback
-            if self.use_feedback:
-                sqrt_T = np.sqrt(self.T)
-                sqrt_T_initial = np.sqrt(T_initial)
-                f = 1.0 + self.feedback_coeff * (sqrt_T - sqrt_T_initial)
-                self.material_xs[0].sigma_t[0] = f * sigma_t_0
-                self.L = self.diffusion_matrix()
-                self.A = self.assemble_transient_matrices()
+            if self.adaptivity:
+                self.refine_time_step()
 
             # Increment time
-            time += self.dt
+            t += self.dt
             n_steps += 1
 
-            # Reinit solutions
-            power_old = self.power
-            self.phi_old[:] = self.phi
-            if self.use_precursors:
-                self.precursors_old[:] = self.precursors
-
             # Output solutions
-            if time == next_output:
-                self.store_outputs(time)
+            if t == next_output:
+                self.store_outputs(t)
                 next_output += self.output_frequency
                 if next_output > self.t_final:
                     next_output = self.t_final
 
             # Coarsen time steps
             if self.adaptivity:
-                if dP < self.coarsen_level:
-                    self.dt *= 2.0
-                    if self.dt > self.output_frequency:
-                        self.dt = self.output_frequency
-                    self.A = self.assemble_transient_matrices()
+                self.coarsen_time_step()
             elif self.dt != dt_initial:
                 self.dt = dt_initial
-                self.A = self.assemble_transient_matrices()
+
+            self.bump_solutions()
 
             # Print time step summary
-            if verbose:
+            if verbose > 0:
+                print()
                 print(f"***** Time Step: {n_steps} *****")
-                print(f"Simulation Time:\t{time}")
-                print(f"Time Step Size:\t\t{self.dt}")
-                print(f"System Power:\t\t{self.power}")
-                print(f"Temperature:\t\t{self.T}\n")
+                print(f"Simulation Time:\t{t:.3e}")
+                print(f"Time Step Size:\t\t{self.dt:.3e}")
+                print(f"System Power:\t\t{self.power:.3e}")
+                T_avg = np.mean(self.temperature)
+                print(f"Average Temperature:\t{T_avg:.3g}")
 
         self.dt = dt_initial
 
-    def solve_time_step(self, m: int = 0) -> None:
+    def refine_time_step(self) -> None:
+        """Refine the time step.
+        """
+        dP = abs(self.power - self.power_old) / self.power_old
+        while dP > self.refine_level:
+            # Half the time step
+            self.dt /= 2.0
+
+            # Take the reduced time step
+            self.solve_time_step()
+            self.power = self.compute_power()
+
+            # Compute new change in power
+            dP = abs(self.power - self.power_old) / self.power_old
+
+    def coarsen_time_step(self):
+        """Coarsen the time step.
+        """
+        dP = abs(self.power - self.power_old) / self.power_old
+        if self.dt < self.coarsen_level:
+            self.dt *= 2.0
+            if self.dt > self.output_frequency:
+                self.dt = self.output_frequency
+
+    def solve_time_step(self) -> None:
         """Solve the `m`'th step of a multi-step method.
 
         Parameters
@@ -219,57 +215,83 @@ class TransientSolver(KEigenvalueSolver):
         m : int, default 0
             The step in a multi-step method.
         """
-        b = self.assemble_transient_rhs(m)
-        self.phi = spsolve(self.A[m], b)
-        self.update_precursors(m)
+        A = self.assemble_transient_matrix(m=0)
+        b = self.assemble_transient_rhs(m=0)
+        self.phi = spsolve(A, b)
+        self.compute_fission_rate()
+        self.update_temperature(m=0)
+        if self.use_precursors:
+            self.update_precursors(m=0)
 
-    def post_process_time_step(self) -> None:
-        """Post-process the time step results.
-
-        For Backward Euler, nothing is done. For Crank Nicholson,
-        this computes the next time step value from the previous and
-        half time step values. For TBDF-2, this computes the half time
-        step value from the previous and quarter time step values, then
-        takes a step of BDF-2.
-        """
-        # Handle 2nd order methods
         if self.method in ["CRANK_NICHOLSON", "TBDF2"]:
             self.phi = 2.0*self.phi - self.phi_old
             if self.use_precursors:
                 self.precursors = 2.0*self.precursors - self.precursors_old
 
             if self.method == "TBDF2":
+                A = self.assemble_transient_matrix(m=1)
                 b = self.assemble_transient_rhs(m=1)
-                self.phi = spsolve(self.A[1], b)
-                self.update_precursors(m=1)
+                self.phi = spsolve(A, b)
+                self.compute_fission_rate()
+                self.update_temperature(m=1)
+                if self.use_precursors:
+                    self.update_precursors(m=1)
 
-    def assemble_transient_matrices(self) -> List[csr_matrix]:
-        """Assemble the multigroup evolution matrix for each step `m`.
+        self.power = self.compute_power()
+
+    def bump_solutions(self) -> None:
+        self.power_old = self.power
+        self.phi_old[:] = self.phi
+        self.fission_rate_old[:] = self.fission_rate
+        self.temperature_old[:] = self.temperature
+        if self.use_precursors:
+            self.precursors_old[:] = self.precursors
+
+    def assemble_transient_matrix(self, m: int = 0) -> List[csr_matrix]:
+        """Assemble the multigroup evolution matrix for step `m`.
+
+        Parameters
+        ----------
+        m : int, default 0
+            The step in a multi-step method.
 
         Returns
         -------
-        List[csr_matrix (n_cells * n_groups,) * 2]
+        csr_matrix (n_cells * n_groups,) * 2
         """
-
         if self.method == "BACKWARD_EULER":
-            A = [self.L + self.M / self.dt]
+            A = self.L + self.M / self.dt
         elif self.method == "CRANK_NICHOLSON":
-            A = [self.L + 2.0 * self.M / self.dt]
-        elif self.method == "TBDF2":
-            A = [self.L + 4.0 * self.M / self.dt,
-                 self.L + 3.0 * self.M / self.dt]
+            A = self.L + 2.0 * self.M / self.dt
+        elif self.method == "TBDF2" and m == 0:
+            A = self.L + 4.0 * self.M / self.dt
+        elif self.method == "TBDF2" and m == 1:
+            A = self.L + 3.0 * self.M / self.dt
         else:
             raise NotImplementedError(f"{self.method} is not implemented.")
 
-        for m in range(len(A)):
-            D = self.precursor_substitution_matrix(m)
-            A[m] -= self.S + self.Fp + D
-            A[m] = self.apply_matrix_bcs(A[m])
-        return A
+        A -= self.S + self.Fp
+        if self.use_precursors and not self.lag_precursors:
+            A -= self.precursor_substitution_matrix(m)
+        if self.use_feedback:
+            A += self.feedback_matrix()
+        return self.apply_matrix_bcs(A)
 
     def assemble_transient_rhs(self, m: int = 0) -> ndarray:
         b = self.set_source() + self.set_old_source(m)
         return self.apply_vector_bcs(b)
+
+    def feedback_matrix(self) -> csr_matrix:
+        """Assemble the feedback matrix.
+
+        Returns
+        -------
+        csr_matrix (n_cells * n_groups,) * 2
+        """
+        if isinstance(self.discretization, FiniteVolume):
+            return self._fv_feedback_matrix()
+        elif isinstance(self.discretization, PiecewiseContinuous):
+            return self._pwc_feedback_matrix()
 
     def mass_matrix(self) -> csr_matrix:
         """Assemble the multigroup mass matrix.
@@ -322,7 +344,8 @@ class TransientSolver(KEigenvalueSolver):
             b = self.M / self.dt @ (4.0 * self.phi - self.phi_old)
 
         # Add old time step precursors
-        b += self.old_precursor_source(m)
+        if self.use_precursors:
+            b += self.old_precursor_source(m)
         return b
 
     def old_precursor_source(self, m: int = 0) -> ndarray:
@@ -337,11 +360,10 @@ class TransientSolver(KEigenvalueSolver):
         -------
         ndarray (n_cells * n_groups)
         """
-        if self.use_precursors:
-            if isinstance(self.discretization, FiniteVolume):
-                return self._fv_old_precursor_source(m)
-            elif isinstance(self.discretization, PiecewiseContinuous):
-                return self._pwc_old_precursor_source(m)
+        if isinstance(self.discretization, FiniteVolume):
+            return self._fv_old_precursor_source(m)
+        elif isinstance(self.discretization, PiecewiseContinuous):
+            return self._pwc_old_precursor_source(m)
 
     def update_precursors(self, m: int = 0) -> None:
         """Update the precursors after a time step.
@@ -351,11 +373,39 @@ class TransientSolver(KEigenvalueSolver):
         m : int, default 0
             The step in a multi-step method.
         """
-        if self.use_precursors:
-            if isinstance(self.discretization, FiniteVolume):
-                self._fv_update_precursors(m)
-            elif isinstance(self.discretization, PiecewiseContinuous):
-                self._pwc_update_precursors(m)
+        if isinstance(self.discretization, FiniteVolume):
+            self._fv_update_precursors(m)
+        elif isinstance(self.discretization, PiecewiseContinuous):
+            self._pwc_update_precursors(m)
+
+    def compute_fission_rate(self) -> None:
+        """Compute the fission rate averaged over a cell.
+        """
+        if isinstance(self.discretization, FiniteVolume):
+            self._fv_compute_fission_rate()
+        elif isinstance(self.discretization, PiecewiseContinuous):
+            self._pwc_compute_fission_rate()
+
+    def update_temperature(self, m: int = 0) -> None:
+        """Compute the temperature averaged over a cell.
+
+        Parameters
+        ----------
+        m : int, default 0
+            The step in a multi-step method.
+        """
+        eff_dt = self.effective_time_step(m)
+        P = self.energy_per_fission * self.fission_rate
+        T_old = self.temperature_old
+        if m == 1:
+            T = self.temperature
+            T_old = (4.0*T - T_old) / 3.0
+
+        # Loop over cells
+        for cell in self.mesh.cells:
+            E_dep = P[cell.id] * eff_dt
+            dT = E_dep / (self.density * self.specific_heat)
+            self.temperature[cell.id] = T_old[cell.id] + dT
 
     def compute_power(self) -> float:
         """Compute the fission power in the system.
@@ -395,69 +445,83 @@ class TransientSolver(KEigenvalueSolver):
     def compute_initial_values(self) -> None:
         """Evaluate the initial conditions.
         """
-        if self.initial_conditions is None:
-            KEigenvalueSolver.execute(self, verbose=0)
-            msg = f"***** k-Eigenvalue Initialization *****"
-            header = "*" * len(msg)
-            print("\n".join(["", header, msg, header]))
-            print(f"k-Eigenvalue:\t{self.k_eff:.6g}")
-        else:
-            G, J = self.n_groups, self.n_precursors
+        # Evaluate initial condition functions
+        if self.initial_conditions is not None:
+            self._check_initial_conditions()
+
             grid = self.discretization.grid
             grid = np.array([p.z for p in grid])
 
-            # Convert to lambdas
-            if isinstance(self.initial_conditions, MutableDenseMatrix):
-                from sympy import lambdify
-                symbols = list(self.initial_conditions.free_symbols)
-
-                ics = []
-                for ic in self.initial_conditions:
-                    ics += lambdify(symbols, ic)
-                self.initial_conditions = ics
-
-            # Check initial conditions
-            if len(self.initial_conditions) not in [G, G + J]:
-                raise AssertionError(
-                    "Invalid number of initial conditions. There must be "
-                    "either n_groups or n_groups + n_precursors initial "
-                    "conditions.")
-
             # Initial conditions for scalar flux
-            for g in range(G):
-                ic = self.initial_conditions[g]
+            for g, ic in enumerate(self.initial_conditions):
                 if callable(ic):
-                    self.phi[g::G] = ic(grid)
-                elif isinstance(ic, (ndarray, List[float])):
-                    if len(ic) == len(self.phi[g::G]):
-                        self.phi[g::G] = ic
-                    else:
-                        raise ValueError(
-                            f"Initial condition vector for group {g} is "
-                            f"incompatible with the discretization.")
+                    self.phi[g::self.n_groups] = ic(grid)
+                else:
+                    self.phi[g::self.n_groups] = ic
 
-            # Initial conditions for precursors
-            if self.use_precursors and len(self.initial_conditions) > G:
-                for j in range(J):
-                    ic = self.initial_conditions[G + j]
-                    if callable(ic):
-                        self.precursors[j::J] = ic(grid)
-                    elif isinstance(ic, (ndarray, List[float])):
-                        if len(ic) == len(self.precursors[j::J]):
-                            self.precursors[j::J] = ic
-                        else:
-                            raise ValueError(
-                                f"Initial condition vector for precursor "
-                                f"{j} is incompatible with the "
-                                f"discretization.")
+            # Compute fission rate and set precursors to zero
+            self.compute_fission_rate()
+            if self.use_precursors:
+                self.precursors[:] = 0.0
 
-        # Copy initial conditions to old solutions
-        self.phi_old[:] = self.phi
-        if self.use_precursors:
-            self.precursors_old[:] = self.precursors
+        # Initialize with a k-eigenvalue solver
+        else:
+            # Modify fission cross section
+            for xs in self.material_xs:
+                xs.sigma_f /= self.k_eff
+
+            # Reconstruct pompt/total and delayd matrices
+            self.Fp = self.prompt_fission_matrix()
+            self.Fd = self.delayed_fission_matrix()
+
+            # Normalize phi to initial power
+            self.phi *= self.power / self.compute_power()
+
+            # Compute fission rate and precursors
+            self.compute_fission_rate()
+            if self.use_precursors:
+                self.compute_precursors()
+
+        self.bump_solutions()
 
     def store_outputs(self, time: float) -> None:
         self.outputs.store_outputs(self, time)
 
     def write_outputs(self, path: str = ".") -> None:
         self.outputs.write_outputs(path)
+
+    def _check_time_step(self) -> None:
+        if self.output_frequency is None:
+            self.output_frequency = self.dt
+        if self.dt > self.output_frequency:
+            self.dt = self.output_frequency
+
+    def _check_initial_conditions(self) -> None:
+        # Check number of ics
+        if len(self.initial_conditions) != self.n_groups:
+            raise AssertionError(
+                "Invalid number of initial conditions. There must be "
+                "as many initial conditions as groups.")
+
+        # Convert to lambdas, if sympy functions
+        if isinstance(self.initial_conditions, MutableDenseMatrix):
+            from sympy import lambdify
+            symbols = list(self.initial_conditions.free_symbols)
+
+            ics = []
+            for ic in self.initial_conditions:
+                ics += lambdify(symbols, ic)
+            self.initial_conditions = ics
+
+        # Check length for vector ics
+        if isinstance(self.initial_conditions, list):
+            n_phi_dofs = self.discretization.n_dofs(self.phi_uk_man)
+            for ic in self.initial_conditions:
+                array_like = (ndarray, List[float])
+                if not callable(ic) and isinstance(ic, array_like):
+                    if len(ic) != n_phi_dofs:
+                        raise AssertionError(
+                            "Vector initial conditions must agree with "
+                            "the number of DoFs associated with the "
+                            "attached discretization and phi unknown "
+                            "manager.")

@@ -47,7 +47,7 @@ solver.method = "TBDF2"
 
 # Run the problem
 solver.initialize()
-
 solver.execute(verbose=1)
+
 solver.plot_solution(title="Final Solution")
 plt.show()

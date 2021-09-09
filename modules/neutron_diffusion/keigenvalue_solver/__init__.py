@@ -79,7 +79,9 @@ class KEigenvalueSolver(SteadyStateSolver):
                 converged = True
                 break
 
-        self.compute_precursors()
+        if self.use_precursors:
+            self.compute_precursors()
+            self.precursors /= self.k_eff
 
         # Print summary
         if converged:
@@ -111,8 +113,3 @@ class KEigenvalueSolver(SteadyStateSolver):
         float
         """
         return np.sum((self.Fp + self.Fd) @ self.phi)
-
-    def compute_precursors(self) -> None:
-        SteadyStateSolver.compute_precursors(self)
-        if self.use_precursors:
-            self.precursors /= self.k_eff

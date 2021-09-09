@@ -244,11 +244,10 @@ class SteadyStateSolver:
     def compute_precursors(self) -> None:
         """Compute the delayed neutron precursor concentrations.
         """
-        if self.use_precursors:
-            if isinstance(self.discretization, FiniteVolume):
-                self._fv_compute_precursors()
-            elif isinstance(self.discretization, PiecewiseContinuous):
-                self._pwc_compute_precursors()
+        if isinstance(self.discretization, FiniteVolume):
+            self._fv_compute_precursors()
+        elif isinstance(self.discretization, PiecewiseContinuous):
+            self._pwc_compute_precursors()
 
     def _check_inputs(self) -> None:
         self._check_mesh()
