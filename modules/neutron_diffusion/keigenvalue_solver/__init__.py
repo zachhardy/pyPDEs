@@ -102,7 +102,9 @@ class KEigenvalueSolver(SteadyStateSolver):
         return self.apply_matrix_bcs(A)
 
     def assemble_rhs(self) -> csr_matrix:
-        b = (self.Fp + self.Fd) @ self.phi / self.k_eff
+        b = self.Fp @ self.phi / self.k_eff
+        if self.use_precursors:
+            b += self.Fd @ self.phi / self.k_eff
         return self.apply_vector_bcs(b)
 
     def compute_fission_production(self) -> float:

@@ -125,7 +125,8 @@ class SteadyStateSolver:
         self.L = self.diffusion_matrix()
         self.S = self.scattering_matrix()
         self.Fp = self.prompt_fission_matrix()
-        self.Fd = self.delayed_fission_matrix()
+        if self.use_precursors:
+            self.Fd = self.delayed_fission_matrix()
 
     def execute(self) -> None:
         """Execute the steady-state multigroup diffusion solver.
@@ -136,7 +137,9 @@ class SteadyStateSolver:
         self.compute_precursors()
 
     def assemble_matrix(self) -> csr_matrix:
-        A = self.L - self.S - self.Fp - self.Fd
+        A = self.L - self.S - self.Fp
+        if self.use_precursors:
+            A -= self.Fd
         return self.apply_matrix_bcs(A)
 
     def assemble_rhs(self) -> ndarray:
