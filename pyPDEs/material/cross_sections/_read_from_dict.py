@@ -101,7 +101,7 @@ def read_from_xs_dict(
                 "chi_prompt msut be provided if "
                 "precursors are present.")
         if chi_p:
-            if len(chi) != self.n_groups:
+            if len(chi_p) != self.n_groups:
                 raise ValueError(
                     "chi_prompt is incompatible with num_groups.")
             self.chi_prompt = np.array(chi_p) / np.sum(chi_p)
@@ -157,7 +157,7 @@ def read_from_xs_dict(
                 raise ValueError(
                     "chi_delayed is incompatible with num_precursors.")
             for j in range(self.n_precursors):
-                chi_dj = np.array(chi_d[:, j])
+                chi_dj = np.array(chi_d)[:, j]
                 self.chi_delayed[:, j] = chi_dj / np.sum(chi_dj)
 
     # Inverse velocity term
