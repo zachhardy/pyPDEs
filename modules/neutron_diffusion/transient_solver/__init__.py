@@ -57,14 +57,17 @@ class TransientSolver(KEigenvalueSolver):
         # Physics options
         self.lag_precursors: bool = False
 
-        # Power related parameters
-        self.power: float = 1.0  # W
-        self.power_old: float = 1.0
-        self.energy_per_fission: float = 3.2e-11  # J / fission
+        # Flag for transient cross sections
+        self.has_transient_xs: bool = False
 
         # Feedback related parameters
         self.use_feedback: bool = False
         self.feedback_coeff: float = 1.0e-3
+
+        # Power related parameters
+        self.power: float = 1.0  # W
+        self.power_old: float = 1.0
+        self.energy_per_fission: float = 3.2e-11  # J / fission
 
         # Heat generation parameters
         self.density: float = 19.0  # g/cc
@@ -90,15 +93,18 @@ class TransientSolver(KEigenvalueSolver):
         self.temperature: ndarray = None
         self.temperature_old: ndarray = None
 
-        # Cross section perturbation function
-        self.xs_perturbations = None
-
     def initialize(self) -> None:
         """Initialize the solver.
         """
         KEigenvalueSolver.initialize(self)
         KEigenvalueSolver.execute(self, verbose=1)
         time.sleep(2.5)
+
+        # Set transient cross section flag
+        for xs in self.material_xs:
+            if xs.sigma_t_function is not None:
+                self.has_transient_xs = True
+                break
 
         # Set/check output frequency
         self._check_time_step()
@@ -218,6 +224,10 @@ class TransientSolver(KEigenvalueSolver):
         m : int, default 0
             The step in a multi-step method.
         """
+        if self.has_transient_xs:
+            eff_dt = self.effective_time_step(m=0)
+            self.L = self.diffusion_matrix(t + eff_dt)
+
         A = self.assemble_transient_matrix(m=0)
         b = self.assemble_transient_rhs(m=0)
         self.phi = spsolve(A, b)
@@ -232,6 +242,9 @@ class TransientSolver(KEigenvalueSolver):
                 self.precursors = 2.0*self.precursors - self.precursors_old
 
             if self.method == "TBDF2":
+                if self.has_transient_xs:
+                    self.L = self.diffusion_matrix(t + self.dt)
+
                 A = self.assemble_transient_matrix(m=1)
                 b = self.assemble_transient_rhs(m=1)
                 self.phi = spsolve(A, b)

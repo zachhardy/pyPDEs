@@ -14,37 +14,38 @@ from pyPDEs.utilities.boundaries import *
 from modules.neutron_diffusion import *
 
 
-def xs_peturbations(material_xs: List[CrossSections],
-                    g: int, t: float) -> None:
-    for i, xs in enumerate(material_xs):
-        if t <= 0.1: v = 1.1
+def sigma_t_1(t: float, sigt_i: float) -> float:
+    if t <= 0.1:
+        return 1.1
+    elif 0.1 < t <= 0.6:
+        f = (t - 0.1) / 0.5
+        return 1.1 + f*(1.095 - 1.1)
+    else:
+        return 1.095
 
-        elif 0.1 < t <= 0.6:
-            f = (t - 0.1) / 0.5
-            if i == 0: v = 1.1
-            elif i == 1: v = 1.1 + f*(1.095 - 1.1)
-            elif i == 2: v = 1.1 + f * (1.09 - 1.1)
-            elif i == 3: v = 1.1 + f*(1.105 - 1.1)
+def sigma_t_2(t: float, sigt_i: float) -> float:
+    if t <= 0.1:
+        return 1.1
+    elif 0.1 < t <= 0.6:
+        f = (t - 0.1) / 0.5
+        return 1.1 + f*(1.09 - 1.1)
+    elif 0.6 < t <= 1.0:
+        return 1.09
+    elif 1.0 < t <= 1.7:
+        f = (t - 1.0) / 0.7
+        return 1.09 + f*(1.1 - 1.09)
+    else:
+        return 1.1
 
-        elif 0.6 < t <= 1.0:
-            if i == 0: v = 1.1
-            elif i == 1: v = 1.095
-            elif i == 2: v = 1.09
-            elif i == 3: v = 1.105
+def sigma_t_3(t: float, sigt_i: float) -> float:
+    if t <= 0.1:
+        return 1.1
+    elif 0.1 < t <= 0.6:
+        f = (t - 0.1) / 0.5
+        return 1.1 + f*(1.105 - 1.1)
+    else:
+        return 1.105
 
-        elif 1.0 < t <= 1.7:
-            f = (t - 1.0) / 0.7
-            if i == 0: v = 1.1
-            elif i == 1: v = 1.095
-            elif i == 2: v = 1.09 + f*(1.1 - 1.09)
-            elif i == 3: v = 1.105
-
-        elif t > 1.7:
-            if i in [0, 2]: v = 1.1
-            elif i == 1: v = 1.095
-            elif i == 3: v = 1.105
-
-        xs.sigma_t[0] = v
 
 # Create mesh and discretization
 zones = [0.0, 16.0, 20.0, 24.0, 56.0, 64.0, 80.0]
@@ -57,28 +58,33 @@ discretization = FiniteVolume(mesh)
 xs_vals = {"n_groups": 1, "n_precursors": 1,
            "D": [1.0], "sigma_t": [1.1], "sigma_f": [1.1],
            "transfer_matrix": [[0.0]],
-           "inv_velocity": [1.0e-3],
+           "velocity": [1000.0],
            "nu_prompt": [0.994], "nu_delayed": [0.006],
-           "chi_prompt": [1.0], "chi_delayed": [[1.0]],
            "precursor_lambda": [0.1], "precursor_yield": [1.0]}
 
 
-xs = CrossSections()
-xs.read_from_xs_dict(xs_vals)
+xs0 = CrossSections()
+xs0.read_from_xs_dict(xs_vals)
 
-src = MultiGroupSource(np.zeros(xs.n_groups))
+xs1 = deepcopy(xs0)
+xs1.sigma_t_function = sigma_t_1
+
+xs2 = deepcopy(xs0)
+xs2.sigma_t_function = sigma_t_2
+
+xs3 = deepcopy(xs0)
+xs3.sigma_t_function = sigma_t_3
 
 # Create boundary conditions
-boundaries = [VacuumBoundary(xs.n_groups),
-              VacuumBoundary(xs.n_groups)]
+boundaries = [VacuumBoundary(xs0.n_groups),
+              VacuumBoundary(xs0.n_groups)]
 
 # Initialize solver and attach objects
 solver = TransientSolver()
 solver.mesh = mesh
 solver.discretization = discretization
 solver.boundaries = boundaries
-solver.material_xs = [xs, deepcopy(xs), deepcopy(xs), deepcopy(xs)]
-solver.material_src = [src, src, src, src]
+solver.material_xs = [xs0, xs1, xs2, xs3]
 
 # Set options
 solver.use_precursors = True
@@ -92,8 +98,6 @@ solver.adaptivity = True
 
 solver.max_iterations = 50000
 solver.tolerance = 1.0e-12
-
-solver.xs_perturbations = xs_peturbations
 
 # Run the problem
 solver.initialize()

@@ -39,7 +39,7 @@ def _pwc_feedback_matrix(self: "TransientSolver") -> csr_matrix:
 
         # Loop over groups
         for g in range(self.n_groups):
-            sig_t = xs.sigma_t[g]
+            sig_t = xs.sigma_t(g)
 
             # Loop over nodes
             for i in range(view.n_nodes):

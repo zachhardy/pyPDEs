@@ -38,7 +38,7 @@ def read_from_xs_dict(
         sig_t = np.array(xs.get("sigma_t"))
         if len(sig_t) != self.n_groups:
             raise ValueError( f"sigma_t {incompat_w_G}.")
-        self.sigma_t = density * sig_t
+        self._sigma_t = density * sig_t
 
     # Get absorption cross section
     if "sigma_a" in xs:

@@ -11,11 +11,17 @@ if TYPE_CHECKING:
     from . import SteadyStateSolver
 
 
-def _pwc_diffusion_matrix(self: "SteadyStateSolver") -> csr_matrix:
+def _pwc_diffusion_matrix(self: "SteadyStateSolver",
+                          t: float = 0.0) -> csr_matrix:
     """Assemble the multigroup diffusion matrix.
 
     This routine assembles the diffusion plus interaction matrix
     for all groups according to the DoF ordering of `phi_uk_man`.
+
+    Parameters
+    ----------
+    t : float, default 0.0
+        The simulation time.
 
     Returns
     -------
@@ -33,7 +39,7 @@ def _pwc_diffusion_matrix(self: "SteadyStateSolver") -> csr_matrix:
         # Loop over groups
         for g in range(self.n_groups):
             D = xs.D[g]
-            sig_t = xs.sigma_t[g]
+            sig_t = xs.sigma_t(g, t)
 
             # Loop over nodes
             for i in range(view.n_nodes):

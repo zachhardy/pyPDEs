@@ -15,11 +15,17 @@ if TYPE_CHECKING:
     from . import SteadyStateSolver
 
 
-def _fv_diffusion_matrix(self: "SteadyStateSolver") -> csr_matrix:
+def _fv_diffusion_matrix(self: "SteadyStateSolver",
+                         t: float = 0.0) -> csr_matrix:
     """Assemble the multigroup diffusion matrix.
 
     This routine assembles the diffusion plus interaction matrix
     for all groups according to the DoF ordering of `phi_uk_man`.
+
+    Parameters
+    ----------
+    t : float, default 0.0
+        The simulation time.
 
     Returns
     -------
@@ -37,7 +43,7 @@ def _fv_diffusion_matrix(self: "SteadyStateSolver") -> csr_matrix:
         # Loop over groups
         for g in range(self.n_groups):
             ig = fv.map_dof(cell, 0, uk_man, 0, g)
-            A[ig, ig] += xs.sigma_t[g] * volume
+            A[ig, ig] += xs.sigma_t(g, t) * volume
 
         # Loop over faces
         for face in cell.faces:

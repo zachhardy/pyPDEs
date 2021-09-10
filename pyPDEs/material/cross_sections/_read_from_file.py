@@ -83,9 +83,9 @@ def read_from_xs_file(self: "CrossSections", filename: str,
                 self.has_precursors = self.n_precursors > 0
 
             if line[0] == "SIGMA_T_BEGIN":
-                self.sigma_t = np.zeros(self.n_groups)
-                read_1d_xs("SIGMA_T", self.sigma_t, lines, line_num)
-                self.sigma_t *= density  # scale by density
+                self._sigma_t = np.zeros(self.n_groups)
+                read_1d_xs("SIGMA_T", self._sigma_t, lines, line_num)
+                self._sigma_t *= density  # scale by density
 
             if line[0] == "SIGMA_A_BEGIN":
                 self.sigma_a = np.zeros(self.n_groups)
