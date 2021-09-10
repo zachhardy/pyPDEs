@@ -459,6 +459,7 @@ class TransientSolver(KEigenvalueSolver):
         if self.initial_conditions is not None:
             self._check_initial_conditions()
 
+            # Get 1D grid
             grid = self.discretization.grid
             grid = np.array([p.z for p in grid])
 
