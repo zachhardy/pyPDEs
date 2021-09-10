@@ -71,20 +71,6 @@ class CrossSections(MaterialProperty):
         """
         return self.nu_delayed * self.sigma_f
 
-    def finalize_xs(self) -> None:
-        """Compute auxiliary cross sections based upon others.
-        """
-        self.sigma_s = np.sum(self.transfer_matrix, axis=1)
-        if sum(self.D) == 0.0:
-            self.D = 1.0 / (3.0 * self.sigma_t)
-        if sum(self.sigma_a) == 0.0:
-            self.sigma_a = self.sigma_t - self.sigma_s
-        self.sigma_r = self.sigma_t - np.diag(self.transfer_matrix)
-
-        nu_p, nu_d = self.nu_prompt, self.nu_delayed
-        if sum(nu_p) > 0.0 and sum(nu_d) > 0.0:
-            self.nu = nu_p + nu_d
-
     def reset_groupwise_xs(self) -> None:
         """Reset the general and prompt cross sections.
         """
