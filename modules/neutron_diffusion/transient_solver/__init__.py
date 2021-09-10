@@ -90,6 +90,8 @@ class TransientSolver(KEigenvalueSolver):
         self.temperature: ndarray = None
         self.temperature_old: ndarray = None
 
+        # Cross section perturbation function
+        self.xs_perturbations = None
 
     def initialize(self) -> None:
         """Initialize the solver.
@@ -116,6 +118,7 @@ class TransientSolver(KEigenvalueSolver):
 
         # Evaluate initial conditions
         self.compute_initial_values()
+        self.store_outputs(0.0)
 
         # Set the old power to set initial power
         self.power_old = self.power
@@ -145,7 +148,7 @@ class TransientSolver(KEigenvalueSolver):
                 self.dt = self.t_final - t
 
             # Solve time step
-            self.solve_time_step()
+            self.solve_time_step(t)
             self.power = self.compute_power()
 
             # Refinements, if adaptivity is used
@@ -192,7 +195,7 @@ class TransientSolver(KEigenvalueSolver):
             self.dt /= 2.0
 
             # Take the reduced time step
-            self.solve_time_step()
+            self.solve_time_step(t)
             self.power = self.compute_power()
 
             # Compute new change in power
@@ -207,7 +210,7 @@ class TransientSolver(KEigenvalueSolver):
             if self.dt > self.output_frequency:
                 self.dt = self.output_frequency
 
-    def solve_time_step(self) -> None:
+    def solve_time_step(self, t: float) -> None:
         """Solve the `m`'th step of a multi-step method.
 
         Parameters
@@ -215,6 +218,10 @@ class TransientSolver(KEigenvalueSolver):
         m : int, default 0
             The step in a multi-step method.
         """
+        eff_dt = self.effective_time_step(m=0)
+        self.xs_perturbations(self.material_xs, 0, t + eff_dt)
+        self.L = self.diffusion_matrix()
+
         A = self.assemble_transient_matrix(m=0)
         b = self.assemble_transient_rhs(m=0)
         self.phi = spsolve(A, b)
@@ -229,6 +236,9 @@ class TransientSolver(KEigenvalueSolver):
                 self.precursors = 2.0*self.precursors - self.precursors_old
 
             if self.method == "TBDF2":
+                self.xs_perturbations(self.material_xs, 0, t + self.dt)
+                self.L = self.diffusion_matrix()
+
                 A = self.assemble_transient_matrix(m=1)
                 b = self.assemble_transient_rhs(m=1)
                 self.phi = spsolve(A, b)
