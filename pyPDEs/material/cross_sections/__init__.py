@@ -36,7 +36,7 @@ class CrossSections(MaterialProperty):
         self.chi_prompt: ndarray = None
         self.chi_delayed: ndarray = None
 
-        self.inv_velocity: ndarray = None
+        self.velocity: ndarray = None
 
         self.precursor_lambda: ndarray = None
         self.precursor_yield: ndarray = None
@@ -71,26 +71,74 @@ class CrossSections(MaterialProperty):
         """
         return self.nu_delayed * self.sigma_f
 
-    def reset_groupwise_xs(self) -> None:
-        """Reset the general and prompt cross sections.
+    def _validate_xs(self) -> None:
+        """Validate the parsed cross sections.
         """
-        self.D = np.zeros(self.n_groups)
-        self.sigma_t = np.zeros(self.n_groups)
-        self.sigma_f = np.zeros(self.n_groups)
-        self.sigma_a = np.zeros(self.n_groups)
-        self.sigma_s = np.zeros(self.n_groups)
-        self.sigma_r = np.zeros(self.n_groups)
-        self.chi = np.zeros(self.n_groups)
-        self.chi_prompt = np.zeros(self.n_groups)
-        self.nu = np.zeros(self.n_groups)
-        self.nu_prompt = np.zeros(self.n_groups)
-        self.nu_delayed = np.zeros(self.n_groups)
-        self.inv_velocity = np.zeros(self.n_groups)
-        self.transfer_matrix = np.zeros((self.n_groups,) * 2)
+        # Ensure sigma_t was provided
+        if self.sigma_t is None:
+            raise AssertionError(
+                "Total cross sections must be provided.")
 
-    def reset_delayed_xs(self) -> None:
-        """Reset the cross section terms involving delayed neutrons.
-        """
-        self.chi_delayed = np.zeros((self.n_groups, self.n_precursors))
-        self.precursor_lambda = np.zeros(self.n_precursors)
-        self.precursor_yield = np.zeros(self.n_precursors)
+        # Ensure transfer matrix was provided
+        if self.transfer_matrix is None:
+            raise AssertionError(
+                "The transfer matrix must be provided.")
+
+        # Compute diffusion coefficient if not provided
+        if self.D is None:
+            self.D = (3.0 * self.sigma_t) ** (-1)
+
+        # Enforce sigma_t = sigma_a + sigma_s
+        if self.sigma_a is None:
+            self.sigma_a = self.sigma_t - self.sigma_s
+        else:
+            self.sigma_t = self.sigma_a + self.sigma_s
+
+        # Compute removal cross sections
+        self.sigma_r = self.sigma_t - np.diag(self.transfer_matrix)
+
+        # Check fissile properties
+        if self.is_fissile:
+
+            # Enforce nu = nu_prompt + nu_delayed
+            has_nu = self.nu is not None
+            has_nu_p = self.nu_prompt is not None
+            has_nu_d = self.nu_delayed is not None
+            if has_nu_p and has_nu_d:
+                self.nu = self.nu_prompt + self.nu_delayed
+                has_nu = True
+
+            # Ensure appropriate nu values exist
+            if self.has_precursors:
+                if not has_nu_p or not has_nu_d:
+                    raise AssertionError(
+                        "Both prompt and delayed nu must be provided "
+                        "if the cross sections have precursors.")
+            elif not has_nu:
+                raise AssertionError(
+                    "nu must be provided if the cross sections do "
+                    "not have precursors.")
+
+            # Enforce chi = (1.0 - beta) * chi_prompt +
+            #               beta * sum_{j=1}^J gamma_j * chi_delayed
+            has_chi = self.chi is not None
+            has_chi_p = self.chi_prompt is not None
+            has_chi_d = self.chi_delayed is not None
+            if has_chi_p and has_chi_d:
+                beta = self.nu_delayed / self.nu
+                self.chi = (1.0 - beta) * self.chi_prompt
+                for j in range(self.n_precursors):
+                    gamma = self.precursor_yield[j]
+                    self.chi += beta * gamma * self.chi_delayed[:, j]
+                has_chi = True
+
+            # Ensure appropriate chi values exist
+            if self.has_precursors:
+                if not has_chi_p or not has_chi_d:
+                    raise AssertionError(
+                        "Both prompt and delayed chi must be provided "
+                        "if the cross sections have precursors.")
+            elif not has_chi:
+                raise AssertionError(
+                    "chi must be provided if the cross sections do "
+                    "not have precursors.")

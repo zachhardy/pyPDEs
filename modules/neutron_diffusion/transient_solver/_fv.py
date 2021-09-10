@@ -62,7 +62,7 @@ def _fv_mass_matrix(self: "TransientSolver") -> csr_matrix:
         # Loop over groups
         for g in range(self.n_groups):
             ig = fv.map_dof(cell, 0, uk_man, 0, g)
-            A[ig, ig] += xs.inv_velocity[g] * volume
+            A[ig, ig] += volume / xs.velocity[g]
     return A.tocsr()
 
 

@@ -77,137 +77,87 @@ def read_from_xs_file(self: "CrossSections", filename: str,
 
             if line[0] == "NUM_GROUPS":
                 self.n_groups = int(line[1])
-                self.reset_groupwise_xs()
 
             if line[0] == "NUM_PRECURSORS":
                 self.n_precursors = int(line[1])
                 self.has_precursors = self.n_precursors > 0
-                self.reset_delayed_xs()
 
             if line[0] == "SIGMA_T_BEGIN":
+                self.sigma_t = np.zeros(self.n_groups)
                 read_1d_xs("SIGMA_T", self.sigma_t, lines, line_num)
                 self.sigma_t *= density  # scale by density
 
             if line[0] == "SIGMA_A_BEGIN":
+                self.sigma_a = np.zeros(self.n_groups)
                 read_1d_xs("SIGMA_A", self.sigma_a, lines, line_num)
                 self.sigma_a *= density  # scale by density
 
             if line[0] == "DIFFUSION_COEFF_BEGIN":
+                self.D = np.zeros(self.n_groups)
                 read_1d_xs("DIFFUSION_COEFF", self.D, lines, line_num)
 
             if line[0] == "SIGMA_F_BEGIN":
+                self.sigma_f = np.zeros(self.n_groups)
                 read_1d_xs("SIGMA_F", self.sigma_f, lines, line_num)
                 self.sigma_f *= density
                 if np.sum(self.sigma_f) > 0.0:
                     self.is_fissile = True
 
             if line[0] == "NU_BEGIN":
+                self.nu = np.zeros(self.n_groups)
                 read_1d_xs("NU", self.nu, lines, line_num)
 
             if line[0] == "NU_PROMPT_BEGIN":
+                self.nu_prompt = np.zeros(self.n_groups)
                 read_1d_xs("NU_PROMPT", self.nu_prompt, lines, line_num)
 
             if line[0] == "NU_DELAYED_BEGIN":
+                self.nu_delayed = np.zeros(self.n_groups)
                 read_1d_xs("NU_DELAYED", self.nu_delayed, lines, line_num)
 
             if line[0] == "CHI_BEGIN":
+                self.chi = np.zeros(self.n_groups)
                 read_1d_xs("CHI", self.chi, lines, line_num)
-
-                # Normalize to unit spectrum
                 self.chi /= np.sum(self.chi)
 
             if line[0] == "CHI_PROMPT_BEGIN":
+                self.chi_prompt = np.zeros(self.n_groups)
                 read_1d_xs("CHI_PROMPT", self.chi_prompt, lines, line_num)
-
-                # Normalize to unit spectrum
                 self.chi_prompt /= np.sum(self.chi_prompt)
 
             if line[0] == "CHI_DELAYED_BEGIN":
+                G, J = self.n_groups, self.n_precursors
+                self.chi_delayed = np.zeros((G, J))
                 read_chi_delayed(
                     "CHI_DELAYED", self.chi_delayed, lines, line_num)
-
-                # Normalize to unit spectra
                 for j in range(self.n_precursors):
                     chi_dj_sum = np.sum(self.chi_delayed[:, j])
                     self.chi_delayed[:, j] /= chi_dj_sum
 
-            if line[0] == "INV_VELOCITY_BEGIN":
+            if line[0] == "VELOCITY_BEGIN":
+                self.velocity = np.zeros(self.n_groups)
                 read_1d_xs(
-                    "INV_VELOCITY", self.inv_velocity, lines, line_num)
+                    "VELOCITY", self.velocity, lines, line_num)
 
             if line[0] == "TRANSFER_MOMENTS_BEGIN":
+                self.transfer_matrix = np.zeros((self.n_groups,) * 2)
                 read_transfer_matrix(
                     "TRANSFER_MOMENTS", self.transfer_matrix, lines, line_num)
                 self.transfer_matrix *= density  # scale by density
-
-                # Compute total scattering cross section
                 self.sigma_s = np.sum(self.transfer_matrix, axis=1)
 
             if line[0] == "PRECURSOR_LAMBDA_BEGIN":
+                self.precursor_lambda = np.zeros(self.n_precursors)
                 read_1d_xs(
                     "PRECURSOR_LAMBDA", self.precursor_lambda, lines, line_num)
 
 
             if line[0] == "PRECURSOR_YIELD_BEGIN":
+                self.precursor_yield = np.zeros(self.n_precursors)
                 read_1d_xs(
                     "PRECURSOR_YIELD", self.precursor_yield, lines, line_num)
-
-                # Normalize to unit yield
                 self.precursor_yield /= np.sum(self.precursor_yield)
 
             line_num += 1
 
-    # Check that mandatory cross sections are provided
-    if self.sigma_t is None:
-        raise AssertionError(f"sigma_t {not_found}.")
-
-    if self.transfer_matrix is None:
-        raise AssertionError(f"transfer_matrix {not_found}.")
-
-
-
-    # Enforce nu = nu_prompt + nu_delayed
-    has_nu = self.nu is not None
-    has_nu_p = self.nu_prompt is not None
-    has_nu_d = self.nu_delayed is not None
-    if has_nu_p and has_nu_d:
-        self.nu = self.nu_prompt + self.nu_delayed
-        has_nu = True
-
-    # Ensure appropriate nu values exist
-    if self.has_precursors:
-        if not has_nu_p or not has_nu_d:
-            raise AssertionError(
-                "Both prompt and delayed nu must be provided "
-                "if the cross sections have precursors.")
-    elif not has_nu:
-        raise AssertionError(
-            "nu must be provided if the cross sections do "
-            "not have precursors.")
-
-        # Compute chi from prompt and delayed chi
-        has_chi = self.chi is not None
-        has_chi_p = self.chi_prompt is not None
-        has_chi_d = self.chi_delayed is not None
-        if has_chi_p and has_chi_d:
-            beta = self.nu_delayed / self.nu
-            self.chi = (1.0 - beta) * self.chi_prompt
-            for j in range(self.n_precursors):
-                gamma = self.precursor_yield[j]
-                self.chi += beta * gamma * self.chi_delayed[:, j]
-            has_chi = True
-
-        # Ensure appropriate chi values exist
-        if self.has_precursors:
-            if not has_chi_p or not has_chi_d:
-                raise AssertionError(
-                    "Both prompt and delayed chi must be provided "
-                    "if the cross sections have precursors.")
-        elif not has_chi:
-            raise AssertionError(
-                "chi must be provided if the cross sections do "
-                "not have precursors.")
-
-
-    # Compute other xs
-    self.finalize_xs()
+    self._validate_xs()

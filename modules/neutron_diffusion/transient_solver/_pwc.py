@@ -75,7 +75,7 @@ def _pwc_mass_matrix(self: "TransientSolver",
 
         # Loop over groups
         for g in range(self.n_groups):
-            inv_vel = xs.inv_velocity[g]
+            v = xs.velocity[g]
 
             # Loop over nodes
             for i in range(view.n_nodes):
@@ -89,7 +89,7 @@ def _pwc_mass_matrix(self: "TransientSolver",
                         jg = pwc.map_dof(cell, j, uk_man, 0, g)
 
                         mass_ij = view.intV_shapeI_shapeJ[i][j]
-                        A[ig, jg] += inv_vel * mass_ij
+                        A[ig, jg] +=  mass_ij / v
     return A.tocsr()
 
 

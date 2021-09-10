@@ -218,10 +218,6 @@ class TransientSolver(KEigenvalueSolver):
         m : int, default 0
             The step in a multi-step method.
         """
-        eff_dt = self.effective_time_step(m=0)
-        self.xs_perturbations(self.material_xs, 0, t + eff_dt)
-        self.L = self.diffusion_matrix()
-
         A = self.assemble_transient_matrix(m=0)
         b = self.assemble_transient_rhs(m=0)
         self.phi = spsolve(A, b)
@@ -236,9 +232,6 @@ class TransientSolver(KEigenvalueSolver):
                 self.precursors = 2.0*self.precursors - self.precursors_old
 
             if self.method == "TBDF2":
-                self.xs_perturbations(self.material_xs, 0, t + self.dt)
-                self.L = self.diffusion_matrix()
-
                 A = self.assemble_transient_matrix(m=1)
                 b = self.assemble_transient_rhs(m=1)
                 self.phi = spsolve(A, b)
