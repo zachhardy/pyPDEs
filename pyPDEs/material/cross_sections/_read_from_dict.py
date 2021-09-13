@@ -117,8 +117,8 @@ def read_from_xs_dict(
                     f"chi_delayed group {g} {incompat_w_J}.")
         chi_d = np.array(chi_d)
         for j in range(self.n_precursors):
-            chi_dj = chi_d[:, j]
-            self.chi_delayed[:, j] = chi_dj / np.sum(chi_dj)
+            chi_d[:, j] = chi_d[:, j] / np.sum(chi_d[:, j])
+        self.chi_delayed = chi_d
 
     # Get precursor decay constants
     if "precursor_lambda" in xs and self.has_precursors:
@@ -128,7 +128,7 @@ def read_from_xs_dict(
         self.precursor_lambda = decay
 
     # Get precursor yields
-    if "precursor_gamma" in xs and self.has_precursors:
+    if "precursor_yield" in xs and self.has_precursors:
         gamma = np.array(xs.get("precursor_yield"))
         if len(gamma) != self.n_precursors:
             raise ValueError(f"precursor_yield {incompat_w_J}.")

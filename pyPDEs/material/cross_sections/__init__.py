@@ -51,7 +51,7 @@ class CrossSections(MaterialProperty):
         if self.sigma_t_function is None:
             return self._sigma_t[g]
         else:
-            return self.sigma_t_function(t, self._sigma_t[g])
+            return self.sigma_t_function(g, t, self._sigma_t)
 
     @property
     def nu_sigma_f(self) -> ndarray:
@@ -87,9 +87,9 @@ class CrossSections(MaterialProperty):
         """Validate the parsed cross sections.
         """
         # Ensure sigma_t was provided
-        if self._sigma_t is None:
+        if self._sigma_t is None and self.sigma_a is None:
             raise AssertionError(
-                "Total cross sections must be provided.")
+                "Total or absorption cross sections must be provided.")
 
         # Ensure transfer matrix was provided
         if self.transfer_matrix is None:
@@ -111,6 +111,21 @@ class CrossSections(MaterialProperty):
 
         # Check fissile properties
         if self.is_fissile:
+
+            # Check precursor terms
+            if self.has_precursors:
+                if self.precursor_lambda is None:
+                    raise AssertionError(
+                        "Delayed neutron precursor decay constants must be "
+                        "supplied for cross sections with precursors.")
+
+                if self.n_precursors > 1:
+                    if self.precursor_yield is None:
+                        raise AssertionError(
+                            "Delayed neutron precursor yields must be "
+                            "supplied for cross sections with precursors.")
+                else:
+                    self.precursor_yield = np.ones(1)
 
             # Enforce nu = nu_prompt + nu_delayed
             has_nu = self.nu is not None
@@ -164,20 +179,16 @@ class CrossSections(MaterialProperty):
                 if self.has_precursors:
                     self.chi_delayed = np.ones((1, self.n_precursors))
 
-
-            # Check precursor terms
-            if self.has_precursors:
-                if self.precursor_lambda is None:
-                    raise AssertionError(
-                        "Delayed neutron precursor decay constants must be "
-                        "supplied for cross sections with precursors.")
-
-                if self.n_precursors > 1:
-                    if self.precursor_yield is None:
-                        raise AssertionError(
-                            "Delayed neutron precursor yields must be "
-                            "supplied for cross sections with precursors.")
-                else:
-                    self.precursor_yield = np.ones(1)
-
-
+        else:
+            G, J = self.n_groups, self.n_precursors
+            self.sigma_f = np.zeros(G)
+            self.nu = np.zeros(G)
+            self.nu_prompt = np.zeros(G)
+            self.nu_delayed = np.zeros(G)
+            self.chi = np.zeros(G)
+            self.chi_prompt = np.zeros(G)
+            self.chi_delayed = np.zeros((G, J))
+            self.precursor_yield = np.zeros(J)
+            self.precursor_lambda = np.zeros(J)
+            if self.velocity is None:
+                self.velocity = np.zeros(G)
