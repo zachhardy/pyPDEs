@@ -63,6 +63,7 @@ class TransientSolver(KEigenvalueSolver):
         # Feedback related parameters
         self.use_feedback: bool = False
         self.feedback_coeff: float = 1.0e-3
+        self.feedback_groups: List[int] = None
 
         # Power related parameters
         self.power: float = 1.0  # W
@@ -489,7 +490,8 @@ class TransientSolver(KEigenvalueSolver):
 
             # Reconstruct pompt/total and delayd matrices
             self.Fp = self.prompt_fission_matrix()
-            self.Fd = self.delayed_fission_matrix()
+            if self.use_precursors:
+                self.Fd = self.delayed_fission_matrix()
 
             # Normalize phi to initial power
             self.phi *= self.power / self.compute_power()
