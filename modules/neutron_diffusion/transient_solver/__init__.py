@@ -103,7 +103,8 @@ class TransientSolver(KEigenvalueSolver):
 
         # Set transient cross section flag
         for xs in self.material_xs:
-            if xs.sigma_t_function is not None:
+            if xs.sigma_t_function is not None or \
+                    xs.sigma_a_function is not None:
                 self.has_transient_xs = True
                 break
 

@@ -25,7 +25,7 @@ class CrossSections(MaterialProperty):
         self.has_precursors: bool = False
 
         self._sigma_t: ndarray = None
-        self.sigma_a: ndarray = None
+        self._sigma_a: ndarray = None
         self.sigma_r: ndarray = None
         self.sigma_f: ndarray = None
         self.sigma_s: ndarray = None
@@ -46,12 +46,28 @@ class CrossSections(MaterialProperty):
         self.precursor_yield: ndarray = None
 
         self.sigma_t_function: XSFunc = None
+        self.sigma_a_function: XSFunc = None
 
     def sigma_t(self, g: int, t: float = 0.0) -> float:
-        if self.sigma_t_function is None:
+        if self.sigma_t_function is not None and \
+                self.sigma_a_function is not None:
+            raise AssertionError(
+                "Only one transient cross section function can "
+                "be provided.")
+
+        if self.sigma_t_function is None and \
+                self.sigma_a_function is None:
             return self._sigma_t[g]
-        else:
+
+        elif self.sigma_t_function is not None and \
+                self.sigma_a_function is None:
             return self.sigma_t_function(g, t, self._sigma_t)
+
+        elif self.sigma_a_function is not None and \
+                self.sigma_t_function is None:
+            val = self.sigma_a_function(g, t, self._sigma_a)
+            return val + self.sigma_s[g]
+
 
     @property
     def nu_sigma_f(self) -> ndarray:
@@ -87,7 +103,7 @@ class CrossSections(MaterialProperty):
         """Validate the parsed cross sections.
         """
         # Ensure sigma_t was provided
-        if self._sigma_t is None and self.sigma_a is None:
+        if self._sigma_t is None and self._sigma_a is None:
             raise AssertionError(
                 "Total or absorption cross sections must be provided.")
 
@@ -101,10 +117,10 @@ class CrossSections(MaterialProperty):
             self.D = (3.0 * self._sigma_t) ** (-1)
 
         # Enforce _sigma_t = sigma_a + sigma_s
-        if self.sigma_a is None:
-            self.sigma_a = self._sigma_t - self.sigma_s
+        if self._sigma_a is None:
+            self._sigma_a = self._sigma_t - self.sigma_s
         else:
-            self._sigma_t = self.sigma_a + self.sigma_s
+            self._sigma_t = self._sigma_a + self.sigma_s
 
         # Compute removal cross sections
         self.sigma_r = self._sigma_t - np.diag(self.transfer_matrix)

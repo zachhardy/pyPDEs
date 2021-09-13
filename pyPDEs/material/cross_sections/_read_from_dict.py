@@ -45,7 +45,7 @@ def read_from_xs_dict(
         sig_a = np.array(xs.get("sigma_a"))
         if len(sig_a) != self.n_groups:
             raise ValueError(f"sigma_a {incompat_w_G}.")
-        self.sigma_a = density * sig_a
+        self._sigma_a = density * sig_a
 
     # Get transfer matrix
     if "transfer_matrix" in xs:
