@@ -63,7 +63,7 @@ class TransientSolver(KEigenvalueSolver):
         # Feedback related parameters
         self.use_feedback: bool = False
         self.feedback_coeff: float = 1.0e-3
-        self.feedback_groups: List[int] = None
+        self.feedback_groups: List[int] = []
 
         # Power related parameters
         self.power: float = 1.0  # W
