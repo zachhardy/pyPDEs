@@ -13,7 +13,7 @@ from pyPDEs.utilities.boundaries import *
 
 from modules.neutron_diffusion import *
 
-from transient_xs import *
+from prototype_minicore_xs import *
 
 # Create mesh and discretization
 zones = [0.0, 16.0, 20.0, 24.0, 56.0, 64.0, 80.0]
@@ -23,14 +23,6 @@ mesh = create_1d_mesh(zones, n_cells, material_ids, coord_sys="CARTESIAN")
 discretization = FiniteVolume(mesh)
 
 # Create cross sections and sources
-xs_vals = {"n_groups": 1, "n_precursors": 1,
-           "D": [1.0], "sigma_t": [1.1], "sigma_f": [1.1],
-           "transfer_matrix": [[0.0]],
-           "velocity": [1000.0],
-           "nu_prompt": [0.994], "nu_delayed": [0.006],
-           "precursor_lambda": [0.1], "precursor_yield": [1.0]}
-
-
 xs0 = CrossSections()
 xs0.read_from_xs_dict(xs_vals)
 
@@ -61,8 +53,7 @@ solver.lag_precursors = False
 # Set time stepping options
 solver.t_final = 2.0
 solver.dt = 0.01
-solver.method = "TBDF2"
-solver.adaptivity = True
+solver.method = "CRANK_NICHOLSON"
 
 solver.max_iterations = 50000
 solver.tolerance = 1.0e-12
