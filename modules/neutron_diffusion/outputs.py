@@ -1,6 +1,10 @@
 import os
 import numpy as np
+import matplotlib.pyplot as plt
+
 from numpy import ndarray
+from matplotlib.figure import Figure
+from matplotlib.pyplot import Axes
 
 from pyPDEs.spatial_discretization import *
 
@@ -74,6 +78,69 @@ class Outputs:
             for j in range(len(self.precursors[0])):
                 filepath = os.path.join(precursor_dirpath, f"j{j}.txt")
                 np.savetxt(filepath, np.array(self.precursors)[:, j])
+
+    def plot_flux(self, g: int = 0, t: float = 0.0,
+                  title: str = None) -> None:
+        """Plot the scalar flux on an Axes.
+
+        Parameters
+        ----------
+        g : int, default 0
+            The group to plot.
+        t : float, default 0.0
+            The time to plot the solution at.
+        title : str, default None
+            A title for the Axes.
+        """
+        fig: Figure = plt.figure()
+        ax: Axes = fig.add_subplot(1, 1, 1)
+        if title:
+            ax.set_title(title)
+
+        grid = np.array(self.grid)
+        times = np.array(self.times)
+        ind = np.argmin(abs(times - t))
+
+        # 1D plots
+        if np.sum(grid[:, 0:2]) == 0.0:
+            z = grid[:, 2]
+
+            ax.set_xlabel("Location (cm)")
+            ax.set_ylabel(r"$\phi(r)$")
+            label = f"Group {g}"
+
+            phi= self.flux[ind][g]
+            ax.plot(z, phi, label=label)
+            ax.legend()
+            ax.grid(True)
+
+        # 2D plots
+        elif np.sum(grid[:, 2]) == 0.0:
+            x = np.unique(grid[:, 0])
+            y = np.unique(grid[:, 1])
+            xx, yy = np.meshgrid(x, y)
+
+            ax.set_xlabel("X (cm)")
+            ax.set_ylabel("Y (cm)")
+
+            phi = self.flux[ind][g]
+            phi = phi.reshape(xx.shape)
+            im = ax.pcolor(xx, yy, phi, cmap="jet", shading="auto",
+                           vmin=0.0, vmax=phi.max())
+            plt.colorbar(im)
+        plt.tight_layout()
+
+    def plot_power(self, title: str = None) -> None:
+        fig: Figure = plt.figure()
+        ax: Axes = fig.add_subplot(1, 1, 1)
+        if title:
+            ax.set_title(title)
+
+        times = np.array(self.times)
+        power = np.array(self.power)
+        ax.plot(times, power)
+        ax.set_xlabel("Time (s)")
+        ax.set_ylabel("Power (W)")
 
     def reset(self):
         self.grid.clear()
