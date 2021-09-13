@@ -114,4 +114,7 @@ class KEigenvalueSolver(SteadyStateSolver):
         -------
         float
         """
-        return np.sum((self.Fp + self.Fd) @ self.phi)
+        production = np.sum(self.Fp @ self.phi)
+        if self.use_precursors:
+            production += np.sum(self.Fd @ self.phi)
+        return production
