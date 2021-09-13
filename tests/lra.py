@@ -43,7 +43,11 @@ mesh.plot_material_ids()
 discretization = FiniteVolume(mesh)
 
 # Create cross sections and sources
+<<<<<<< HEAD
 xs0 = CrossSections()
+=======
+xs0 = CrossSections
+>>>>>>> origin/development
 xs0.read_from_xs_dict(fuel_1_with_rod)
 xs0.sigma_t_function = sigma_t_generic
 
