@@ -16,8 +16,8 @@ from modules.neutron_diffusion import *
 from twigl_xs import *
 
 # Create mesh, assign material IDs
-x_verts = np.linspace(0.0, 80.0, 81)
-y_verts = np.linspace(0.0, 80.0, 81)
+x_verts = np.linspace(0.0, 80.0, 41)
+y_verts = np.linspace(0.0, 80.0, 41)
 
 mesh = create_2d_mesh(x_verts, y_verts, verbose=True)
 
@@ -72,7 +72,7 @@ solver.lag_precursors = False
 
 # Set time stepping options
 solver.t_final = 0.5
-solver.dt = 0.01
+solver.dt = 1.0e-3
 solver.method = "BACKWARD_EULER"
 
 

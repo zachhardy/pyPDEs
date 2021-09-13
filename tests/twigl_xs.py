@@ -6,12 +6,19 @@ __all__ = ["xs_material_0", "xs_material_1", "sigma_a_function"]
 from numpy import ndarray
 
 
-def sigma_a_function(g: int, t: float, sigma_a: ndarray) -> float:
+def sigma_a_ramp(g: int, t: float, sigma_a: ndarray) -> float:
     if g == 1:
-        if t <= 0.2:
+        if 0.0 < t <= 0.2:
             return sigma_a[g] * (1.0 - 0.11667 * t)
         else:
             return sigma_a[g] * 0.97666
+    else:
+        return sigma_a[g]
+
+
+def sigma_a_step(g: int, t: float, sigma_a: ndarray) -> float:
+    if g == 1 and t > 0.0:
+        return 0.97666 * sigma_a[g]
     else:
         return sigma_a[g]
 
