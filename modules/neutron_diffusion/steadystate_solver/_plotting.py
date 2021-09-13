@@ -36,7 +36,7 @@ def plot_solution(self: "SteadyStateSolver", title: str = None) -> None:
 
 
 def plot_flux(self: "SteadyStateSolver",
-              ax: Axes, title: str = None) -> None:
+              ax: Axes = None, title: str = None) -> None:
     """Plot the scalar flux on an Axes.
 
     Parameters
@@ -46,7 +46,9 @@ def plot_flux(self: "SteadyStateSolver",
     title : str, default None
         A title for the Axes.
     """
-    ax: Axes = plt.gca() if ax is None else ax
+    if ax is None:
+        fig: Figure = plt.figure()
+        ax: Axes = fig.add_subplot(1, 1, 1)
     if title:
         ax.set_title(title)
 
@@ -85,7 +87,9 @@ def plot_precursors(self: "SteadyStateSolver",
     title : str, default None
         A title for the Axes.
     """
-    ax: Axes = plt.gca() if ax is None else ax
+    if ax is None:
+        fig: Figure = plt.figure()
+        ax: Axes = fig.add_subplot(1, 1, 1)
     if title:
         ax.set_title(title)
 
