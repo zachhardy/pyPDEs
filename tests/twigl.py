@@ -41,7 +41,7 @@ discretization = FiniteVolume(mesh)
 # Create cross sections and sources
 xs0 = CrossSections()
 xs0.read_from_xs_dict(xs_material_0)
-xs0.sigma_t_function = sigma_t_0
+xs0.sigma_a_function = sigma_a_function
 
 xs1 = CrossSections()
 xs1.read_from_xs_dict(xs_material_0)

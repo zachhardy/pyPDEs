@@ -16,8 +16,8 @@ from modules.neutron_diffusion import *
 from lra_xs import *
 
 # Create mesh, assign material IDs
-x_verts = np.linspace(0.0, 165.0, 11)
-y_verts = np.linspace(0.0, 165.0, 11)
+x_verts = np.linspace(0.0, 165.0, 12)
+y_verts = np.linspace(0.0, 165.0, 12)
 mesh = create_2d_mesh(x_verts, y_verts, verbose=True)
 
 for cell in mesh.cells:
@@ -43,29 +43,25 @@ mesh.plot_material_ids()
 discretization = FiniteVolume(mesh)
 
 # Create cross sections and sources
-<<<<<<< HEAD
 xs0 = CrossSections()
-=======
-xs0 = CrossSections
->>>>>>> origin/development
 xs0.read_from_xs_dict(fuel_1_with_rod)
 xs0.sigma_t_function = sigma_t_generic
 
 xs1 = CrossSections()
 xs1.read_from_xs_dict(fuel_1_without_rod)
-xs1.sigma_t_function = sigma_t_generic
+xs1.sigma_a_function = sigma_t_generic
 
 xs2 = CrossSections()
 xs2.read_from_xs_dict(fuel_2_with_rod)
-xs2.sigma_t_function = sigma_t_generic
+xs2.sigma_a_function = sigma_t_generic
 
 xs3 = CrossSections()
 xs3.read_from_xs_dict(fuel_2_without_rod)
-xs3.sigma_t_function = sigma_t_generic
+xs3.sigma_a_function = sigma_t_generic
 
 xs4 = CrossSections()
 xs4.read_from_xs_dict(reflector)
-xs4.sigma_t_function = sigma_t_generic
+xs4.sigma_a_function = sigma_t_generic
 
 # Create boundary conditions
 boundaries = [ReflectiveBoundary(xs0.n_groups),
@@ -104,6 +100,8 @@ solver.method = "BACKWARD_EULER"
 # Run the problem
 solver.initialize()
 solver.plot_flux()
+plt.show()
+sys.exit()
 
 solver.execute(verbose=1)
 

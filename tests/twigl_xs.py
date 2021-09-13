@@ -1,19 +1,19 @@
 """
 Cross section functions for `twigl.py` test problem.
 """
-__all__ = ["xs_material_0", "xs_material_1", "sigma_t_0"]
+__all__ = ["xs_material_0", "xs_material_1", "sigma_a_function"]
 
 from numpy import ndarray
 
 
-def sigma_t_0(g: int, t: float, sigma_t: ndarray) -> float:
+def sigma_a_function(g: int, t: float, sigma_a: ndarray) -> float:
     if g == 1:
         if t <= 0.2:
-            return sigma_t[g] * (1.0 - 0.11667*t)
+            return sigma_a[g] * (1.0 - 0.11667 * t)
         else:
-            return sigma_t[g] * 0.97666
+            return sigma_a[g] * 0.97666
     else:
-        return sigma_t[g]
+        return sigma_a[g]
 
 
 nu = 2.43
