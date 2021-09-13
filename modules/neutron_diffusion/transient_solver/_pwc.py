@@ -39,15 +39,16 @@ def _pwc_feedback_matrix(self: "TransientSolver") -> csr_matrix:
 
         # Loop over groups
         for g in range(self.n_groups):
-            sig_t = xs.sigma_t(g)
+            if g in self.feedback_groups:
+                sig_t = xs.sigma_t(g)
 
-            # Loop over nodes
-            for i in range(view.n_nodes):
-                ig = pwc.map_dof(cell, i, uk_man, 0, g)
-                for j in range(view.n_nodes):
-                    jg = pwc.map_dof(cell, j, uk_man, 0, g)
-                    mass_ij = view.intV_shapeI_shapeJ[i][j]
-                    A[ig, jg] += sig_t * f * mass_ij
+                # Loop over nodes
+                for i in range(view.n_nodes):
+                    ig = pwc.map_dof(cell, i, uk_man, 0, g)
+                    for j in range(view.n_nodes):
+                        jg = pwc.map_dof(cell, j, uk_man, 0, g)
+                        mass_ij = view.intV_shapeI_shapeJ[i][j]
+                        A[ig, jg] += sig_t * f * mass_ij
     return A.tocsr()
 
 
@@ -116,6 +117,8 @@ def _pwc_precursor_substitution_matrix(self: "TransientSolver",
         volume = cell.volume
         view = pwc.fe_views[cell.id]
         xs = self.material_xs[cell.material_id]
+        if not xs.is_fissile:
+            continue
 
         # Loop over precursors
         for p in range(xs.n_precursors):
@@ -164,6 +167,8 @@ def _pwc_old_precursor_source(self: "TransientSolver", m: int = 0) -> ndarray:
     for cell in self.mesh.cells:
         view = pwc.fe_views[cell.id]
         xs = self.material_xs[cell.material_id]
+        if not xs.is_fissile:
+            continue
 
         # Loop over precursors
         for p in range(xs.n_precursors):
@@ -211,6 +216,8 @@ def _pwc_update_precursors(self: "TransientSolver", m: int = 0) -> None:
         volume = cell.volume
         view = pwc.fe_views[cell.id]
         xs = self.material_xs[cell.material_id]
+        if not xs.is_fissile:
+            continue
 
         # Compute delayed fission rate
         f_d = 0.0
@@ -249,6 +256,8 @@ def _pwc_compute_fission_rate(self: "TransientSolver") -> None:
         volume = cell.volume
         view = pwc.fe_views[cell.id]
         xs = self.material_xs[cell.material_id]
+        if not xs.is_fissile:
+            continue
 
         # Loop over nodes
         for i in range(view.n_nodes):
@@ -259,8 +268,6 @@ def _pwc_compute_fission_rate(self: "TransientSolver") -> None:
                 ig = pwc.map_dof(cell, i, uk_man, 0, g)
                 self.fission_rate[cell.id] += \
                     xs.sigma_f[g]*self.phi[ig] * intV_shapeI/volume
-
-
 
 
 def _pwc_compute_power(self: "TransientSolver") -> float:
@@ -278,6 +285,8 @@ def _pwc_compute_power(self: "TransientSolver") -> float:
     for cell in self.mesh.cells:
         view = pwc.fe_views[cell.id]
         xs = self.material_xs[cell.material_id]
+        if not xs.is_fissile:
+            continue
 
         # Loop over group
         for g in range(self.n_groups):

@@ -38,8 +38,9 @@ def _fv_feedback_matrix(self: "TransientSolver") -> csr_matrix:
 
         # Loop over groups
         for g in range(self.n_groups):
-            ig = fv.map_dof(cell, 0, uk_man, 0, g)
-            A[ig, ig] += xs.sigma_t(g) * f * volume
+            if g in self.feedback_groups:
+                ig = fv.map_dof(cell, 0, uk_man, 0, g)
+                A[ig, ig] += xs.sigma_t(g) * f * volume
     return A.tocsr()
 
 
@@ -88,6 +89,8 @@ def _fv_precursor_substitution_matrix(self: "TransientSolver",
     for cell in self.mesh.cells:
         volume = cell.volume
         xs = self.material_xs[cell.material_id]
+        if not xs.is_fissile:
+            continue
 
         # Loop over precursors
         for p in range(xs.n_precursors):
@@ -133,6 +136,8 @@ def _fv_old_precursor_source(self: "TransientSolver", m: int = 0) -> ndarray:
     for cell in self.mesh.cells:
         volume = cell.volume
         xs = self.material_xs[cell.material_id]
+        if not xs.is_fissile:
+            continue
 
         # Loop over precursors
         for p in range(xs.n_precursors):
@@ -176,6 +181,8 @@ def _fv_update_precursors(self: "TransientSolver", m: int = 0) -> None:
     # Loop over cells
     for cell in self.mesh.cells:
         xs = self.material_xs[cell.material_id]
+        if not xs.is_fissile:
+            continue
 
         # Compute delayed fission rate
         f_d = 0.0
@@ -211,6 +218,8 @@ def _fv_compute_fission_rate(self: "TransientSolver") -> None:
     for cell in self.mesh.cells:
         volume = cell.volume
         xs = self.material_xs[cell.material_id]
+        if not xs.is_fissile:
+            continue
 
         # Loop over groups
         for g in range(self.n_groups):
@@ -234,6 +243,8 @@ def _fv_compute_power(self: "TransientSolver") -> float:
     for cell in self.mesh.cells:
         volume = cell.volume
         xs = self.material_xs[cell.material_id]
+        if not xs.is_fissile:
+            continue
 
         # Loop over group
         for g in range(self.n_groups):
