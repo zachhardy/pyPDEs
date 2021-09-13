@@ -109,6 +109,8 @@ def _fv_prompt_fission_matrix(self: "SteadyStateSolver") -> csr_matrix:
     for cell in self.mesh.cells:
         volume = cell.volume
         xs = self.material_xs[cell.material_id]
+        if not xs.is_fissile:
+            continue
 
         # Loop over groups
         for g in range(self.n_groups):
@@ -138,27 +140,26 @@ def _fv_delayed_fission_matrix(self: "SteadyStateSolver") -> csr_matrix:
     fv: FiniteVolume = self.discretization
     uk_man = self.phi_uk_man
 
-    # Construct if using precursors
+    # Loop over cells
     A = lil_matrix((fv.n_dofs(uk_man),) * 2)
-    if self.use_precursors:
+    for cell in self.mesh.cells:
+        volume = cell.volume
+        xs = self.material_xs[cell.material_id]
+        if not xs.is_fissile:
+            continue
 
-        # Loop over cells
-        for cell in self.mesh.cells:
-            volume = cell.volume
-            xs = self.material_xs[cell.material_id]
+        # Loop over to/from groups
+        for g in range(self.n_groups):
+            ig = fv.map_dof(cell, 0, uk_man, 0, g)
+            for gp in range(self.n_groups):
+                igp = fv.map_dof(cell, 0, uk_man, 0, gp)
 
-            # Loop over to/from groups
-            for g in range(self.n_groups):
-                ig = fv.map_dof(cell, 0, uk_man, 0, g)
-                for gp in range(self.n_groups):
-                    igp = fv.map_dof(cell, 0, uk_man, 0, gp)
-
-                    # Loop over precursors
-                    for j in range(xs.n_precursors):
-                        A[ig, igp] += xs.chi_delayed[g][j] * \
-                                      xs.precursor_yield[j] * \
-                                      xs.nu_delayed_sigma_f[gp] * \
-                                      volume
+                # Loop over precursors
+                for j in range(xs.n_precursors):
+                    A[ig, igp] += xs.chi_delayed[g][j] * \
+                                  xs.precursor_yield[j] * \
+                                  xs.nu_delayed_sigma_f[gp] * \
+                                  volume
     return A.tocsr()
 
 
@@ -196,6 +197,8 @@ def _fv_compute_precursors(self: "SteadyStateSolver") -> None:
     self.precursors *= 0.0
     for cell in self.mesh.cells:
         xs = self.material_xs[cell.material_id]
+        if not xs.is_fissile:
+            continue
 
         # Loop over precursors
         for p in range(xs.n_precursors):

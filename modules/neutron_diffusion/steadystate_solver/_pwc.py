@@ -101,6 +101,8 @@ def _pwc_prompt_fission_matrix(self: "SteadyStateSolver") -> csr_matrix:
     for cell in self.mesh.cells:
         view = pwc.fe_views[cell.id]
         xs = self.material_xs[cell.material_id]
+        if not xs.is_fissile:
+            continue
 
         # Loop over groups
         for g in range(self.n_groups):
@@ -134,15 +136,13 @@ def _pwc_delayed_fission_matrix(self: "SteadyStateSolver") -> csr_matrix:
     pwc: PiecewiseContinuous = self.discretization
     uk_man = self.phi_uk_man
 
-    # Construct if using precursors
-    A = lil_matrix((pwc.n_dofs(uk_man),) * 2)
-    if not self.use_precursors:
-        return A.tocsr()
-
     # Loop over cells
+    A = lil_matrix((pwc.n_dofs(uk_man),) * 2)
     for cell in self.mesh.cells:
         view = pwc.fe_views[cell.id]
         xs = self.material_xs[cell.material_id]
+        if not xs.is_fissile:
+            continue
 
         # Loop over precursors
         for p in range(xs.n_precursors):
@@ -207,6 +207,8 @@ def _pwc_compute_precursors(self: "SteadyStateSolver") -> None:
         volume = cell.volume
         view = pwc.fe_views[cell.id]
         xs = self.material_xs[cell.material_id]
+        if not xs.is_fissile:
+            continue
 
         # Loop over precursors
         for p in range(xs.n_precursors):
