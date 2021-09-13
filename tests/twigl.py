@@ -19,9 +19,7 @@ from twigl_xs import *
 x_verts = np.linspace(0.0, 80.0, 81)
 y_verts = np.linspace(0.0, 80.0, 81)
 
-t0 = time()
 mesh = create_2d_mesh(x_verts, y_verts, verbose=True)
-print(f"\nMesh creation time:\t{time() - t0:.4g} s")
 
 for cell in mesh.cells:
     c = cell.centroid

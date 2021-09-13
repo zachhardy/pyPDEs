@@ -14,10 +14,7 @@ from modules.neutron_diffusion import *
 # Create mesh, assign material IDs
 x_verts = np.linspace(0.0, 10.0, 41)
 y_verts = np.linspace(0.0, 10.0, 41)
-
-t0 = time()
 mesh = create_2d_mesh(x_verts, y_verts, verbose=True)
-print(f"\nMesh creation time:\t{time() - t0} s")
 
 fuel_dim = 9.0
 for cell in mesh.cells:
