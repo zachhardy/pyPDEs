@@ -130,7 +130,7 @@ class Outputs:
             plt.colorbar(im)
         plt.tight_layout()
 
-    def plot_power(self, title: str = None) -> None:
+    def plot_power(self, logscale: bool = False, title: str = None) -> None:
         fig: Figure = plt.figure()
         ax: Axes = fig.add_subplot(1, 1, 1)
         if title:
@@ -138,7 +138,8 @@ class Outputs:
 
         times = np.array(self.times)
         power = np.array(self.power)
-        ax.plot(times, power)
+        plotter = ax.semilogy if logscale else ax.plot
+        plotter(times, power)
         ax.set_xlabel("Time (s)")
         ax.set_ylabel("Power (W)")
 
