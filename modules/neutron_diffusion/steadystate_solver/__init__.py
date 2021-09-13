@@ -134,7 +134,8 @@ class SteadyStateSolver:
         A = self.assemble_matrix()
         b = self.assemble_rhs()
         self.phi = spsolve(A, b)
-        self.compute_precursors()
+        if self.use_precursors:
+            self.compute_precursors()
 
     def assemble_matrix(self) -> csr_matrix:
         A = self.L - self.S - self.Fp
