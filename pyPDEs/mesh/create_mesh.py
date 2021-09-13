@@ -1,5 +1,6 @@
 """Generators for orthogonal line and quad meshes."""
 
+import time
 import numpy as np
 
 from numpy import ndarray
@@ -40,7 +41,7 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
     elif len(zone_subdivs) != len(zone_edges) - 1:
         raise ValueError("Ambiguous combination of zone_bndrys "
                          "and zone_subdivs.")
-
+    t_start = time.time()
     mesh = Mesh()
     mesh.dim = 1
     mesh.type = "LINE"
@@ -112,11 +113,13 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
             count += 1
 
         # ======================================== Verbose printout
+        t_elapsed = time.time() - t_start
         if verbose:
             print("\n***** Summary of the 1D mesh:\n")
             print(f"Number of Cells:\t{mesh.n_cells}")
             print(f"Number of Faces:\t{mesh.n_faces}")
             print(f"Number of Vertices:\t{mesh.n_vertices}")
+            print(f"Mesh Creation Time:\t{t_elapsed:.4g} sec")
     return mesh
 
 
@@ -133,6 +136,7 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
     -------
     Mesh
     """
+    t_start = time.time()
     mesh = Mesh()
     mesh.dim = 2
     mesh.type = "ORTHO_QUAD"
@@ -224,10 +228,11 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
             mesh.cells.append(cell)
 
     # ======================================== Verbose printout
+    t_elapsed = time.time() - t_start
     if verbose:
         print("\n***** Summary of the 2D mesh *****")
         print(f"Number of Cells:\t{mesh.n_cells}")
         print(f"Number of Faces:\t{mesh.n_faces}")
         print(f"Number of Vertices:\t{mesh.n_vertices}")
-
+        print(f"Mesh Creation Time:\t{t_elapsed:.4g} sec")
     return mesh
