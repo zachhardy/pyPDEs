@@ -184,7 +184,8 @@ class Outputs:
 
             # Plot data
             for i in range(len(times)):
-                ax.plot(z, vals[i], label=f"Time = {t:.2f} sec")
+                label = f"Time = {times[i]:.2f} sec"
+                ax.plot(z, vals[i], label=label)
             ax.legend()
             ax.grid(True)
         fig.tight_layout()
