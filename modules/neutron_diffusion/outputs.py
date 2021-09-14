@@ -8,66 +8,114 @@ from matplotlib.pyplot import Axes
 
 from pyPDEs.spatial_discretization import *
 
-from typing import TYPE_CHECKING
+from typing import List, TYPE_CHECKING
 if TYPE_CHECKING:
     from . import TransientSolver
 
 
 class Outputs:
     def __init__(self):
-        self.grid: List[List[float]] = []
-        self.times: List[float] = []
-        self.power: List[float] = []
-        self.flux: List[List[ndarray]] = []
-        self.precursors: List[List[ndarray]] = []
+        self.dim: int = 0
 
-    def store_grid(self, sd: SpatialDiscretization):
-        self.grid.clear()
-        for point in sd.grid:
-            self.grid.append([point.x, point.y, point.z])
+        self.grid: ndarray = []
+        self.times: ndarray = []
+        self.system_power:ndarray = []
 
-    def store_outputs(self, solver: 'TransientSolver',
+        self.scalar_flux: ndarray = []
+        self.precursors: ndarray = []
+        self.power_density: ndarray = []
+        self.temperature: ndarray = []
+
+    def store_outputs(self, solver: "TransientSolver",
                       time: float) -> None:
+
+        # Store grid, if storing initial conditions
         if time == 0.0:
-            self.store_grid(solver.discretization)
+            self.grid.clear()
+            for point in solver.discretization.grid:
+                self.grid += [[point.x, point.y, point.z]]
 
-        self.times.append(time)
+        # Store the current simulation time
+        self.times += [time]
 
-        self.power.append(solver.power)
+        # Store the global fission power in W
+        self.system_power += [solver.power]
 
+        # Store the groupswise fluxes. This stores a list
+        # of G arrays where each array contains the group `g`
+        # scalar flux at cell centers
         n_grps, phi = solver.n_groups, np.copy(solver.phi)
         flux = [phi[g::n_grps] for g in range(n_grps)]
-        self.flux.append(flux)
+        self.scalar_flux += [flux]
 
+        # NOTE: For multi-region problems with the same delayed
+        # neutron data, this does not work very well because
+        # there is currently no way to declared precursors
+        # identical across materials.
         if solver.use_precursors:
-            n_dnps = solver.n_precursors
+            n_dnps = solver.precursor_uk_man.total_components
             precursors = np.copy(solver.precursors)
             precursors = [precursors[j::n_dnps] for j in range(n_dnps)]
-            self.precursors.append(precursors)
+            self.precursors += [precursors]
+
+        # Store the power density. This stores the cell-wise fission
+        # rate multiplied by the energy released per fission event.
+        E_f = solver.energy_per_fission
+        self.power_density += [E_f * solver.fission_rate]
+
+        # Store the temperatures, if feedback is being used.
+        if solver.use_feedback:
+            self.temperature += [solver.temperature]
+
+    def finalize_outputs(self) -> None:
+        self.grid = np.array(self.grid)
+        self.times = np.array(self.times)
+        self.system_power = np.array(self.system_power)
+        self.scalar_flux = np.array(self.scalar_flux)
+        self.power_density = np.array(self.power_density)
+        if len(self.precursors) > 0:
+            self.precursors = np.array(self.precursors)
+        if len(self.temperature) > 0:
+            self.temperature = np.array(self.temperature)
+
+        # Define dimension
+        if np.sum(self.grid[:, :2]) == 0.0:
+            self.dim = 1
+        elif np.sum(self.grid[:, 2]) == 0.0:
+            self.dim = 2
+        else:
+            self.dim = 3
 
     def write_outputs(self, path: str = ".") -> None:
         if not os.path.isdir(path):
             os.makedirs(path)
 
-        time_path = os.path.join(path, "times.txt")
-        np.savetxt(time_path, self.times)
-
+        # Write the spatial grid
         grid_path = os.path.join(path, "grid.txt")
         np.savetxt(grid_path, self.grid)
 
-        power_path = os.path.join(path, "power.txt")
-        np.savetxt(power_path, self.power)
+        # Write the time step times
+        time_path = os.path.join(path, "times.txt")
+        np.savetxt(time_path, self.times)
 
+        # Write the system power at each time step
+        system_power_path = os.path.join(path, "system_power.txt")
+        np.savetxt(system_power_path, self.system_power)
+
+        # Write the group-wise scalar fluxes at each time step
         flux_dirpath = os.path.join(path, "flux")
         if not os.path.isdir(flux_dirpath):
             os.makedirs(flux_dirpath)
         if len(os.listdir(flux_dirpath)) > 0:
             os.system(f"rm -r {flux_dirpath}/*")
 
-        for g in range(len(self.flux[0])):
+        for g in range(len(self.scalar_flux[0])):
             filepath = os.path.join(flux_dirpath, f"g{g}.txt")
-            np.savetxt(filepath, np.array(self.flux)[:, g])
+            np.savetxt(filepath, self.scalar_flux[:, g])
 
+        # Write the precursors at each time step.
+        # NOTE: See note above about poor functionality in multi-
+        # material region problems.
         if len(self.precursors) > 0:
             precursor_dirpath = os.path.join(path, "precursors")
             if not os.path.isdir(precursor_dirpath):
@@ -77,75 +125,223 @@ class Outputs:
 
             for j in range(len(self.precursors[0])):
                 filepath = os.path.join(precursor_dirpath, f"j{j}.txt")
-                np.savetxt(filepath, np.array(self.precursors)[:, j])
+                np.savetxt(filepath, self.precursors[:, j])
 
-    def plot_flux(self, g: int = 0, t: float = 0.0,
-                  title: str = None) -> None:
-        """Plot the scalar flux on an Axes.
+        # Write the power densities at each time step.
+        power_density_path = os.path.join(path, "power_density.txt")
+        np.savetxt(power_density_path, self.power_density)
+
+        # Write the temperatures at each time step.
+        if len(self.temperature) > 0:
+            temperature_path = os.path.join(path, "temperature.txt")
+            np.savetxt(temperature_path, self.temperature)
+
+    def plot_1d_scalar_flux(self, groups: List[int] = None,
+                            times: List[float] = None) -> None:
+        """Plot specific group scalar fluxs at specific times.
 
         Parameters
         ----------
-        g : int, default 0
-            The group to plot.
-        t : float, default 0.0
-            The time to plot the solution at.
-        title : str, default None
-            A title for the Axes.
+        groups : List[int], default None
+            The groups to plot. Default is all groups
+        times : List[float], default None
+            The times to plot the group `g` scalar flux. The
+            default is the initial condition and final result.
         """
-        fig: Figure = plt.figure()
-        ax: Axes = fig.add_subplot(1, 1, 1)
-        if title:
-            ax.set_title(title)
+        if self.dim != 1:
+            raise AssertionError("This routine is only for 1D grids.")
 
-        grid = np.array(self.grid)
-        times = np.array(self.times)
-        ind = np.argmin(abs(times - t))
+        # Get the scalar flux data
+        phi = self.scalar_flux
+        n_grps = phi.shape[1]
+        if groups is None:
+            groups = [g for g in range(n_grps)]
+        if isinstance(groups, int):
+            groups = [groups]
 
-        # 1D plots
-        if np.sum(grid[:, 0:2]) == 0.0:
-            z = grid[:, 2]
+        # Get the times to plot
+        if times is None:
+            times = [self.times[0], self.times[-1]]
+        if isinstance(times, float):
+            times = [times]
 
-            ax.set_xlabel("Location (cm)")
-            ax.set_ylabel(r"$\phi(r)$")
-            label = f"Group {g}"
+        # Get the grid
+        z = self.grid[:, 2]
 
-            phi= self.flux[ind][g]
-            ax.plot(z, phi, label=label)
+        # Loop over groups
+        for g in groups:
+            fig: Figure = plt.figure()
+            ax: Axes = fig.add_subplot(1, 1, 1)
+            ax.set_xlabel("r (cm)")
+            ax.set_ylabel(f"$\phi_{{{g}}}(r)$")
+            ax.set_title(f"Group {g}")
+
+            # Loop over times to get data
+            vals = []
+            for t in times:
+                vals += [self._interpolate(t, phi[:, g])]
+            vals = np.array(vals) / np.max(vals)
+
+            # Plot data
+            for i in range(len(times)):
+                ax.plot(z, vals[i], label=f"Time = {t:.2f} sec")
             ax.legend()
             ax.grid(True)
+        fig.tight_layout()
 
-        # 2D plots
-        elif np.sum(grid[:, 2]) == 0.0:
-            x = np.unique(grid[:, 0])
-            y = np.unique(grid[:, 1])
-            xx, yy = np.meshgrid(x, y)
+    def plot_2d_scalar_flux(self, groups: List[int] = None,
+                            times: List[float] = None) -> None:
+        """Plot specific group scalar fluxs at specific times.
 
-            ax.set_xlabel("X (cm)")
-            ax.set_ylabel("Y (cm)")
+        Parameters
+        ----------
+        groups : List[int], default None
+            The groups to plot. Default is all groups
+        times : List[float], default None
+            The times to plot the group `g` scalar flux. The
+            default is the initial condition and final result.
+        """
+        if self.dim != 2:
+            raise AssertionError("This routine is only for 2D grids.")
 
-            phi = self.flux[ind][g]
-            phi = phi.reshape(xx.shape)
-            im = ax.pcolor(xx, yy, phi, cmap="jet", shading="auto",
-                           vmin=0.0, vmax=phi.max())
-            plt.colorbar(im)
-        plt.tight_layout()
+        # Get the scalar flux data
+        phi = self.scalar_flux
+        n_grps = phi.shape[1]
+        if groups is None:
+            groups = [g for g in range(n_grps)]
+        if isinstance(groups, int):
+            groups = [groups]
 
-    def plot_power(self, logscale: bool = False, title: str = None) -> None:
+        # Get the times to plot
+        if times is None:
+            times = [self.times[0], self.times[-1]]
+        if isinstance(times, float):
+            times = [times]
+
+        # Get the grid
+        x, y = self.grid[:, 0], self.grid[:, 1]
+        x, y = np.unique(x), np.unique(y)
+        xx, yy = np.meshgrid(x, y)
+
+        # Determine subplot format
+        n_plots = len(times)
+        if n_plots < 4:
+            n_rows, n_cols = 1, 3
+        elif n_plots < 9:
+            n_cols = int(np.ceil(np.sqrt(n_plots)))
+            n_rows = n_cols
+            for n in range(1, n_cols + 1):
+                if n * n_cols >= n_plots:
+                    n_rows = n
+                    break
+        else:
+            raise AssertionError("Maximum number of plots is 9.")
+
+        # Loop over groups
+        for g in groups:
+            figsize = (4*n_cols, 4*n_rows)
+            fig: Figure = plt.figure(figsize=figsize)
+            fig.suptitle(f"Group {g}")
+
+            # Loop over times to get the data
+            vals = []
+            for t in times:
+                vals += [self._interpolate(t, phi[:, g])]
+            vals: ndarray = np.array(vals) / np.max(vals)
+
+            axs = []
+            for i in range(len(times)):
+                val = vals[i].reshape(xx.shape)
+
+                ax: Axes = fig.add_subplot(n_rows, n_cols, i + 1)
+                ax.set_xlabel("X (cm)")
+                ax.set_ylabel("Y (cm)")
+                ax.set_title(f"Time = {times[i]:.2f} sec")
+                im = ax.pcolor(xx, yy, val, cmap="jet", shading="auto",
+                               vmin=0.0, vmax=vals.max())
+                fig.colorbar(im)
+            fig.tight_layout()
+
+    def plot_system_power(self, logscale: bool = False,
+                          normalize: bool = True) -> None:
+        """Plot the system power.
+
+        Parameters
+        ----------
+        logscale : bool, default False
+            Flag to plot power on a log scale.
+        normalize : bool, default True
+            Flag to normalize to the initial power.
+        """
+        times = self.times
+        system_power = self.system_power
+        if normalize:
+            system_power /= system_power[0]
+
         fig: Figure = plt.figure()
         ax: Axes = fig.add_subplot(1, 1, 1)
-        if title:
-            ax.set_title(title)
-
-        times = np.array(self.times)
-        power = np.array(self.power)
+        ax.set_xlabel("Time (sec)")
+        ax.set_ylabel("System Power")
         plotter = ax.semilogy if logscale else ax.plot
-        plotter(times, power)
-        ax.set_xlabel("Time (s)")
-        ax.set_ylabel("Power (W)")
+        plotter(times, system_power)
+        plt.grid(True)
+        plt.tight_layout()
+
+    def _interpolate(self, t: float,
+                     data: ndarray) -> ndarray:
+        """Interpolate the solution at the specified time.
+
+        Parameters
+        ----------
+        t : float
+            The time to get the value(s) at.
+        data : ndarray, (n_steps, n_nodes)
+            The data to interpolate.
+
+        Returns
+        -------
+        ndarray
+            The interpolated result.
+        """
+        if not self.times[0] <= t <= self.times[-1]:
+            raise ValueError(
+                "Provided time is outside of simulation bounds.")
+
+        dt = np.diff(self.times)[0]
+        i = [int(np.floor(t/dt)), int(np.ceil(t/dt))]
+        w = [i[1] - t/dt, t/dt - i[0]]
+        if i[0] == i[1]:
+            w = [1.0, 0.0]
+
+        return w[0]*data[i[0]] + w[1]*data[i[1]]
+
+    def _normalize_vector(self, vector: ndarray, method: str) -> ndarray:
+        """Normalize a vector based on `method`.
+
+        Parameters
+        ----------
+        vector : ndarray
+            The vector to normalize.
+        method : str, {"inf", "L1", "L2"}
+            The normalization method.
+
+        Returns
+        -------
+        ndarray
+            The normalized input vector.
+        """
+        if method is None:
+            return vector
+
+        if method not in [np.inf, 1, 2]:
+            raise ValueError("Invalid normalization type.")
+        return vector / np.linalg.norm(vector, ord=method)
 
     def reset(self):
         self.grid.clear()
         self.times.clear()
-        self.power.clear()
-        self.flux.clear()
+        self.system_power.clear()
+        self.scalar_flux.clear()
         self.precursors.clear()
+        self.power_density.clear()
+        self.temperature.clear()
