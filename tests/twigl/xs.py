@@ -1,5 +1,5 @@
 """
-Cross section functions for `twigl.py` test problem.
+Cross section functions for `ramp.py` test problem.
 """
 __all__ = ["xs_material_0", "xs_material_1",
            "sigma_a_ramp", "sigma_a_step"]

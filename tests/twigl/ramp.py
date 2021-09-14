@@ -13,7 +13,7 @@ from pyPDEs.utilities.boundaries import *
 
 from modules.neutron_diffusion import *
 
-from twigl_xs import *
+from xs import *
 
 # Create mesh, assign material IDs
 x_verts = np.linspace(0.0, 80.0, 41)
@@ -63,29 +63,23 @@ solver.boundaries = boundaries
 solver.material_xs = [xs0, xs1, xs2]
 
 # Set options
-solver.max_iterations = 2500
-solver.tolerance = 1.0e-8
-
-# Set options
 solver.use_precursors = True
 solver.lag_precursors = False
 
 # Set time stepping options
 solver.t_final = 0.5
 solver.dt = 1.0e-2
-solver.method = "BACKWARD_EULER"
-
+solver.method = "TBDF2"
 
 solver.max_iterations = 50000
-solver.tolerance = 1.0e-12
+solver.tolerance = 1.0e-8
 
 # Run the problem
 solver.initialize()
 solver.execute(verbose=1)
 
 outputs = solver.outputs
-outputs.plot_2d_scalar_flux(
-    times=[0.0, 0.1, 0.2, 0.3, 0.4, 0.5])
+outputs.plot_2d_scalar_flux(times=[0.0, 0.2, 0.5])
 outputs.plot_system_power(normalize=True)
 
 plt.show()

@@ -1,5 +1,5 @@
 """
-Cross section functions for `lra.py` test problem.
+Cross section functions for `run.py` test problem.
 """
 __all__ = ["fuel_1_with_rod", "fuel_1_without_rod",
            "fuel_2_with_rod", "fuel_2_without_rod",

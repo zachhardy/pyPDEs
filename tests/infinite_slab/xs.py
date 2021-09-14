@@ -1,4 +1,4 @@
-__all__ = ["sigma_a_ramp_up", "sigma_a_ramp_down",
+__all__ = ["sigma_a_ramp_up", "sigma_a_ramp_down", "sigma_a_fast_ramp_up",
            "xs_material_0_and_2", "xs_material_1"]
 
 from numpy import ndarray
@@ -6,7 +6,7 @@ from numpy import ndarray
 
 def sigma_a_ramp_up(g: int, t: float, sigma_a: ndarray) -> float:
     if g == 1 and 0.0 <= t <= 1.0:
-        return sigma_a[g] * (1.0 + 0.03*t)
+        return sigma_a[g] * (1.0 + t * 0.03)
     elif g == 1 and t > 1.0:
         return 1.03 * sigma_a[g]
     else:
@@ -15,9 +15,18 @@ def sigma_a_ramp_up(g: int, t: float, sigma_a: ndarray) -> float:
 
 def sigma_a_ramp_down(g: int, t: float, sigma_a: ndarray) -> float:
     if g == 1 and 0.0 < t <= 1.0:
-        return sigma_a[g] * (1.0 - 0.01*t)
+        return sigma_a[g] * (1.0 - t * 0.01)
     elif g == 1 and t > 1.0:
         return 0.99 * sigma_a[g]
+    else:
+        return sigma_a[g]
+
+
+def sigma_a_fast_ramp_up(g: int, t: float, sigma_a: ndarray) -> float:
+    if g == 1 and 0.0 <= t <= 0.01:
+        return sigma_a[g] * (1.0 - t/0.01 * 0.05)
+    elif g == 1 and t > 0.01:
+        return 0.95 * sigma_a[g]
     else:
         return sigma_a[g]
 

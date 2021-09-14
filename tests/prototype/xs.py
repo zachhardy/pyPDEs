@@ -1,6 +1,6 @@
 """
-Cross section functions for `prototype_1d_fv.py` and
-`minicore_1d_fv.py` test problems.
+Cross section functions for `prototype.py` and
+`minicore.py` test problems.
 """
 __all__ = ["sigma_a_material_1",  "sigma_a_material_2",
            "sigma_a_material_3", "xs_vals"]

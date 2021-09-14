@@ -13,7 +13,7 @@ from pyPDEs.utilities.boundaries import *
 
 from modules.neutron_diffusion import *
 
-from lra_xs import *
+from xs import *
 
 # Create mesh, assign material IDs
 x_verts = np.linspace(0.0, 165.0, 12)
@@ -95,7 +95,7 @@ solver.power = 1.0e-6
 # Set time stepping options
 solver.t_final = 3.0
 solver.dt = 2.5e-3
-solver.method = "BACKWARD_EULER"
+solver.method = "CRANK_NICHOLSON"
 
 # Run the problem
 solver.initialize()
