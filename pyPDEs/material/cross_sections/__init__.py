@@ -22,28 +22,27 @@ class CrossSections(MaterialProperty):
         self.n_groups: int = 0
         self.n_precursors: int = 0
         self.is_fissile: bool = False
-        self.has_precursors: bool = False
 
-        self._sigma_t: ndarray = None
-        self._sigma_a: ndarray = None
-        self.sigma_r: ndarray = None
-        self.sigma_f: ndarray = None
-        self.sigma_s: ndarray = None
-        self.transfer_matrix: ndarray = None
-        self.D: ndarray = None
+        self._sigma_t: ndarray = []
+        self._sigma_a: ndarray = []
+        self.sigma_r: ndarray = []
+        self.sigma_f: ndarray = []
+        self.sigma_s: ndarray = []
+        self.transfer_matrix: ndarray = []
+        self.D: ndarray = []
 
-        self.nu: ndarray = None
-        self.nu_prompt: ndarray = None
-        self.nu_delayed: ndarray = None
+        self.nu: ndarray = []
+        self.nu_prompt: ndarray = []
+        self.nu_delayed: ndarray = []
 
-        self.chi: ndarray = None
-        self.chi_prompt: ndarray = None
-        self.chi_delayed: ndarray = None
+        self.chi: ndarray = []
+        self.chi_prompt: ndarray = []
+        self.chi_delayed: ndarray = []
 
-        self.velocity: ndarray = None
+        self.velocity: ndarray = []
 
-        self.precursor_lambda: ndarray = None
-        self.precursor_yield: ndarray = None
+        self.precursor_lambda: ndarray = []
+        self.precursor_yield: ndarray = []
 
         self.sigma_t_function: XSFunc = None
         self.sigma_a_function: XSFunc = None
@@ -67,7 +66,6 @@ class CrossSections(MaterialProperty):
                 self.sigma_t_function is None:
             val = self.sigma_a_function(g, t, self._sigma_a)
             return val + self.sigma_s[g]
-
 
     @property
     def nu_sigma_f(self) -> ndarray:
@@ -99,112 +97,134 @@ class CrossSections(MaterialProperty):
         """
         return self.nu_delayed * self.sigma_f
 
-    def _validate_xs(self) -> None:
+    def _validate_xs(self) -> []:
         """Validate the parsed cross sections.
         """
-        # Ensure sigma_t was provided
-        if self._sigma_t is None and self._sigma_a is None:
+        # Ensure sigma_t or sigma_a was provided
+        has_sig_t = np.sum(self._sigma_t) > 0.0
+        has_sig_a = np.sum(self._sigma_a) > 0.0
+        if not has_sig_t and not has_sig_a:
             raise AssertionError(
-                "Total or absorption cross sections must be provided.")
+                "Either the total or absorption cross sections "
+                "must be provided.")
 
-        # Ensure transfer matrix was provided
-        if self.transfer_matrix is None:
-            raise AssertionError(
-                "The transfer matrix must be provided.")
+        # Compute sigma_s from transfer matrix
+        self.sigma_s = np.sum(self.transfer_matrix, axis=1)
 
-        # Compute diffusion coefficient if not provided
-        if self.D is None:
-            self.D = (3.0 * self._sigma_t) ** (-1)
-
-        # Enforce _sigma_t = sigma_a + sigma_s
-        if self._sigma_a is None:
-            self._sigma_a = self._sigma_t - self.sigma_s
-        else:
+        # Enfore sigma_t = sigma_a + sigma_s
+        if has_sig_a:
             self._sigma_t = self._sigma_a + self.sigma_s
+        else:
+            self._sigma_a = self._sigma_t - self.sigma_s
+
+        # Compute diffusion coefficient, if not provided
+        if np.sum(self.D) == 0.0:
+            self.D = (3.0 * self._sigma_t) ** (-1.0)
 
         # Compute removal cross sections
         self.sigma_r = self._sigma_t - np.diag(self.transfer_matrix)
 
+        # If not fissile with precursors
+        if not self.is_fissile and self.n_precursors > 0:
+            self.precursor_lambda = []
+            self.precursor_yield = []
+            self.chi_delayed = []
+            self.n_precursors = 0
+
         # Check fissile properties
         if self.is_fissile:
 
+            # Determine present nu terms
+            has_nu = sum(self.nu) > 0.0
+            has_nu_p = sum(self.nu_prompt) > 0.0
+            has_nu_d = sum(self.nu_delayed) > 0.0
+
+            # Determine present chi terms
+            has_chi = sum(self.chi) > 0.0
+            has_chi_p = sum(self.chi_prompt) > 0.0
+            has_chi_d = np.sum(self.chi_delayed) > 0.0
+
             # Check precursor terms
-            if self.has_precursors:
-                if self.precursor_lambda is None:
-                    raise AssertionError(
-                        "Delayed neutron precursor decay constants must be "
-                        "supplied for cross sections with precursors.")
+            if self.n_precursors > 0:
+                for j in range(self.n_precursors):
+                    if self.precursor_lambda[j] == 0.0:
+                        raise ValueError(
+                            f"Precursor family {j} decay constant "
+                            f"must be non-zero.")
+                    if self.precursor_yield[j] == 0.0:
+                        raise ValueError(
+                            f"Precursor family {j} yield must be non-zero.")
 
-                if self.n_precursors > 1:
-                    if self.precursor_yield is None:
-                        raise AssertionError(
-                            "Delayed neutron precursor yields must be "
-                            "supplied for cross sections with precursors.")
-                else:
-                    self.precursor_yield = np.ones(1)
+            # Normalizaiton
+            if has_chi:
+                self.chi /= sum(self.chi)
+            if has_chi_p:
+                self.chi_prompt /= sum(self.chi_prompt)
+            if has_chi_d:
+                self.chi_delayed /= np.sum(self.chi_delayed, axis=0)
+            if self.n_precursors > 0:
+                self.precursor_yield /= sum(self.precursor_yield)
 
-            # Enforce nu = nu_prompt + nu_delayed
-            has_nu = self.nu is not None
-            has_nu_p = self.nu_prompt is not None
-            has_nu_d = self.nu_delayed is not None
+            # Check input compatibility
+            if (has_nu_p and not has_chi_p) or \
+                    (not has_nu_p and has_chi_p):
+                raise AssertionError(
+                    "If prompt nu or chi are provided, the other must be.")
+            if (has_nu_d and not has_chi_d) or \
+                    (not has_nu_d and has_chi_d):
+                raise AssertionError(
+                    "If delayed nu or chi are provided, the other must be.")
+            if (has_nu and not has_chi) or \
+                    (not has_nu and has_chi):
+                raise AssertionError(
+                    "If total nu or chi are provided, the other must be.")
+            if (has_nu_p and not has_nu_d) or \
+                    (not has_nu_p and has_nu_d):
+                raise AssertionError(
+                    "If prompt quantities are provided, delayed must be.")
+
+            # Compute total from prompt and delayed
             if has_nu_p and has_nu_d:
                 self.nu = self.nu_prompt + self.nu_delayed
-                has_nu = True
 
-            # Ensure appropriate nu values exist
-            if self.has_precursors:
-                if not has_nu_p or not has_nu_d:
-                    raise AssertionError(
-                        "Both prompt and delayed nu must be provided "
-                        "if the cross sections have precursors.")
-            elif not has_nu:
-                raise AssertionError(
-                    "nu must be provided if the cross sections do "
-                    "not have precursors.")
+            if has_chi_p and has_chi_d:
+                beta = self.nu_delayed / self.nu
+                self.chi = (1.0 - beta) * self.chi_prompt
+                for j in range(self.n_precursors):
+                    self.chi += beta * self.precursor_yield[j] *\
+                                self.chi_delayed[:, j]
 
-            # Enforce chi = (1.0 - beta) * chi_prompt +
-            #               beta * sum_{j=1}^J gamma_j * chi_delayed
-            # for multigroup
-            if self.n_groups > 1:
-                has_chi = self.chi is not None
-                has_chi_p = self.chi_prompt is not None
-                has_chi_d = self.chi_delayed is not None
-                if has_chi_p and has_chi_d:
-                    beta = self.nu_delayed / self.nu
-                    self.chi = (1.0 - beta) * self.chi_prompt
-                    for j in range(self.n_precursors):
-                        gamma = self.precursor_yield[j]
-                        self.chi += beta * gamma * self.chi_delayed[:, j]
-                    has_chi = True
+    def initialize_groupwise_data(self) -> []:
+        """Initialize the group-wise only data.
+        """
+        # General cross sections
+        self._sigma_t = np.zeros(self.n_groups)
+        self._sigma_a = np.zeros(self.n_groups)
+        self.sigma_s = np.zeros(self.n_groups)
+        self.sigma_r = np.zeros(self.n_groups)
+        self.sigma_f = np.zeros(self.n_groups)
+        self.D = np.zeros(self.n_groups)
 
-                # Ensure appropriate chi values exist
-                if self.has_precursors:
-                    if not has_chi_p or not has_chi_d:
-                        raise AssertionError(
-                            "Both prompt and delayed chi must be provided "
-                            "if the cross sections have precursors.")
-                elif not has_chi:
-                    raise AssertionError(
-                        "chi must be provided if the cross sections do "
-                        "not have precursors.")
+        # Transfer matrix
+        self.transfer_matrix = np.zeros((self.n_groups,) * 2)
 
-            # Set all chi's to unit for one group problems
-            else:
-                self.chi = np.ones(1)
-                self.chi_prompt = np.ones(1)
-                if self.has_precursors:
-                    self.chi_delayed = np.ones((1, self.n_precursors))
+        # Fission neutron production data
+        self.nu = np.zeros(self.n_groups)
+        self.nu_prompt = np.zeros(self.n_groups)
+        self.nu_delayed = np.zeros(self.n_groups)
 
-        else:
-            G, J = self.n_groups, self.n_precursors
-            self.sigma_f = np.zeros(G)
-            self.nu = np.zeros(G)
-            self.nu_prompt = np.zeros(G)
-            self.nu_delayed = np.zeros(G)
-            self.chi = np.zeros(G)
-            self.chi_prompt = np.zeros(G)
-            self.chi_delayed = np.zeros((G, J))
-            self.precursor_yield = np.zeros(J)
-            self.precursor_lambda = np.zeros(J)
-            if self.velocity is None:
-                self.velocity = np.zeros(G)
+        # Fission spectrum data
+        self.chi = np.zeros(self.n_groups)
+        self.chi_prompt = np.zeros(self.n_groups)
+
+        # Groupwise velocities
+        self.velocity = np.zeros(self.n_groups)
+
+    def initialize_precursor_data(self) -> []:
+        """Initialize the delayed neutron data.
+        """
+        G, J = self.n_groups, self.n_precursors
+        self.precursor_lambda = np.zeros(J)
+        self.precursor_yield = np.zeros(J)
+        self.chi_delayed = np.zeros((G, J))
+

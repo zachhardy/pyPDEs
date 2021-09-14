@@ -75,88 +75,73 @@ def read_from_xs_file(self: "CrossSections", filename: str,
                 line_num += 1
                 line = lines[line_num].split()
 
+            # Get the number of groups and precursors
             if line[0] == "NUM_GROUPS":
                 self.n_groups = int(line[1])
+                self.initialize_groupwise_data()
+                if self.n_groups == 1:
+                    self.chi = np.ones(1)
+                    self.chi_prompt = np.ones(1)
 
             if line[0] == "NUM_PRECURSORS":
                 self.n_precursors = int(line[1])
-                self.has_precursors = self.n_precursors > 0
+                if self.n_precursors > 0:
+                    self.initialize_precursor_data()
+                    if self.n_precursors == 1:
+                        self.precursor_yield = np.ones(1)
+                    if self.n_groups == 1:
+                        self.chi_delayed = np.ones((1, self.n_precursors))
 
             if line[0] == "SIGMA_T_BEGIN":
-                self._sigma_t = np.zeros(self.n_groups)
                 read_1d_xs("SIGMA_T", self._sigma_t, lines, line_num)
                 self._sigma_t *= density  # scale by density
 
             if line[0] == "SIGMA_A_BEGIN":
-                self._sigma_a = np.zeros(self.n_groups)
                 read_1d_xs("SIGMA_A", self._sigma_a, lines, line_num)
                 self._sigma_a *= density  # scale by density
 
             if line[0] == "DIFFUSION_COEFF_BEGIN":
-                self.D = np.zeros(self.n_groups)
                 read_1d_xs("DIFFUSION_COEFF", self.D, lines, line_num)
 
             if line[0] == "SIGMA_F_BEGIN":
-                self.sigma_f = np.zeros(self.n_groups)
                 read_1d_xs("SIGMA_F", self.sigma_f, lines, line_num)
                 self.sigma_f *= density
-                if np.sum(self.sigma_f) > 0.0:
-                    self.is_fissile = True
 
             if line[0] == "NU_BEGIN":
-                self.nu = np.zeros(self.n_groups)
                 read_1d_xs("NU", self.nu, lines, line_num)
 
             if line[0] == "NU_PROMPT_BEGIN":
-                self.nu_prompt = np.zeros(self.n_groups)
                 read_1d_xs("NU_PROMPT", self.nu_prompt, lines, line_num)
 
             if line[0] == "NU_DELAYED_BEGIN":
-                self.nu_delayed = np.zeros(self.n_groups)
                 read_1d_xs("NU_DELAYED", self.nu_delayed, lines, line_num)
 
             if line[0] == "CHI_BEGIN":
-                self.chi = np.zeros(self.n_groups)
                 read_1d_xs("CHI", self.chi, lines, line_num)
-                self.chi /= np.sum(self.chi)
 
             if line[0] == "CHI_PROMPT_BEGIN":
-                self.chi_prompt = np.zeros(self.n_groups)
                 read_1d_xs("CHI_PROMPT", self.chi_prompt, lines, line_num)
-                self.chi_prompt /= np.sum(self.chi_prompt)
 
             if line[0] == "CHI_DELAYED_BEGIN":
-                G, J = self.n_groups, self.n_precursors
-                self.chi_delayed = np.zeros((G, J))
                 read_chi_delayed(
                     "CHI_DELAYED", self.chi_delayed, lines, line_num)
-                for j in range(self.n_precursors):
-                    chi_dj_sum = np.sum(self.chi_delayed[:, j])
-                    self.chi_delayed[:, j] /= chi_dj_sum
 
             if line[0] == "VELOCITY_BEGIN":
-                self.velocity = np.zeros(self.n_groups)
                 read_1d_xs(
                     "VELOCITY", self.velocity, lines, line_num)
 
             if line[0] == "TRANSFER_MOMENTS_BEGIN":
-                self.transfer_matrix = np.zeros((self.n_groups,) * 2)
                 read_transfer_matrix(
                     "TRANSFER_MOMENTS", self.transfer_matrix, lines, line_num)
-                self.transfer_matrix *= density  # scale by density
-                self.sigma_s = np.sum(self.transfer_matrix, axis=1)
 
             if line[0] == "PRECURSOR_LAMBDA_BEGIN":
-                self.precursor_lambda = np.zeros(self.n_precursors)
                 read_1d_xs(
                     "PRECURSOR_LAMBDA", self.precursor_lambda, lines, line_num)
 
 
             if line[0] == "PRECURSOR_YIELD_BEGIN":
-                self.precursor_yield = np.zeros(self.n_precursors)
                 read_1d_xs(
                     "PRECURSOR_YIELD", self.precursor_yield, lines, line_num)
-                self.precursor_yield /= np.sum(self.precursor_yield)
 
             line_num += 1
 

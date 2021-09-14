@@ -26,12 +26,21 @@ def read_from_xs_dict(
     self.n_groups = xs.get("n_groups")
     if not self.n_groups:
         raise KeyError(f"n_groups {not_found}.")
+    self.initialize_groupwise_data()
+    if self.n_groups == 1:
+        self.chi = np.ones(1)
+        self.chi_prompt = np.ones(1)
 
     # Get number of precursors
     self.n_precursors = xs.get("n_precursors")
     if not self.n_precursors:
         self.n_precursors = 0
-    self.has_precursors = self.n_precursors > 0
+    if self.n_precursors > 0:
+        self.initialize_precursor_data()
+        if self.n_precursors == 1:
+            self.precursor_yield = np.ones(1)
+        if self.n_groups == 1:
+            self.chi_delayed = np.one((1, self.n_precursors))
 
     # Get total cross section
     if "sigma_t" in xs:
@@ -54,7 +63,6 @@ def read_from_xs_dict(
             raise ValueError(
                 f"transfer_matrix {incompat_w_G}.")
         self.transfer_matrix = density * trnsfr
-        self.sigma_s = np.sum(self.transfer_matrix, axis=1)
 
     # Get diffusion coefficient or set to default
     if "D" in xs:
@@ -86,7 +94,7 @@ def read_from_xs_dict(
         self.nu_prompt = nu_p
 
     # Get nu delayed
-    if "nu_delayed" in xs and self.has_precursors:
+    if "nu_delayed" in xs:
         nu_d = np.array(xs.get("nu_delayed"))
         if len(nu_d) != self.n_groups:
             raise ValueError(f"nu_delayed {incompat_w_G}.")
@@ -107,7 +115,7 @@ def read_from_xs_dict(
         self.chi_prompt = chi_p / np.sum(chi_p)
 
     # Get chi delayed
-    if "chi_delayed" in xs and self.has_precursors:
+    if "chi_delayed" in xs:
         chi_d = xs.get("chi_delayed")
         if len(chi_d) != self.n_groups:
             raise ValueError(f"chi_delayed {incompat_w_G}.")
@@ -115,20 +123,17 @@ def read_from_xs_dict(
             if len(chi_d[g]) != self.n_precursors:
                 raise ValueError(
                     f"chi_delayed group {g} {incompat_w_J}.")
-        chi_d = np.array(chi_d)
-        for j in range(self.n_precursors):
-            chi_d[:, j] = chi_d[:, j] / np.sum(chi_d[:, j])
-        self.chi_delayed = chi_d
+        self.chi_delayed = np.array(chi_d)
 
     # Get precursor decay constants
-    if "precursor_lambda" in xs and self.has_precursors:
+    if "precursor_lambda" in xs:
         decay = np.array(xs.get("precursor_lambda"))
         if len(decay) != self.n_precursors:
             raise ValueError(f"precursor_lambda {incompat_w_J}.")
         self.precursor_lambda = decay
 
     # Get precursor yields
-    if "precursor_yield" in xs and self.has_precursors:
+    if "precursor_yield" in xs:
         gamma = np.array(xs.get("precursor_yield"))
         if len(gamma) != self.n_precursors:
             raise ValueError(f"precursor_yield {incompat_w_J}.")
