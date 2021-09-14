@@ -284,7 +284,7 @@ class Outputs:
         ax.set_xlabel("Time (sec)")
         ax.set_ylabel("System Power")
         plotter = ax.semilogy if logscale else ax.plot
-        plotter(times, system_power)
+        plotter(times, system_power, "-*b")
         plt.grid(True)
         plt.tight_layout()
 
