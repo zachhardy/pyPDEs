@@ -8,7 +8,7 @@ from matplotlib.pyplot import Axes
 
 from pyPDEs.spatial_discretization import *
 
-from typing import List, TYPE_CHECKING
+from typing import List, Tuple, TYPE_CHECKING
 if TYPE_CHECKING:
     from . import TransientSolver
 
@@ -151,9 +151,8 @@ class Outputs:
         if self.dim != 1:
             raise AssertionError("This routine is only for 1D grids.")
 
-        # Get the scalar flux data
-        phi = self.scalar_flux
-        n_grps = phi.shape[1]
+        # Get the groups to plot
+        n_grps = self.scalar_flux.shape[1]
         if groups is None:
             groups = [g for g in range(n_grps)]
         if isinstance(groups, int):
@@ -168,6 +167,12 @@ class Outputs:
         # Get the grid
         z = self.grid[:, 2]
 
+        # Get the scalar flux at the specified times
+        phi = []
+        for t in times:
+            phi += [self._interpolate(t, self.scalar_flux)]
+        phi = np.array(data)
+
         # Loop over groups
         for g in groups:
             fig: Figure = plt.figure()
@@ -176,16 +181,11 @@ class Outputs:
             ax.set_ylabel(f"$\phi_{{{g}}}(r)$")
             ax.set_title(f"Group {g}")
 
-            # Loop over times to get data
-            vals = []
-            for t in times:
-                vals += [self._interpolate(t, phi[:, g])]
-            vals = np.array(vals) / np.max(vals)
-
-            # Plot data
+            # Plot this groups scalar fluxes
+            phi_g = phi[:, g] / np.max(phi[:, g])
             for i in range(len(times)):
                 label = f"Time = {times[i]:.2f} sec"
-                ax.plot(z, vals[i], label=label)
+                ax.plot(z, phi_g[i], label=label)
             ax.legend()
             ax.grid(True)
         fig.tight_layout()
@@ -205,9 +205,8 @@ class Outputs:
         if self.dim != 2:
             raise AssertionError("This routine is only for 2D grids.")
 
-        # Get the scalar flux data
-        phi = self.scalar_flux
-        n_grps = phi.shape[1]
+        # Get the groups to plot
+        n_grps = self.scalar_flux.shape[1]
         if groups is None:
             groups = [g for g in range(n_grps)]
         if isinstance(groups, int):
@@ -224,19 +223,14 @@ class Outputs:
         x, y = np.unique(x), np.unique(y)
         xx, yy = np.meshgrid(x, y)
 
-        # Determine subplot format
-        n_plots = len(times)
-        if n_plots < 4:
-            n_rows, n_cols = 1, 3
-        elif n_plots < 9:
-            n_cols = int(np.ceil(np.sqrt(n_plots)))
-            n_rows = n_cols
-            for n in range(1, n_cols + 1):
-                if n * n_cols >= n_plots:
-                    n_rows = n
-                    break
-        else:
-            raise AssertionError("Maximum number of plots is 9.")
+        # Get the dimensions of the subplots
+        n_rows, n_cols = self._format_subplots(len(times))
+
+        # Get the scalar flux at the specified times
+        phi = []
+        for t in times:
+            phi += [self._interpolate(t, self.scalar_flux)]
+        phi = np.array(phi)
 
         # Loop over groups
         for g in groups:
@@ -244,22 +238,17 @@ class Outputs:
             fig: Figure = plt.figure(figsize=figsize)
             fig.suptitle(f"Group {g}")
 
-            # Loop over times to get the data
-            vals = []
-            for t in times:
-                vals += [self._interpolate(t, phi[:, g])]
-            vals: ndarray = np.array(vals) / np.max(vals)
-
-            axs = []
+            # Plot this groups scalar fluxes
+            phi_g = phi[:, g] / np.max(phi[:, g])
             for i in range(len(times)):
-                val = vals[i].reshape(xx.shape)
+                phi_gt = phi_g[i].reshape(xx.shape)
 
                 ax: Axes = fig.add_subplot(n_rows, n_cols, i + 1)
                 ax.set_xlabel("X (cm)")
                 ax.set_ylabel("Y (cm)")
                 ax.set_title(f"Time = {times[i]:.2f} sec")
-                im = ax.pcolor(xx, yy, val, cmap="jet", shading="auto",
-                               vmin=0.0, vmax=vals.max())
+                im = ax.pcolor(xx, yy, phi_gt, cmap="jet", shading="auto",
+                               vmin=0.0, vmax=phi_g.max())
                 fig.colorbar(im)
             fig.tight_layout()
 
@@ -337,6 +326,30 @@ class Outputs:
         if method not in [np.inf, 1, 2]:
             raise ValueError("Invalid normalization type.")
         return vector / np.linalg.norm(vector, ord=method)
+
+    @staticmethod
+    def _format_subplots(n_plots: int) -> Tuple[int, int]:
+        """Determine the number of rows and columns for subplots.
+
+        Parameters
+        ----------
+        n_plots : int
+            The number of subplots that will be used.
+
+        """
+        n_rows, n_cols = 1, 1
+        if n_plots < 4:
+            n_rows, n_cols = 1, 3
+        elif 4 <= n_plots < 9:
+            ref = int(np.ceil(np.sqrt((n_plots))))
+            n_rows = n_cols = ref
+            for n in range(1, n_cols + 1):
+                if n * n_cols >= n_plots:
+                    n_rows = n
+                    break
+        else:
+            raise AssertionError("Maximum number of plots is 9.")
+        return n_rows, n_cols
 
     def reset(self):
         self.grid.clear()
