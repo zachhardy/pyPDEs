@@ -126,7 +126,7 @@ class TransientSolver(KEigenvalueSolver):
 
         # Evaluate initial conditions
         self.compute_initial_values()
-        self.store_outputs(0.0)
+        self.outputs.store_outputs(self, 0.0)
 
         # Set the old power to set initial power
         self.power_old = self.power
@@ -152,7 +152,7 @@ class TransientSolver(KEigenvalueSolver):
                 self.dt = next_output - t
 
             # Force coincidence with t_final
-            if t + self.dt > self.t_final - 1.0e-12:
+            if t + self.dt > self.t_final:
                 self.dt = self.t_final - t
 
             # Solve time step
@@ -164,13 +164,14 @@ class TransientSolver(KEigenvalueSolver):
                 self.refine_time_step()
 
             # Increment time
-            t += self.dt
+            t = np.round(t + self.dt, 12)
             n_steps += 1
 
             # Output solutions
             if t == next_output:
-                self.store_outputs(t)
+                self.outputs.store_outputs(self, t)
                 next_output += self.output_frequency
+                next_output = np.round(next_output, 12)
                 if next_output > self.t_final:
                     next_output = self.t_final
 
@@ -193,6 +194,7 @@ class TransientSolver(KEigenvalueSolver):
                 print(f"Average Temperature:\t{T_avg:.3g}")
 
         self.dt = dt_initial
+        self.outputs.finalize_outputs()
 
     def refine_time_step(self) -> None:
         """Refine the time step.
@@ -503,9 +505,6 @@ class TransientSolver(KEigenvalueSolver):
                 self.compute_precursors()
 
         self.bump_solutions()
-
-    def store_outputs(self, time: float) -> None:
-        self.outputs.store_outputs(self, time)
 
     def write_outputs(self, path: str = ".") -> None:
         self.outputs.write_outputs(path)
