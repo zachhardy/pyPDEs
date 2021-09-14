@@ -62,22 +62,7 @@ solver.tolerance = 1.0e-12
 solver.initialize()
 solver.execute(verbose=1)
 
-out = solver.outputs
-sim_times = np.round(out.times, 6)
-grid = [p[2] for p in out.grid]
-
-plt.figure()
-times = [0.0, 0.6, 1.1, 1.7]
-for t in times:
-    i = np.argmin(abs(sim_times - t))
-    phi = out.flux[i][0]
-    plt.plot(grid, phi, label=f"Time = {t:.2g} sec")
-plt.legend()
-plt.grid(True)
-
-plt.figure()
-plt.title("Power Profile")
-plt.plot(sim_times, out.power)
-plt.grid(True)
-
+outputs = solver.outputs
+outputs.plot_1d_scalar_flux(times=[0.0, 0.6, 1.1, 2.0])
+outputs.plot_system_power(normalize=True)
 plt.show()
