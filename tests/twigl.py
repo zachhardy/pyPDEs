@@ -41,7 +41,7 @@ discretization = FiniteVolume(mesh)
 # Create cross sections and sources
 xs0 = CrossSections()
 xs0.read_from_xs_dict(xs_material_0)
-xs0.sigma_a_function = sigma_a_function
+xs0.sigma_a_function = sigma_a_ramp
 
 xs1 = CrossSections()
 xs1.read_from_xs_dict(xs_material_0)
@@ -72,7 +72,7 @@ solver.lag_precursors = False
 
 # Set time stepping options
 solver.t_final = 0.5
-solver.dt = 1.0e-3
+solver.dt = 1.0e-2
 solver.method = "BACKWARD_EULER"
 
 
@@ -83,7 +83,9 @@ solver.tolerance = 1.0e-12
 solver.initialize()
 solver.execute(verbose=1)
 
-solver.outputs.plot_flux(0, 0.2, f"Group 0 at t = 0.2 sec")
-solver.outputs.plot_power()
+outputs = solver.outputs
+outputs.plot_2d_scalar_flux(
+    times=[0.0, 0.1, 0.2, 0.3, 0.4, 0.5])
+outputs.plot_system_power(normalize=True)
 
 plt.show()

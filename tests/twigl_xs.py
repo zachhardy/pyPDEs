@@ -1,14 +1,15 @@
 """
 Cross section functions for `twigl.py` test problem.
 """
-__all__ = ["xs_material_0", "xs_material_1", "sigma_a_function"]
+__all__ = ["xs_material_0", "xs_material_1",
+           "sigma_a_ramp", "sigma_a_step"]
 
 from numpy import ndarray
 
 
 def sigma_a_ramp(g: int, t: float, sigma_a: ndarray) -> float:
     if g == 1:
-        if 0.0 < t <= 0.2:
+        if 0.0 <= t <= 0.2:
             return sigma_a[g] * (1.0 - 0.11667 * t)
         else:
             return sigma_a[g] * 0.97666
@@ -23,6 +24,8 @@ def sigma_a_step(g: int, t: float, sigma_a: ndarray) -> float:
         return sigma_a[g]
 
 
+trnsfr = [[0.0, 0.01], [0.0, 0.0]]
+
 nu = 2.43
 beta = 0.0075
 nu_prompt = [(1.0 - beta) * nu] * 2
@@ -31,10 +34,9 @@ nu_delayed = [beta * nu] * 2
 chi_prompt = [1.0, 0.0]
 chi_delayed = [[1.0], [0.0]]
 
-trnsfr = [[0.0, 0.01], [0.0, 0.0]]
+decay = [0.08]
 
 velocity = [1.0e7, 2.0e5]
-
 
 xs_material_0 = \
        {"n_groups": 2, "n_precursors": 1,
@@ -43,7 +45,7 @@ xs_material_0 = \
         "transfer_matrix": trnsfr,
         "nu_prompt": nu_prompt, "nu_delayed": nu_delayed,
         "chi_prompt": chi_prompt, "chi_delayed": chi_delayed,
-        "precursor_lambda": [0.08], "velocity": velocity}
+        "precursor_lambda": decay, "velocity": velocity}
 
 xs_material_1 = \
        {"n_groups": 2, "n_precursors": 1,
@@ -52,4 +54,4 @@ xs_material_1 = \
         "transfer_matrix": trnsfr,
         "nu_prompt": nu_prompt, "nu_delayed": nu_delayed,
         "chi_prompt": chi_prompt, "chi_delayed": chi_delayed,
-        "precursor_lambda": [0.08], "velocity": velocity}
+        "precursor_lambda": decay, "velocity": velocity}
