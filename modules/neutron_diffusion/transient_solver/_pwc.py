@@ -83,7 +83,7 @@ def _pwc_mass_matrix(self: "TransientSolver",
                 ig = pwc.map_dof(cell, i, uk_man, 0, g)
 
                 if lumped:
-                    A[ig, ig] += inv_vel * view.intV_shapeI[i]
+                    A[ig, ig] += view.intV_shapeI[i] / v
                 else:
                     # Loop over nodes
                     for j in range(view.n_nodes):
