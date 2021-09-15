@@ -171,7 +171,7 @@ class Outputs:
         phi = []
         for t in times:
             phi += [self._interpolate(t, self.scalar_flux)]
-        phi = np.array(data)
+        phi = np.array(phi)
 
         # Loop over groups
         for g in groups:
