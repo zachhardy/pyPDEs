@@ -87,7 +87,6 @@ class TransientSolver(KEigenvalueSolver):
 
         # Fission rate
         self.fission_rate: ndarray = None
-        self.fission_rate_old: ndarray = None
 
         # Temperatures
         self.initial_temperature: float = 300.0
@@ -117,12 +116,12 @@ class TransientSolver(KEigenvalueSolver):
 
         # Initialize fission rate vectors
         self.fission_rate = np.zeros(self.mesh.n_cells)
-        self.fission_rate_old = np.copy(self.fission_rate)
 
         # Initialize temperature vectors
-        T0 = self.initial_temperature
-        self.temperature = T0 * np.ones(self.mesh.n_cells)
-        self.temperature_old = T0 * np.ones(self.mesh.n_cells)
+        if self.use_feedback:
+            T0 = self.initial_temperature
+            self.temperature = T0 * np.ones(self.mesh.n_cells)
+            self.temperature_old = T0 * np.ones(self.mesh.n_cells)
 
         # Evaluate initial conditions
         self.compute_initial_values()
@@ -215,7 +214,7 @@ class TransientSolver(KEigenvalueSolver):
         """Coarsen the time step.
         """
         dP = abs(self.power - self.power_old) / self.power_old
-        if self.dt < self.coarsen_level:
+        if dP < self.coarsen_level:
             self.dt *= 2.0
             if self.dt > self.output_frequency:
                 self.dt = self.output_frequency
@@ -235,15 +234,17 @@ class TransientSolver(KEigenvalueSolver):
         A = self.assemble_transient_matrix(m=0)
         b = self.assemble_transient_rhs(m=0)
         self.phi = spsolve(A, b)
-        self.compute_fission_rate()
-        self.update_temperature(m=0)
         if self.use_precursors:
             self.update_precursors(m=0)
+        if self.use_feedback:
+            self.update_temperature(m=0)
 
         if self.method in ["CRANK_NICHOLSON", "TBDF2"]:
             self.phi = 2.0*self.phi - self.phi_old
             if self.use_precursors:
                 self.precursors = 2.0*self.precursors - self.precursors_old
+            if self.use_feedback:
+                self.temperature = 2.0*self.temperature - self.temperature_old
 
             if self.method == "TBDF2":
                 if self.has_transient_xs:
@@ -252,17 +253,16 @@ class TransientSolver(KEigenvalueSolver):
                 A = self.assemble_transient_matrix(m=1)
                 b = self.assemble_transient_rhs(m=1)
                 self.phi = spsolve(A, b)
-                self.compute_fission_rate()
-                self.update_temperature(m=1)
                 if self.use_precursors:
                     self.update_precursors(m=1)
+                if self.use_feedback:
+                    self.update_temperature(m=1)
 
-        self.power = self.compute_power()
+        self.compute_fission_rate()
 
-    def bump_solutions(self) -> None:
+    def step_solutions(self) -> None:
         self.power_old = self.power
         self.phi_old[:] = self.phi
-        self.fission_rate_old[:] = self.fission_rate
         self.temperature_old[:] = self.temperature
         if self.use_precursors:
             self.precursors_old[:] = self.precursors
@@ -504,7 +504,7 @@ class TransientSolver(KEigenvalueSolver):
             if self.use_precursors:
                 self.compute_precursors()
 
-        self.bump_solutions()
+        self.step_solutions()
 
     def write_outputs(self, path: str = ".") -> None:
         self.outputs.write_outputs(path)
