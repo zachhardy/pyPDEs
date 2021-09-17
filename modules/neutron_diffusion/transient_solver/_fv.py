@@ -127,12 +127,11 @@ def _fv_old_precursor_source(self: "TransientSolver", m: int = 0) -> ndarray:
     ndarray (n_cells * n_groups)
     """
     fv: FiniteVolume = self.discretization
-    phi_ukm = self.phi_uk_man
-    c_ukm = self.precursor_uk_man
+    uk_man = self.phi_uk_man
     eff_dt = self.effective_time_step(m)
 
     # Loop over cells
-    b = np.zeros(fv.n_dofs(phi_ukm))
+    b = np.zeros(fv.n_dofs(uk_man))
     for cell in self.mesh.cells:
         volume = cell.volume
         xs = self.material_xs[cell.material_id]
@@ -141,9 +140,9 @@ def _fv_old_precursor_source(self: "TransientSolver", m: int = 0) -> ndarray:
 
         # Loop over precursors
         for p in range(xs.n_precursors):
-            ip = fv.map_dof(cell, 0, c_ukm, 0, p)
+            ip = self.max_precursors * cell.id + p
             lambda_p = xs.precursor_lambda[p]
-            gamma_p = xs.precursor_yield[p]
+            yield_p = xs.precursor_yield[p]
 
             # Get the precursors
             c_old = self.precursors_old[ip]
@@ -153,7 +152,7 @@ def _fv_old_precursor_source(self: "TransientSolver", m: int = 0) -> ndarray:
 
             # Loop over groups
             for g in range(self.n_groups):
-                ig = fv.map_dof(cell, 0, phi_ukm, 0, g)
+                ig = fv.map_dof(cell, 0, uk_man, 0, g)
                 chi_d = xs.chi_delayed[g][p]
 
                 # Decay emission coefficient
@@ -174,8 +173,7 @@ def _fv_update_precursors(self: "TransientSolver", m: int = 0) -> None:
         The step in a multi-step method.
     """
     fv: FiniteVolume = self.discretization
-    phi_ukm = self.phi_uk_man
-    c_ukm = self.precursor_uk_man
+    uk_man = self.phi_uk_man
     eff_dt = self.effective_time_step(m)
 
     # Loop over cells
@@ -187,13 +185,13 @@ def _fv_update_precursors(self: "TransientSolver", m: int = 0) -> None:
         # Compute delayed fission rate
         f_d = 0.0
         for g in range(self.n_groups):
-            ig = fv.map_dof(cell, 0, phi_ukm, 0, g)
+            ig = fv.map_dof(cell, 0, uk_man, 0, g)
             nud_sigf = xs.nu_delayed_sigma_f[g]
             f_d += nud_sigf * self.phi[ig]
 
         # Loop pver precursors
         for p in range(xs.n_precursors):
-            ip = fv.map_dof(cell, 0, c_ukm, 0, p)
+            ip = self.max_precursors * cell.id + p
             lambda_p = xs.precursor_lambda[p]
             gamma_p = xs.precursor_yield[p]
 

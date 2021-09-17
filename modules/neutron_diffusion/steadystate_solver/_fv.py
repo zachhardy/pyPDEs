@@ -184,8 +184,7 @@ def _fv_compute_precursors(self: "SteadyStateSolver") -> None:
     """Compute the delayed neutron precursor concentrations.
     """
     fv: FiniteVolume = self.discretization
-    phi_uk_man = self.phi_uk_man
-    c_uk_man = self.precursor_uk_man
+    uk_man = self.phi_uk_man
 
     # Loop over cells
     self.precursors *= 0.0
@@ -196,16 +195,16 @@ def _fv_compute_precursors(self: "SteadyStateSolver") -> None:
 
         # Loop over precursors
         for p in range(xs.n_precursors):
-            ip = fv.map_dof(cell, 0, c_uk_man, 0, p)
+            ip = self.max_precursors * cell.id + p
             lambda_p = xs.precursor_lambda[p]
-            gamma_p = xs.precursor_yield[p]
+            yield_p = xs.precursor_yield[p]
 
             # Loop over groups
             for g in range(self.n_groups):
-                ig = fv.map_dof(cell, 0, phi_uk_man, 0, g)
+                ig = fv.map_dof(cell, 0, uk_man, 0, g)
                 nu_d_sig_f = xs.nu_delayed_sigma_f[g]
                 self.precursors[ip] += \
-                    gamma_p / lambda_p * nu_d_sig_f * self.phi[ig]
+                    yield_p / lambda_p * nu_d_sig_f * self.phi[ig]
 
 
 def _fv_apply_matrix_bcs(self: "SteadyStateSolver",

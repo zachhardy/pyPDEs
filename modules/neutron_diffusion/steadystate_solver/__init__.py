@@ -53,6 +53,9 @@ class SteadyStateSolver:
         self.material_xs: List[CrossSections] = None
         self.material_src: List[MultiGroupSource] = None
 
+        self.n_precursors: int = 0
+        self.max_precursors: int = 0
+
         # Physics options
         self.use_precursors: bool = False
 
@@ -68,7 +71,6 @@ class SteadyStateSolver:
 
         # Precursor solution vector
         self.precursors: ndarray = None
-        self.precursor_uk_man: UnknownManager = UnknownManager()
 
     @property
     def n_groups(self) -> int:
@@ -79,19 +81,6 @@ class SteadyStateSolver:
         int
         """
         return self.material_xs[0].n_groups
-
-    @property
-    def n_precursors(self) -> int:
-        """Get the total number of precursors.
-
-        Returns
-        -------
-        int
-        """
-        n_precursors = 0
-        for xs in self.material_xs:
-            n_precursors += xs.n_precursors
-        return n_precursors
 
     def initialize(self) -> None:
         """Initialize the solver.
@@ -105,21 +94,18 @@ class SteadyStateSolver:
         self.phi = np.zeros(sd.n_dofs(self.phi_uk_man))
 
         # Initialize precursor information
-        if self.use_precursors:
-            # Compute the max precursors per material
-            max_precursors: int = 0
-            for xs in self.material_xs:
-                if xs.n_precursors > max_precursors:
-                    max_precursors = xs.n_precursors
+        self.n_precursors = 0
+        self.max_precursors = 0
+        for xs in self.material_xs:
+            self.n_precursors += xs.n_precursors
+            if xs.n_precursors > self.max_precursors:
+                self.max_precursors = xs.n_precursors
+        if self.n_precursors == 0.0:
+            self.use_precursors = False
 
-            # Initialize vector and unknown manager
-            self.precursor_uk_man.clear()
-            if self.n_precursors > 0:
-                n = max_precursors * self.mesh.n_cells
-                self.precursor_uk_man.add_unknown(max_precursors)
-                self.precursors = np.zeros(n)
-            else:
-                self.use_precursors = False
+        if self.use_precursors:
+            n_dofs = self.n_precursors * self.mesh.n_cells
+            self.precursors = np.zeros(n_dofs)
 
         # Precompute matrices
         self.L = self.diffusion_matrix()

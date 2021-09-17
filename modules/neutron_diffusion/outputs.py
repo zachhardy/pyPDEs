@@ -53,7 +53,7 @@ class Outputs:
         # there is currently no way to declared precursors
         # identical across materials.
         if solver.use_precursors:
-            n_dnps = solver.precursor_uk_man.total_components
+            n_dnps = solver.max_precursors
             precursors = np.copy(solver.precursors)
             precursors = [precursors[j::n_dnps] for j in range(n_dnps)]
             self.precursors += [precursors]

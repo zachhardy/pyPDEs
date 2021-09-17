@@ -192,8 +192,7 @@ def _pwc_compute_precursors(self: "SteadyStateSolver") -> None:
     """Compute the delayed neutron precursor concentrations.
     """
     pwc: PiecewiseContinuous = self.discretization
-    phi_uk_man = self.phi_uk_man
-    c_uk_man = self.precursor_uk_man
+    uk_man = self.phi_uk_man
 
     # Loop over cells
     self.precursors *= 0.0
@@ -206,9 +205,9 @@ def _pwc_compute_precursors(self: "SteadyStateSolver") -> None:
 
         # Loop over precursors
         for p in range(xs.n_precursors):
-            ip = cell.id * c_uk_man.total_components + p
+            ip = self.max_precursors * cell.id + p
             lambda_p = xs.precursor_lambda[p]
-            gamma_p = xs.precursor_yield[p]
+            yield_p = xs.precursor_yield[p]
 
             # Loop over groups
             for g in range(self.n_groups):
@@ -216,9 +215,9 @@ def _pwc_compute_precursors(self: "SteadyStateSolver") -> None:
 
                 # Loop over nodes
                 for i in range(view.n_nodes):
-                    ig = pwc.map_dof(cell, i, phi_uk_man, 0, g)
+                    ig = pwc.map_dof(cell, i, uk_man, 0, g)
                     self.precursors[ip] += \
-                        gamma_p / lambda_p * nu_d_sig_f * self.phi[ig] * \
+                        yield_p / lambda_p * nu_d_sig_f * self.phi[ig] * \
                         view.intV_shapeI[i] / volume
 
 
