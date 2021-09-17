@@ -11,17 +11,11 @@ if TYPE_CHECKING:
     from . import SteadyStateSolver
 
 
-def _pwc_diffusion_matrix(self: "SteadyStateSolver",
-                          t: float = 0.0) -> csr_matrix:
+def _pwc_diffusion_matrix(self: "SteadyStateSolver") -> csr_matrix:
     """Assemble the multigroup diffusion matrix.
 
     This routine assembles the diffusion plus interaction matrix
     for all groups according to the DoF ordering of `phi_uk_man`.
-
-    Parameters
-    ----------
-    t : float, default 0.0
-        The simulation time.
 
     Returns
     -------
@@ -34,12 +28,12 @@ def _pwc_diffusion_matrix(self: "SteadyStateSolver",
     A = lil_matrix((pwc.n_dofs(uk_man),) * 2)
     for cell in self.mesh.cells:
         view = pwc.fe_views[cell.id]
-        xs = self.material_xs[cell.material_id]
+        xs = self.cellwise_xs[cell.id]
 
         # Loop over groups
         for g in range(self.n_groups):
             D = xs.D[g]
-            sig_t = xs.sigma_t(g, t)
+            sig_t = xs.sigma_t[g]
 
             # Loop over nodes
             for i in range(view.n_nodes):
@@ -198,8 +192,7 @@ def _pwc_compute_precursors(self: "SteadyStateSolver") -> None:
     """Compute the delayed neutron precursor concentrations.
     """
     pwc: PiecewiseContinuous = self.discretization
-    phi_uk_man = self.phi_uk_man
-    c_uk_man = self.precursor_uk_man
+    uk_man = self.phi_uk_man
 
     # Loop over cells
     self.precursors *= 0.0
@@ -212,9 +205,9 @@ def _pwc_compute_precursors(self: "SteadyStateSolver") -> None:
 
         # Loop over precursors
         for p in range(xs.n_precursors):
-            ip = cell.id * c_uk_man.total_components + p
+            ip = self.max_precursors * cell.id + p
             lambda_p = xs.precursor_lambda[p]
-            gamma_p = xs.precursor_yield[p]
+            yield_p = xs.precursor_yield[p]
 
             # Loop over groups
             for g in range(self.n_groups):
@@ -222,9 +215,9 @@ def _pwc_compute_precursors(self: "SteadyStateSolver") -> None:
 
                 # Loop over nodes
                 for i in range(view.n_nodes):
-                    ig = pwc.map_dof(cell, i, phi_uk_man, 0, g)
+                    ig = pwc.map_dof(cell, i, uk_man, 0, g)
                     self.precursors[ip] += \
-                        gamma_p / lambda_p * nu_d_sig_f * self.phi[ig] * \
+                        yield_p / lambda_p * nu_d_sig_f * self.phi[ig] * \
                         view.intV_shapeI[i] / volume
 
 

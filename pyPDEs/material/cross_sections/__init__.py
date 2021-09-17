@@ -23,8 +23,8 @@ class CrossSections(MaterialProperty):
         self.n_precursors: int = 0
         self.is_fissile: bool = False
 
-        self._sigma_t: ndarray = []
-        self._sigma_a: ndarray = []
+        self.sigma_t: ndarray = []
+        self.sigma_a: ndarray = []
         self.sigma_r: ndarray = []
         self.sigma_f: ndarray = []
         self.sigma_s: ndarray = []
@@ -44,28 +44,7 @@ class CrossSections(MaterialProperty):
         self.precursor_lambda: ndarray = []
         self.precursor_yield: ndarray = []
 
-        self.sigma_t_function: XSFunc = None
         self.sigma_a_function: XSFunc = None
-
-    def sigma_t(self, g: int, t: float = 0.0) -> float:
-        if self.sigma_t_function is not None and \
-                self.sigma_a_function is not None:
-            raise AssertionError(
-                "Only one transient cross section function can "
-                "be provided.")
-
-        if self.sigma_t_function is None and \
-                self.sigma_a_function is None:
-            return self._sigma_t[g]
-
-        elif self.sigma_t_function is not None and \
-                self.sigma_a_function is None:
-            return self.sigma_t_function(g, t, self._sigma_t)
-
-        elif self.sigma_a_function is not None and \
-                self.sigma_t_function is None:
-            val = self.sigma_a_function(g, t, self._sigma_a)
-            return val + self.sigma_s[g]
 
     @property
     def nu_sigma_f(self) -> ndarray:
@@ -101,8 +80,8 @@ class CrossSections(MaterialProperty):
         """Validate the parsed cross sections.
         """
         # Ensure sigma_t or sigma_a was provided
-        has_sig_t = np.sum(self._sigma_t) > 0.0
-        has_sig_a = np.sum(self._sigma_a) > 0.0
+        has_sig_t = np.sum(self.sigma_t) > 0.0
+        has_sig_a = np.sum(self.sigma_a) > 0.0
         if not has_sig_t and not has_sig_a:
             raise AssertionError(
                 "Either the total or absorption cross sections "
@@ -113,16 +92,16 @@ class CrossSections(MaterialProperty):
 
         # Enfore sigma_t = sigma_a + sigma_s
         if has_sig_a:
-            self._sigma_t = self._sigma_a + self.sigma_s
+            self.sigma_t = self.sigma_a + self.sigma_s
         else:
-            self._sigma_a = self._sigma_t - self.sigma_s
+            self.sigma_a = self.sigma_t - self.sigma_s
 
         # Compute diffusion coefficient, if not provided
         if np.sum(self.D) == 0.0:
-            self.D = (3.0 * self._sigma_t) ** (-1.0)
+            self.D = (3.0 * self.sigma_t) ** (-1.0)
 
         # Compute removal cross sections
-        self.sigma_r = self._sigma_t - np.diag(self.transfer_matrix)
+        self.sigma_r = self.sigma_t - np.diag(self.transfer_matrix)
 
         # Set fissile
         self.is_fissile = sum(self.sigma_f) > 0.0
@@ -206,8 +185,8 @@ class CrossSections(MaterialProperty):
         """Initialize the group-wise only data.
         """
         # General cross sections
-        self._sigma_t = np.zeros(self.n_groups)
-        self._sigma_a = np.zeros(self.n_groups)
+        self.sigma_t = np.zeros(self.n_groups)
+        self.sigma_a = np.zeros(self.n_groups)
         self.sigma_s = np.zeros(self.n_groups)
         self.sigma_r = np.zeros(self.n_groups)
         self.sigma_f = np.zeros(self.n_groups)

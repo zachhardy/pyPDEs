@@ -158,12 +158,11 @@ def _pwc_old_precursor_source(self: "TransientSolver", m: int = 0) -> ndarray:
     ndarray (n_cells * n_groups)
     """
     pwc: PiecewiseContinuous = self.discretization
-    phi_ukm = self.phi_uk_man
-    c_ukm = self.precursor_uk_man
+    uk_man = self.phi_uk_man
     eff_dt = self.effective_time_step(m)
 
     # Loop over cells
-    b = np.zeros(pwc.n_dofs(phi_ukm))
+    b = np.zeros(pwc.n_dofs(uk_man))
     for cell in self.mesh.cells:
         view = pwc.fe_views[cell.id]
         xs = self.material_xs[cell.material_id]
@@ -172,9 +171,9 @@ def _pwc_old_precursor_source(self: "TransientSolver", m: int = 0) -> ndarray:
 
         # Loop over precursors
         for p in range(xs.n_precursors):
-            ip = cell.id * c_ukm.total_components + p
+            ip = self.max_precursors * cell.id + p
             lambda_p = xs.precursor_lambda[p]
-            gamma_p = xs.precursor_yield[p]
+            yield_p = xs.precursor_yield[p]
 
             # Get the precursors
             c_old = self.precursors_old[ip]
@@ -193,7 +192,7 @@ def _pwc_old_precursor_source(self: "TransientSolver", m: int = 0) -> ndarray:
 
                 # Loop over nodes
                 for i in range(view.n_nodes):
-                    ig = pwc.map_dof(cell, i, phi_ukm, 0, g)
+                    ig = pwc.map_dof(cell, i, uk_man, 0, g)
                     b[ig] += coeff * c_old * view.intV_shapeI[i]
     return b
 

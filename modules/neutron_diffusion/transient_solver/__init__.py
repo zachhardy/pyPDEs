@@ -100,8 +100,7 @@ class TransientSolver(KEigenvalueSolver):
 
         # Set transient cross section flag
         for xs in self.material_xs:
-            if xs.sigma_t_function is not None or \
-                    xs.sigma_a_function is not None:
+            if xs.sigma_a_function is not None:
                 self.has_transient_xs = True
                 break
 
@@ -232,7 +231,8 @@ class TransientSolver(KEigenvalueSolver):
         if self.has_transient_xs:
             eff_dt = self.effective_time_step(m)
             if m == 1: eff_dt = self.dt
-            self.L = self.diffusion_matrix(t + eff_dt)
+            self.update_cross_sections(t + eff_dt)
+            self.L = self.diffusion_matrix()
 
         self.update_phi(m)
         self.update_temperature(m)
@@ -296,6 +296,17 @@ class TransientSolver(KEigenvalueSolver):
         if m == 0 and self.method in ["CN", "TBDF2"]:
             self.temperature = \
                 2.0 * self.temperature - self.temperature_old
+
+    def update_cross_sections(self, t: float) -> None:
+        """Update the cell-wise cross sections.
+
+        Parameters
+        ----------
+        t : float,
+            The time to evaluate the cross sections.
+        """
+        for cell in self.mesh.cells:
+            self.cellwise_xs[cell.id].update(t)
 
     def step_solutions(self) -> None:
         """Copy the current solutions to the old.

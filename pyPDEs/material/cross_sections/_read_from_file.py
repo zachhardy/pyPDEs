@@ -88,12 +88,12 @@ def read_from_xs_file(self: "CrossSections", filename: str,
                         self.precursor_yield = np.ones(1)
 
             if line[0] == "SIGMA_T_BEGIN":
-                read_1d_xs("SIGMA_T", self._sigma_t, lines, line_num)
-                self._sigma_t *= density  # scale by density
+                read_1d_xs("SIGMA_T", self.sigma_t, lines, line_num)
+                self.sigma_t *= density  # scale by density
 
             if line[0] == "SIGMA_A_BEGIN":
-                read_1d_xs("SIGMA_A", self._sigma_a, lines, line_num)
-                self._sigma_a *= density  # scale by density
+                read_1d_xs("SIGMA_A", self.sigma_a, lines, line_num)
+                self.sigma_a *= density  # scale by density
 
             if line[0] == "DIFFUSION_COEFF_BEGIN":
                 read_1d_xs("DIFFUSION_COEFF", self.D, lines, line_num)

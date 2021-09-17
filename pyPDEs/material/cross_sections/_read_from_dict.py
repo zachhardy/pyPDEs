@@ -42,14 +42,14 @@ def read_from_xs_dict(
         sig_t = np.array(xs.get("sigma_t"))
         if len(sig_t) != self.n_groups:
             raise ValueError( f"sigma_t {incompat_w_G}.")
-        self._sigma_t = density * sig_t
+        self.sigma_t = density * sig_t
 
     # Get absorption cross section
     if "sigma_a" in xs:
         sig_a = np.array(xs.get("sigma_a"))
         if len(sig_a) != self.n_groups:
             raise ValueError(f"sigma_a {incompat_w_G}.")
-        self._sigma_a = density * sig_a
+        self.sigma_a = density * sig_a
 
     # Get transfer matrix
     if "transfer_matrix" in xs:
