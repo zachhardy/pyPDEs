@@ -239,10 +239,10 @@ class TransientSolver(KEigenvalueSolver):
         if self.use_precursors:
             self.update_precursors(m)
 
-        if m == 0 and self.method in ["CRANK_NICHOLSON", "TBDF2"]:
+        if m == 0 and self.method in ["CN", "TBDF2"]:
             self.phi = 2.0 * self.phi - self.phi_old
 
-        self.compute_power()
+        self.compute_power_density()
 
     def update_phi(self, m: int = 0) -> None:
         """Update the scalar flux for the `m`'th step.
@@ -269,7 +269,7 @@ class TransientSolver(KEigenvalueSolver):
         elif isinstance(self.discretization, PiecewiseContinuous):
             self._pwc_update_precursors(m)
 
-        if m == 0 and self.method in ["CRANK_NICHOLSON", "TBDF2"]:
+        if m == 0 and self.method in ["CN", "TBDF2"]:
             self.precursors = \
                 2.0 * self.precursors - self.precursors_old
 
@@ -293,7 +293,7 @@ class TransientSolver(KEigenvalueSolver):
             dT = E_dep / (self.density * self.specific_heat)
             self.temperature[cell.id] = T_old[cell.id] + dT
 
-        if m == 0 and self.method in ["CRANK_NICHOLSON", "TBDF2"]:
+        if m == 0 and self.method in ["CN", "TBDF2"]:
             self.temperature = \
                 2.0 * self.temperature - self.temperature_old
 
@@ -318,9 +318,9 @@ class TransientSolver(KEigenvalueSolver):
         -------
         csr_matrix (n_cells * n_groups,) * 2
         """
-        if self.method == "BACKWARD_EULER":
+        if self.method == "BE":
             A = self.L + self.M / self.dt
-        elif self.method == "CRANK_NICHOLSON":
+        elif self.method == "CN":
             A = self.L + 2.0 * self.M / self.dt
         elif self.method == "TBDF2" and m == 0:
             A = self.L + 4.0 * self.M / self.dt
@@ -393,9 +393,9 @@ class TransientSolver(KEigenvalueSolver):
         -------
         ndarray (n_cells * n_groups)
         """
-        if self.method == "BACKWARD_EULER":
+        if self.method == "BE":
             b = self.M / self.dt @ self.phi_old
-        elif self.method == "CRANK_NICHOLSON":
+        elif self.method == "CN":
             b = 2.0 * self.M / self.dt @ self.phi_old
         elif self.method == "TBDF2" and m == 0:
             b = 4.0 * self.M / self.dt @ self.phi_old
@@ -456,9 +456,9 @@ class TransientSolver(KEigenvalueSolver):
         -------
         float
         """
-        if self.method == "BACKWARD_EULER":
+        if self.method == "BE":
             return self.dt
-        elif self.method == "CRANK_NICHOLSON":
+        elif self.method == "CN":
             return self.dt / 2.0
         elif self.method == "TBDF2" and m == 0:
             return self.dt / 4.0
