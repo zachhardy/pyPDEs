@@ -32,7 +32,7 @@ def _fv_diffusion_matrix(self: "SteadyStateSolver") -> csr_matrix:
     A = lil_matrix((fv.n_dofs(uk_man),) * 2)
     for cell in self.mesh.cells:
         volume = cell.volume
-        xs = self.material_xs[cell.material_id]
+        xs = self.cellwise_xs[cell.id]
 
         # Loop over groups
         for g in range(self.n_groups):

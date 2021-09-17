@@ -10,7 +10,7 @@ from matplotlib.axes import Axes
 from typing import List
 
 from pyPDEs.mesh import Mesh
-from pyPDEs.material import CrossSections, MultiGroupSource
+from pyPDEs.material import *
 from pyPDEs.spatial_discretization import *
 from pyPDEs.utilities import UnknownManager
 from pyPDEs.utilities.boundaries import *
@@ -57,6 +57,7 @@ class SteadyStateSolver:
         # Materials information
         self.material_xs: List[CrossSections] = []
         self.material_src: List[MultiGroupSource] = []
+        self.cellwise_xs: List[LightWeightCrossSections] = []
 
         self.n_precursors: int = 0
         self.max_precursors: int = 0
@@ -111,6 +112,12 @@ class SteadyStateSolver:
         if self.use_precursors:
             n_dofs = self.n_precursors * self.mesh.n_cells
             self.precursors = np.zeros(n_dofs)
+
+        # Initialize cell-wise cross sections
+        self.cellwise_xs.clear()
+        for cell in self.mesh.cells:
+            xs = self.material_xs[cell.material_id]
+            self.cellwise_xs += [LightWeightCrossSections(xs)]
 
         # Precompute matrices
         self.L = self.diffusion_matrix()

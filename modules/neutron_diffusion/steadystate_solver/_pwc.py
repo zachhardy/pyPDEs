@@ -28,7 +28,7 @@ def _pwc_diffusion_matrix(self: "SteadyStateSolver") -> csr_matrix:
     A = lil_matrix((pwc.n_dofs(uk_man),) * 2)
     for cell in self.mesh.cells:
         view = pwc.fe_views[cell.id]
-        xs = self.material_xs[cell.material_id]
+        xs = self.cellwise_xs[cell.id]
 
         # Loop over groups
         for g in range(self.n_groups):
