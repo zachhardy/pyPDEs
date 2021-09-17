@@ -147,25 +147,20 @@ class SteadyStateSolver:
         b = self.set_source()
         return self.apply_vector_bcs(b)
 
-    def diffusion_matrix(self, t: float = 0.0) -> csr_matrix:
+    def diffusion_matrix(self) -> csr_matrix:
         """Assemble the multigroup diffusion matrix.
 
         This routine assembles the diffusion plus interaction matrix
         for all groups according to the DoF ordering of `phi_uk_man`.
-
-        Parameters
-        ----------
-        t : float, default 0.0
-            The simulation time.
 
         Returns
         -------
         csr_matrix (n_cells * n_groups,) * 2
         """
         if isinstance(self.discretization, FiniteVolume):
-            return self._fv_diffusion_matrix(t)
+            return self._fv_diffusion_matrix()
         elif isinstance(self.discretization, PiecewiseContinuous):
-            return self._pwc_diffusion_matrix(t)
+            return self._pwc_diffusion_matrix()
 
     def scattering_matrix(self) -> csr_matrix:
         """Assemble the multigroup scattering matrix.
