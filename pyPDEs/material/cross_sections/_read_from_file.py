@@ -79,9 +79,6 @@ def read_from_xs_file(self: "CrossSections", filename: str,
             if line[0] == "NUM_GROUPS":
                 self.n_groups = int(line[1])
                 self.initialize_groupwise_data()
-                if self.n_groups == 1:
-                    self.chi = np.ones(1)
-                    self.chi_prompt = np.ones(1)
 
             if line[0] == "NUM_PRECURSORS":
                 self.n_precursors = int(line[1])
@@ -89,8 +86,6 @@ def read_from_xs_file(self: "CrossSections", filename: str,
                     self.initialize_precursor_data()
                     if self.n_precursors == 1:
                         self.precursor_yield = np.ones(1)
-                    if self.n_groups == 1:
-                        self.chi_delayed = np.ones((1, self.n_precursors))
 
             if line[0] == "SIGMA_T_BEGIN":
                 read_1d_xs("SIGMA_T", self._sigma_t, lines, line_num)

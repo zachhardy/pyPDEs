@@ -126,75 +126,80 @@ class CrossSections(MaterialProperty):
 
         # If not fissile with precursors
         if not self.is_fissile and self.n_precursors > 0:
-            self.precursor_lambda = []
-            self.precursor_yield = []
-            self.chi_delayed = []
             self.n_precursors = 0
+            self.precursor_lambda = np.zeros(0)
+            self.precursor_yield = np.zeros(0)
+            self.chi_delayed = np.zeros((self.n_groups, 0))
 
         # Check fissile properties
         if self.is_fissile:
 
-            # Determine present nu terms
+            # Set chi for one group problems
+            if self.n_groups == 1:
+                self.chi = np.ones(1)
+                if self.n_precursors > 0:
+                    self.chi_prompt = np.ones(1)
+                    self.chi_delayed =  np.ones((1, self.n_precursors))
+
+            # Check whether total quantities
             has_nu = sum(self.nu) > 0.0
-            has_nu_p = sum(self.nu_prompt) > 0.0
-            has_nu_d = sum(self.nu_delayed) > 0.0
-
-            # Determine present chi terms
             has_chi = sum(self.chi) > 0.0
-            has_chi_p = sum(self.chi_prompt) > 0.0
-            has_chi_d = np.sum(self.chi_delayed) > 0.0
-
-            # Check precursor terms
-            if self.n_precursors > 0:
-                for j in range(self.n_precursors):
-                    if self.precursor_lambda[j] == 0.0:
-                        raise ValueError(
-                            f"Precursor family {j} decay constant "
-                            f"must be non-zero.")
-                    if self.precursor_yield[j] == 0.0:
-                        raise ValueError(
-                            f"Precursor family {j} yield must be non-zero.")
-
-            # Normalizaiton
-            if has_chi:
+            has_total = has_nu and has_chi
+            if has_total:
                 self.chi /= sum(self.chi)
-            if has_chi_p:
-                self.chi_prompt /= sum(self.chi_prompt)
-            if has_chi_d:
-                self.chi_delayed /= np.sum(self.chi_delayed, axis=0)
-            if self.n_precursors > 0:
-                self.precursor_yield /= sum(self.precursor_yield)
 
-            # Check input compatibility
-            if (has_nu_p and not has_chi_p) or \
-                    (not has_nu_p and has_chi_p):
+            # Check prompt/delayed quantities
+            has_nu_prompt = sum(self.nu_prompt) > 0.0
+            has_chi_prompt = sum(self.chi_prompt) > 0.0
+            has_prompt = has_nu_prompt and has_chi_prompt
+            if has_prompt:
+                self.chi_prompt /= sum(self.chi_prompt)
+
+            if self.n_precursors > 0 and not has_prompt:
                 raise AssertionError(
-                    "If prompt nu or chi are provided, the other must be.")
-            if (has_nu_d and not has_chi_d) or \
-                    (not has_nu_d and has_chi_d):
+                    "Prompt quantities must be provided when precursors "
+                    "are present in the cross section set.")
+
+            has_nu_delayed = sum(self.nu_delayed) > 0.0
+            chi_dj_sums = np.sum(self.chi_delayed, axis=0)
+            has_chi_delayed = all([s > 0.0 for s in chi_dj_sums])
+            has_delayed = has_nu_delayed and has_chi_delayed
+            if has_delayed:
+                self.chi_delayed /= chi_dj_sums
+
+            if self.n_precursors > 0 and not has_delayed:
                 raise AssertionError(
-                    "If delayed nu or chi are provided, the other must be.")
-            if (has_nu and not has_chi) or \
-                    (not has_nu and has_chi):
-                raise AssertionError(
-                    "If total nu or chi are provided, the other must be.")
-            if (has_nu_p and not has_nu_d) or \
-                    (not has_nu_p and has_nu_d):
-                raise AssertionError(
-                    "If prompt quantities are provided, delayed must be.")
+                    "Delayed quantities must be provided when precursors "
+                    "are present in the cross section set.")
+
+            # Check precursor properties
+            if self.n_precursors > 0:
+                lambda_ = self.precursor_lambda
+                has_lambda = all([val > 0.0 for val in lambda_])
+                has_gamma = sum(self.precursor_yield) > 0.0
+                if has_gamma:
+                    self.precursor_yield /= sum(self.precursor_yield)
+
+                if not has_lambda:
+                    raise AssertionError(
+                        "All precursor decay constants must be strictly "
+                        "greater than zero.")
+                if not has_gamma:
+                    raise AssertionError(
+                        "The precursor yields must be sum to a positive "
+                        "non-zero quantity.")
 
             # Compute total from prompt and delayed
-            if has_nu_p and has_nu_d:
+            if has_prompt and has_delayed:
                 self.nu = self.nu_prompt + self.nu_delayed
 
-            if has_chi_p and has_chi_d:
                 beta = self.nu_delayed / self.nu
                 self.chi = (1.0 - beta) * self.chi_prompt
                 for j in range(self.n_precursors):
-                    self.chi += beta * self.precursor_yield[j] *\
+                    self.chi += beta * self.precursor_yield[j] * \
                                 self.chi_delayed[:, j]
 
-    def initialize_groupwise_data(self) -> []:
+    def initialize_groupwise_data(self) -> None:
         """Initialize the group-wise only data.
         """
         # General cross sections
@@ -220,7 +225,7 @@ class CrossSections(MaterialProperty):
         # Groupwise velocities
         self.velocity = np.zeros(self.n_groups)
 
-    def initialize_precursor_data(self) -> []:
+    def initialize_precursor_data(self) -> None:
         """Initialize the delayed neutron data.
         """
         G, J = self.n_groups, self.n_precursors

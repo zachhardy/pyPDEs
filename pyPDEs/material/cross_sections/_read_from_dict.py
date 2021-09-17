@@ -27,9 +27,6 @@ def read_from_xs_dict(
     if not self.n_groups:
         raise KeyError(f"n_groups {not_found}.")
     self.initialize_groupwise_data()
-    if self.n_groups == 1:
-        self.chi = np.ones(1)
-        self.chi_prompt = np.ones(1)
 
     # Get number of precursors
     self.n_precursors = xs.get("n_precursors")
@@ -39,8 +36,6 @@ def read_from_xs_dict(
         self.initialize_precursor_data()
         if self.n_precursors == 1:
             self.precursor_yield = np.ones(1)
-        if self.n_groups == 1:
-            self.chi_delayed = np.one((1, self.n_precursors))
 
     # Get total cross section
     if "sigma_t" in xs:
