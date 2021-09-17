@@ -53,7 +53,7 @@ solver.lag_precursors = False
 # Set time stepping options
 solver.t_final = 2.0
 solver.dt = 0.01
-solver.method = "CRANK_NICHOLSON"
+solver.method = "TBDF2"
 
 solver.max_iterations = 50000
 solver.tolerance = 1.0e-12

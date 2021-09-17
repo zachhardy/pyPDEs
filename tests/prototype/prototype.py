@@ -54,7 +54,6 @@ solver.lag_precursors = False
 solver.t_final = 2.0
 solver.dt = 0.01
 solver.method = "TBDF2"
-solver.adaptivity = True
 
 solver.max_iterations = 50000
 solver.tolerance = 1.0e-12

@@ -44,7 +44,7 @@ solver.material_xs = [xs0, xs1, xs2]
 
 # Set options
 solver.use_precursors = True
-solver.lag_precursors = True
+solver.lag_precursors = False
 
 # Set time stepping options
 solver.t_final = 4.0
