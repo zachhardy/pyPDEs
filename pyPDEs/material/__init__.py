@@ -5,6 +5,7 @@ from typing import List, NewType
 from .material_property import MaterialProperty
 from .material_property import ScalarProperty, MultiGroupSource
 from .cross_sections import CrossSections
+from .lightweight_xs import LightWeightCrossSections
 
 Properties = List[MaterialProperty]
 
@@ -34,3 +35,7 @@ class Material:
         if not isinstance(properties, list):
             properties = [properties]
         self.properties.extend(properties)
+
+
+__all__ = ["Material", "ScalarProperty", "MaterialProperty",
+           "CrossSections", "LightWeightCrossSections"]

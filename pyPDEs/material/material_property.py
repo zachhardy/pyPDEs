@@ -59,3 +59,5 @@ class MultiGroupSource(MaterialProperty):
         self.type = "MULTIGROUP_SOURCE"
         self.values: ndarray = np.array(values)
         self.n_groups: int = len(self.values)
+
+__all__ = ["ScalarProperty", "MultiGroupSource"]
