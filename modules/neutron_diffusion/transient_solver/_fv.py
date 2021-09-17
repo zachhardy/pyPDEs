@@ -207,14 +207,14 @@ def _fv_update_precursors(self: "TransientSolver", m: int = 0) -> None:
             self.precursors[ip] = coeff * (c_old + eff_dt*gamma_p * f_d)
 
 
-def _fv_compute_fission_rate(self: "TransientSolver") -> None:
+def _fv_compute_power_density(self: "TransientSolver") -> None:
     """Compute the point-wise fission rate.
     """
     fv: FiniteVolume = self.discretization
     uk_man = self.phi_uk_man
 
     # Loop over cells
-    self.fission_rate *= 0.0
+    self.power_density *= 0.0
     for cell in self.mesh.cells:
         volume = cell.volume
         xs = self.material_xs[cell.material_id]
@@ -224,7 +224,8 @@ def _fv_compute_fission_rate(self: "TransientSolver") -> None:
         # Loop over groups
         for g in range(self.n_groups):
             ig = fv.map_dof(cell, 0, uk_man, 0, g)
-            self.fission_rate[cell.id] += \
+            self.power_density[cell.id] += \
+                self.energy_per_fission * \
                 xs.sigma_f[g] * self.phi[ig]
 
 

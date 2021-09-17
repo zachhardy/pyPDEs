@@ -27,7 +27,7 @@ class TransientSolver(KEigenvalueSolver):
                       _fv_precursor_substitution_matrix,
                       _fv_old_precursor_source,
                       _fv_update_precursors,
-                      _fv_compute_fission_rate,
+                      _fv_compute_power_density,
                       _fv_compute_power)
 
     from ._pwc import (_pwc_feedback_matrix,
@@ -35,7 +35,7 @@ class TransientSolver(KEigenvalueSolver):
                        _pwc_precursor_substitution_matrix,
                        _pwc_old_precursor_source,
                        _pwc_update_precursors,
-                       _pwc_compute_fission_rate,
+                       _pwc_compute_power_density,
                        _pwc_compute_power)
 
     def __init__(self) -> None:
@@ -69,6 +69,7 @@ class TransientSolver(KEigenvalueSolver):
         self.power: float = 1.0  # W
         self.power_old: float = 1.0
         self.energy_per_fission: float = 3.2e-11  # J / fission
+        self.power_density: ndarray = None
 
         # Heat generation parameters
         self.density: float = 19.0  # g/cc
@@ -84,9 +85,6 @@ class TransientSolver(KEigenvalueSolver):
         # Previous time step solutions
         self.phi_old: ndarray = None
         self.precursors_old: ndarray = None
-
-        # Fission rate
-        self.fission_rate: ndarray = None
 
         # Temperatures
         self.initial_temperature: float = 300.0
@@ -115,7 +113,7 @@ class TransientSolver(KEigenvalueSolver):
         self.precursors_old = np.copy(self.precursors)
 
         # Initialize fission rate vectors
-        self.fission_rate = np.zeros(self.mesh.n_cells)
+        self.power_density = np.zeros(self.mesh.n_cells)
 
         # Initialize temperature vectors
         if self.use_feedback:
@@ -180,7 +178,7 @@ class TransientSolver(KEigenvalueSolver):
             elif self.dt != dt_initial:
                 self.dt = dt_initial
 
-            self.bump_solutions()
+            self.step_solutions()
 
             # Print time step summary
             if verbose > 0:
@@ -189,8 +187,9 @@ class TransientSolver(KEigenvalueSolver):
                 print(f"Simulation Time:\t{t:.3e}")
                 print(f"Time Step Size:\t\t{self.dt:.3e}")
                 print(f"System Power:\t\t{self.power:.3e}")
-                T_avg = np.mean(self.temperature)
-                print(f"Average Temperature:\t{T_avg:.3g}")
+                if self.use_feedback:
+                    T_avg = np.mean(self.temperature)
+                    print(f"Average Temperature:\t{T_avg:.3g}")
 
         self.dt = dt_initial
         self.outputs.finalize_outputs()
@@ -258,14 +257,15 @@ class TransientSolver(KEigenvalueSolver):
                 if self.use_feedback:
                     self.update_temperature(m=1)
 
-        self.compute_fission_rate()
+        self.compute_power_density()
 
     def step_solutions(self) -> None:
         self.power_old = self.power
         self.phi_old[:] = self.phi
-        self.temperature_old[:] = self.temperature
         if self.use_precursors:
             self.precursors_old[:] = self.precursors
+        if self.use_feedback:
+            self.temperature_old[:] = self.temperature
 
     def assemble_transient_matrix(self, m: int = 0) -> List[csr_matrix]:
         """Assemble the multigroup evolution matrix for step `m`.
@@ -398,13 +398,13 @@ class TransientSolver(KEigenvalueSolver):
         elif isinstance(self.discretization, PiecewiseContinuous):
             self._pwc_update_precursors(m)
 
-    def compute_fission_rate(self) -> None:
+    def compute_power_density(self) -> None:
         """Compute the fission rate averaged over a cell.
         """
         if isinstance(self.discretization, FiniteVolume):
-            self._fv_compute_fission_rate()
+            self._fv_compute_power_density()
         elif isinstance(self.discretization, PiecewiseContinuous):
-            self._pwc_compute_fission_rate()
+            self._pwc_compute_power_density()
 
     def update_temperature(self, m: int = 0) -> None:
         """Compute the temperature averaged over a cell.
@@ -415,7 +415,7 @@ class TransientSolver(KEigenvalueSolver):
             The step in a multi-step method.
         """
         eff_dt = self.effective_time_step(m)
-        P = self.energy_per_fission * self.fission_rate
+        P = self.energy_per_fission * self.power_density
         T_old = self.temperature_old
         if m == 1:
             T = self.temperature
@@ -481,7 +481,7 @@ class TransientSolver(KEigenvalueSolver):
                     self.phi[g::self.n_groups] = ic
 
             # Compute fission rate and set precursors to zero
-            self.compute_fission_rate()
+            self.compute_power_density()
             if self.use_precursors:
                 self.precursors[:] = 0.0
 
@@ -500,7 +500,7 @@ class TransientSolver(KEigenvalueSolver):
             self.phi *= self.power / self.compute_power()
 
             # Compute fission rate and precursors
-            self.compute_fission_rate()
+            self.compute_power_density()
             if self.use_precursors:
                 self.compute_precursors()
 

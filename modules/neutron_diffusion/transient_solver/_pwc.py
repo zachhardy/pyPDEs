@@ -244,14 +244,14 @@ def _pwc_update_precursors(self: "TransientSolver", m: int = 0) -> None:
             self.precursors[ip] = coeff * (c_old + eff_dt*gamma_p * f_d)
 
 
-def _pwc_compute_fission_rate(self: "TransientSolver") -> None:
+def _pwc_compute_power_density(self: "TransientSolver") -> None:
     """Compute the point-wise fission rate.
     """
     pwc: PiecewiseContinuous = self.discretization
     uk_man = self.phi_uk_man
 
     # Loop over cells
-    self.fission_rate *= 0.0
+    self.power_density *= 0.0
     for cell in self.mesh.cells:
         volume = cell.volume
         view = pwc.fe_views[cell.id]
@@ -266,8 +266,10 @@ def _pwc_compute_fission_rate(self: "TransientSolver") -> None:
             # Loop over groups
             for g in range(self.n_groups):
                 ig = pwc.map_dof(cell, i, uk_man, 0, g)
-                self.fission_rate[cell.id] += \
-                    xs.sigma_f[g]*self.phi[ig] * intV_shapeI/volume
+                self.power_density[cell.id] += \
+                    self.energy_per_fission * \
+                    xs.sigma_f[g] * self.phi[ig] * \
+                    intV_shapeI / volume
 
 
 def _pwc_compute_power(self: "TransientSolver") -> float:

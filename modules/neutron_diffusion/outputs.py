@@ -60,8 +60,7 @@ class Outputs:
 
         # Store the power density. This stores the cell-wise fission
         # rate multiplied by the energy released per fission event.
-        E_f = solver.energy_per_fission
-        self.power_density += [E_f * solver.fission_rate]
+        self.power_density += [solver.power_density]
 
         # Store the temperatures, if feedback is being used.
         if solver.use_feedback:
