@@ -124,6 +124,9 @@ class CrossSections(MaterialProperty):
         # Compute removal cross sections
         self.sigma_r = self._sigma_t - np.diag(self.transfer_matrix)
 
+        # Set fissile
+        self.is_fissile = sum(self.sigma_f) > 0.0
+
         # If not fissile with precursors
         if not self.is_fissile and self.n_precursors > 0:
             self.n_precursors = 0

@@ -128,6 +128,7 @@ def read_from_xs_file(self: "CrossSections", filename: str,
             if line[0] == "TRANSFER_MOMENTS_BEGIN":
                 read_transfer_matrix(
                     "TRANSFER_MOMENTS", self.transfer_matrix, lines, line_num)
+                self.transfer_matrix *= density
 
             if line[0] == "PRECURSOR_LAMBDA_BEGIN":
                 read_1d_xs(
