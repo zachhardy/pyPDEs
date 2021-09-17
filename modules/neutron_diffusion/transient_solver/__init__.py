@@ -116,10 +116,9 @@ class TransientSolver(KEigenvalueSolver):
         self.power_density = np.zeros(self.mesh.n_cells)
 
         # Initialize temperature vectors
-        if self.use_feedback:
-            T0 = self.initial_temperature
-            self.temperature = T0 * np.ones(self.mesh.n_cells)
-            self.temperature_old = T0 * np.ones(self.mesh.n_cells)
+        T0 = self.initial_temperature
+        self.temperature = T0 * np.ones(self.mesh.n_cells)
+        self.temperature_old = T0 * np.ones(self.mesh.n_cells)
 
         # Evaluate initial conditions
         self.compute_initial_values()
@@ -153,7 +152,10 @@ class TransientSolver(KEigenvalueSolver):
                 self.dt = self.t_final - t
 
             # Solve time step
-            self.solve_time_step(t)
+            self.solve_time_step(t, m=0)
+            if self.method == "TBDF2":
+                self.solve_time_step(t, m=1)
+
             self.power = self.compute_power()
 
             # Refinements, if adaptivity is used
@@ -187,9 +189,8 @@ class TransientSolver(KEigenvalueSolver):
                 print(f"Simulation Time:\t{t:.3e}")
                 print(f"Time Step Size:\t\t{self.dt:.3e}")
                 print(f"System Power:\t\t{self.power:.3e}")
-                if self.use_feedback:
-                    T_avg = np.mean(self.temperature)
-                    print(f"Average Temperature:\t{T_avg:.3g}")
+                T_avg = np.mean(self.temperature)
+                print(f"Average Temperature:\t{T_avg:.3g}")
 
         self.dt = dt_initial
         self.outputs.finalize_outputs()
@@ -203,7 +204,9 @@ class TransientSolver(KEigenvalueSolver):
             self.dt /= 2.0
 
             # Take the reduced time step
-            self.solve_time_step(t)
+            self.solve_time_step(t, m=0)
+            if self.method == "TBDF2":
+                self.solve_time_step(t, m=1)
             self.power = self.compute_power()
 
             # Compute new change in power
@@ -218,54 +221,90 @@ class TransientSolver(KEigenvalueSolver):
             if self.dt > self.output_frequency:
                 self.dt = self.output_frequency
 
-    def solve_time_step(self, t: float) -> None:
+    def solve_time_step(self, t: float, m: int = 0) -> None:
         """Solve the `m`'th step of a multi-step method.
+
+        Parameters
+        ----------
+        t : float
+            The time at t^{n}
+        """
+        if self.has_transient_xs:
+            eff_dt = self.effective_time_step(m)
+            if m == 1: eff_dt = self.dt
+            self.L = self.diffusion_matrix(t + eff_dt)
+
+        self.update_phi(m)
+        self.update_temperature(m)
+        if self.use_precursors:
+            self.update_precursors(m)
+
+        if m == 0 and self.method in ["CRANK_NICHOLSON", "TBDF2"]:
+            self.phi = 2.0 * self.phi - self.phi_old
+
+        self.compute_power()
+
+    def update_phi(self, m: int = 0) -> None:
+        """Update the scalar flux for the `m`'th step.
 
         Parameters
         ----------
         m : int, default 0
             The step in a multi-step method.
         """
-        if self.has_transient_xs:
-            eff_dt = self.effective_time_step(m=0)
-            self.L = self.diffusion_matrix(t + eff_dt)
-
-        A = self.assemble_transient_matrix(m=0)
-        b = self.assemble_transient_rhs(m=0)
+        A = self.assemble_transient_matrix(m)
+        b = self.assemble_transient_rhs(m)
         self.phi = spsolve(A, b)
-        if self.use_precursors:
-            self.update_precursors(m=0)
-        if self.use_feedback:
-            self.update_temperature(m=0)
 
-        if self.method in ["CRANK_NICHOLSON", "TBDF2"]:
-            self.phi = 2.0*self.phi - self.phi_old
-            if self.use_precursors:
-                self.precursors = 2.0*self.precursors - self.precursors_old
-            if self.use_feedback:
-                self.temperature = 2.0*self.temperature - self.temperature_old
+    def update_precursors(self, m: int = 0) -> None:
+        """Update the precursors for the `m`'th step.
 
-            if self.method == "TBDF2":
-                if self.has_transient_xs:
-                    self.L = self.diffusion_matrix(t + self.dt)
+        Parameters
+        ----------
+        m : int, default 0
+            The step in a multi-step method.
+        """
+        if isinstance(self.discretization, FiniteVolume):
+            self._fv_update_precursors(m)
+        elif isinstance(self.discretization, PiecewiseContinuous):
+            self._pwc_update_precursors(m)
 
-                A = self.assemble_transient_matrix(m=1)
-                b = self.assemble_transient_rhs(m=1)
-                self.phi = spsolve(A, b)
-                if self.use_precursors:
-                    self.update_precursors(m=1)
-                if self.use_feedback:
-                    self.update_temperature(m=1)
+        if m == 0 and self.method in ["CRANK_NICHOLSON", "TBDF2"]:
+            self.precursors = \
+                2.0 * self.precursors - self.precursors_old
 
-        self.compute_power_density()
+    def update_temperature(self, m: int = 0) -> None:
+        """Update the temperature for the `m`'th step.
+
+        Parameters
+        ----------
+        m : int, default 0
+            The step in a multi-step method.
+        """
+        eff_dt = self.effective_time_step(m)
+        T_old = self.temperature_old
+        if m == 1:
+            T = self.temperature
+            T_old = (4.0*self.temperature - T_old) / 3.0
+
+        # Loop over cells
+        for cell in self.mesh.cells:
+            E_dep = self.power_density[cell.id] * eff_dt
+            dT = E_dep / (self.density * self.specific_heat)
+            self.temperature[cell.id] = T_old[cell.id] + dT
+
+        if m == 0 and self.method in ["CRANK_NICHOLSON", "TBDF2"]:
+            self.temperature = \
+                2.0 * self.temperature - self.temperature_old
 
     def step_solutions(self) -> None:
+        """Copy the current solutions to the old.
+        """
         self.power_old = self.power
         self.phi_old[:] = self.phi
+        self.temperature_old[:] = self.temperature
         if self.use_precursors:
             self.precursors_old[:] = self.precursors
-        if self.use_feedback:
-            self.temperature_old[:] = self.temperature
 
     def assemble_transient_matrix(self, m: int = 0) -> List[csr_matrix]:
         """Assemble the multigroup evolution matrix for step `m`.
@@ -385,19 +424,6 @@ class TransientSolver(KEigenvalueSolver):
         elif isinstance(self.discretization, PiecewiseContinuous):
             return self._pwc_old_precursor_source(m)
 
-    def update_precursors(self, m: int = 0) -> None:
-        """Update the precursors after a time step.
-
-        Parameters
-        ----------
-        m : int, default 0
-            The step in a multi-step method.
-        """
-        if isinstance(self.discretization, FiniteVolume):
-            self._fv_update_precursors(m)
-        elif isinstance(self.discretization, PiecewiseContinuous):
-            self._pwc_update_precursors(m)
-
     def compute_power_density(self) -> None:
         """Compute the fission rate averaged over a cell.
         """
@@ -405,27 +431,6 @@ class TransientSolver(KEigenvalueSolver):
             self._fv_compute_power_density()
         elif isinstance(self.discretization, PiecewiseContinuous):
             self._pwc_compute_power_density()
-
-    def update_temperature(self, m: int = 0) -> None:
-        """Compute the temperature averaged over a cell.
-
-        Parameters
-        ----------
-        m : int, default 0
-            The step in a multi-step method.
-        """
-        eff_dt = self.effective_time_step(m)
-        P = self.energy_per_fission * self.power_density
-        T_old = self.temperature_old
-        if m == 1:
-            T = self.temperature
-            T_old = (4.0*T - T_old) / 3.0
-
-        # Loop over cells
-        for cell in self.mesh.cells:
-            E_dep = P[cell.id] * eff_dt
-            dT = E_dep / (self.density * self.specific_heat)
-            self.temperature[cell.id] = T_old[cell.id] + dT
 
     def compute_power(self) -> float:
         """Compute the fission power in the system.
