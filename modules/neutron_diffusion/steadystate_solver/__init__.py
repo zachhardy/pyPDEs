@@ -41,17 +41,22 @@ class SteadyStateSolver:
                             plot_flux,
                             plot_precursors)
 
+    from ._input_checks import (_check_mesh,
+                                _check_discretization,
+                                _check_boundaries,
+                                _check_materials)
+
     def __init__(self) -> None:
         """Class constructor.
         """
         # Domain objects
         self.mesh: Mesh = None
         self.discretization: SpatialDiscretization = None
-        self.boundaries: List[Boundary] = None
+        self.boundaries: List[Boundary] = []
 
         # Materials information
-        self.material_xs: List[CrossSections] = None
-        self.material_src: List[MultiGroupSource] = None
+        self.material_xs: List[CrossSections] = []
+        self.material_src: List[MultiGroupSource] = []
 
         self.n_precursors: int = 0
         self.max_precursors: int = 0
@@ -244,75 +249,3 @@ class SteadyStateSolver:
         self._check_discretization()
         self._check_boundaries()
         self._check_materials()
-
-    def _check_mesh(self) -> None:
-        if not self.mesh:
-            raise AssertionError(
-                "There must be a mesh attached to the solver.")
-        if self.mesh.dim > 2:
-            raise NotImplementedError(
-                "Only 1D and 2D meshes are implemented.")
-
-    def _check_discretization(self) -> None:
-        if not self.discretization:
-            raise AssertionError(
-                "There must be a discretization attached to the solver.")
-        if self.discretization.type not in ["FV", "PWC"]:
-            raise NotImplementedError(
-                "Only finite volume and piecewise continuous spatial "
-                "discretizations are implemented.")
-
-    def _check_boundaries(self) -> None:
-        if not self.boundaries:
-            raise AssertionError(
-                "Boundary conditions must be attached to the solver.")
-        if self.mesh.type == "LINE" and \
-                len(self.boundaries) != 2:
-            raise NotImplementedError(
-                "There must be 2 boundary conditions for 1D problems.")
-        elif self.mesh.type == "ORTHO_QUAD" and \
-                len(self.boundaries) != 4:
-            raise NotImplementedError(
-                "There must be 4 boundary conditions for 2D problems.")
-        for b, bc in enumerate(self.boundaries):
-            error = False
-            if issubclass(type(bc), DirichletBoundary):
-                bc: DirichletBoundary = bc
-                if len(bc.values) != self.n_groups:
-                    error = True
-            elif issubclass(type(bc), NeumannBoundary):
-                bc: NeumannBoundary = bc
-                if len(bc.values) != self.n_groups:
-                    error = True
-            elif issubclass(type(bc), RobinBoundary):
-                bc: RobinBoundary = bc
-                vals = [bc.a, bc.b, bc.f]
-                if any([len(v) != self.n_groups for v in vals]):
-                    error = True
-            if error:
-                raise AssertionError(
-                    f"Invalid number of components found in boundary {b}.")
-
-    def _check_materials(self) -> None:
-        if not self.material_xs:
-            raise AssertionError(
-                "Material cross sections must be attached to the solver.")
-        else:
-            for xs in self.material_xs:
-                if xs.n_groups != self.n_groups:
-                    raise AssertionError(
-                        "n_groups must agree across all cross sections.")
-
-        if self.material_src:
-            for n in range(len(self.material_xs)):
-                if len(self.material_src) <= n + 1:
-                    src = self.material_src[n]
-                    if src.n_groups != self.n_groups:
-                        raise AssertionError(
-                            "All sources must be compatible with n_groups.")
-                else:
-                    src = MultiGroupSource(np.zeros(self.n_groups))
-                    self.material_src.append(src)
-        else:
-            src = MultiGroupSource(np.zeros(self.n_groups))
-            self.material_src = [src] * len(self.material_xs)
