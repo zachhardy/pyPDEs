@@ -8,7 +8,7 @@ __all__ = ["sigma_a_material_1",  "sigma_a_material_2",
 from numpy import ndarray
 
 
-def sigma_a_material_1(g: int, t: float, sigma_a: ndarray) -> float:
+def sigma_a_material_1(g: int, t: float, sigma_a: float) -> float:
     if t <= 0.1:
         return 1.1
     elif 0.1 < t <= 0.6:

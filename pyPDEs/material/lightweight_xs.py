@@ -15,5 +15,5 @@ class LightWeightCrossSections:
         if self._xs.sigma_a_function is not None:
             f_sig_a = self._xs.sigma_a_function
             for g in range(self._xs.n_groups):
-                sig_a = f_sig_a(g, t, self._xs.sigma_a)
+                sig_a = f_sig_a(g, t, self._xs.sigma_a[g])
                 self.sigma_t[g] = sig_a + self._xs.sigma_s[g]

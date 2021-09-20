@@ -4,31 +4,31 @@ __all__ = ["sigma_a_ramp_up", "sigma_a_ramp_down", "sigma_a_fast_ramp_up",
 from numpy import ndarray
 
 
-def sigma_a_ramp_up(g: int, t: float, sigma_a: ndarray) -> float:
+def sigma_a_ramp_up(g: int, t: float, sigma_a: float) -> float:
     if g == 1 and 0.0 <= t <= 1.0:
-        return sigma_a[g] * (1.0 + t * 0.03)
+        return sigma_a * (1.0 + t * 0.03)
     elif g == 1 and t > 1.0:
-        return 1.03 * sigma_a[g]
+        return 1.03 * sigma_a
     else:
-        return sigma_a[g]
+        return sigma_a
 
 
-def sigma_a_ramp_down(g: int, t: float, sigma_a: ndarray) -> float:
+def sigma_a_ramp_down(g: int, t: float, sigma_a: float) -> float:
     if g == 1 and 0.0 < t <= 1.0:
-        return sigma_a[g] * (1.0 - t * 0.01)
+        return sigma_a * (1.0 - t * 0.01)
     elif g == 1 and t > 1.0:
-        return 0.99 * sigma_a[g]
+        return 0.99 * sigma_a
     else:
-        return sigma_a[g]
+        return sigma_a
 
 
-def sigma_a_fast_ramp_up(g: int, t: float, sigma_a: ndarray) -> float:
+def sigma_a_fast_ramp_up(g: int, t: float, sigma_a: float) -> float:
     if g == 1 and 0.0 <= t <= 0.01:
-        return sigma_a[g] * (1.0 - t/0.01 * 0.05)
+        return sigma_a * (1.0 - t/0.01 * 0.05)
     elif g == 1 and t > 0.01:
-        return 0.95 * sigma_a[g]
+        return 0.95 * sigma_a
     else:
-        return sigma_a[g]
+        return sigma_a
 
 
 decay = [0.0124, 0.0305, 0.111, 0.301, 1.14, 3.01]
