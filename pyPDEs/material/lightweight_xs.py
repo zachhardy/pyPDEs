@@ -17,5 +17,3 @@ class LightWeightCrossSections:
             for g in range(self._xs.n_groups):
                 sig_a = f_sig_a(g, t, self._xs.sigma_a)
                 self.sigma_t[g] = sig_a + self._xs.sigma_s[g]
-
-
