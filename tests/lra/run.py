@@ -16,8 +16,8 @@ from modules.neutron_diffusion import *
 from xs import *
 
 # Create mesh, assign material IDs
-x_verts = np.linspace(0.0, 165.0, 56)
-y_verts = np.linspace(0.0, 165.0, 56)
+x_verts = np.linspace(0.0, 165.0, 34)
+y_verts = np.linspace(0.0, 165.0, 34)
 mesh = create_2d_mesh(x_verts, y_verts, verbose=True)
 
 for cell in mesh.cells:
@@ -45,23 +45,22 @@ discretization = FiniteVolume(mesh)
 # Create cross sections and sources
 xs0 = CrossSections()
 xs0.read_from_xs_dict(fuel_1_with_rod)
-xs0.sigma_t_function = sigma_a_generic
+xs0.sigma_t_function = sigma_a_with_rod
 
 xs1 = CrossSections()
 xs1.read_from_xs_dict(fuel_1_without_rod)
-xs1.sigma_a_function = sigma_a_generic
+xs1.sigma_a_function = sigma_a_without_rod
 
 xs2 = CrossSections()
 xs2.read_from_xs_dict(fuel_2_with_rod)
-xs2.sigma_a_function = sigma_a_generic
+xs2.sigma_a_function = sigma_a_with_rod
 
 xs3 = CrossSections()
 xs3.read_from_xs_dict(fuel_2_without_rod)
-xs3.sigma_a_function = sigma_a_generic
+xs3.sigma_a_function = sigma_a_without_rod
 
 xs4 = CrossSections()
 xs4.read_from_xs_dict(reflector)
-xs4.sigma_a_function = sigma_a_generic
 
 # Create boundary conditions
 boundaries = [ReflectiveBoundary(xs0.n_groups),
@@ -86,26 +85,25 @@ solver.lag_precursors = False
 
 # Set feedback options
 solver.use_feedback = True
-solver.feedback_coeff = 2.034e-3
-solver.feedback_groups = [0]
+solver.feedback_coeff = 3.034e-3
+solver.energy_per_fission = 3.204e-11
+solver.conversion_factor= 3.83e-11
 
 # Initial power
 solver.power = 1.0e-6
+solver.phi_normalization_method = "AVERAGE_POWER"
 
 # Set time stepping options
 solver.t_final = 3.0
-solver.dt = 2.5e-3
-solver.method = "CRANK_NICHOLSON"
+solver.dt = 0.005
+solver.method = "BE"
 
 # Run the problem
 solver.initialize()
 solver.plot_flux()
-plt.show()
-sys.exit()
 
 solver.execute(verbose=1)
 
-solver.outputs.plot_flux(0, 1.44, f"Group 0 at t = 1.44 sec")
-solver.outputs.plot_power(logscale=True)
+solver.outputs.plot_power(logscale=True, normalize=False, average=True)
 
 plt.show()
