@@ -243,14 +243,14 @@ def _pwc_update_precursors(self: "TransientSolver", m: int = 0) -> None:
             self.precursors[ip] = coeff * (c_old + eff_dt*gamma_p * f_d)
 
 
-def _pwc_compute_power_density(self: "TransientSolver") -> None:
+def _pwc_compute_fission_density(self: "TransientSolver") -> None:
     """Compute the point-wise fission rate.
     """
     pwc: PiecewiseContinuous = self.discretization
     uk_man = self.phi_uk_man
 
     # Loop over cells
-    self.power_density *= 0.0
+    self.fission_density *= 0.0
     for cell in self.mesh.cells:
         volume = cell.volume
         view = pwc.fe_views[cell.id]
@@ -265,36 +265,6 @@ def _pwc_compute_power_density(self: "TransientSolver") -> None:
             # Loop over groups
             for g in range(self.n_groups):
                 ig = pwc.map_dof(cell, i, uk_man, 0, g)
-                self.power_density[cell.id] += \
-                    self.energy_per_fission * \
+                self.fission_density[cell.id] += \
                     xs.sigma_f[g] * self.phi[ig] * \
                     intV_shapeI / volume
-
-
-def _pwc_compute_power(self: "TransientSolver") -> float:
-    """Compute the fission power in the system.
-
-    Returns
-    -------
-    float
-    """
-    pwc: PiecewiseContinuous = self.discretization
-    uk_man = self.phi_uk_man
-
-    # Loop over cells
-    power = 0.0
-    for cell in self.mesh.cells:
-        view = pwc.fe_views[cell.id]
-        xs = self.material_xs[cell.material_id]
-        if not xs.is_fissile:
-            continue
-
-        # Loop over group
-        for g in range(self.n_groups):
-            sig_f = xs.sigma_f[g]
-
-            # Loop over nodes
-            for i in range(view.n_nodes):
-                ig = pwc.map_dof(cell, i, uk_man, 0, g)
-                power += sig_f * self.phi[ig] * view.intV_shapeI[i]
-    return power * self.energy_per_fission
