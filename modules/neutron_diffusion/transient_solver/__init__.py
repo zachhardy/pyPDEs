@@ -192,11 +192,15 @@ class TransientSolver(KEigenvalueSolver):
             if verbose > 0:
                 print()
                 print(f"***** Time Step: {n_steps} *****")
-                print(f"Simulation Time:\t{t:.3e}")
-                print(f"Time Step Size:\t\t{self.dt:.3e}")
-                print(f"System Power:\t\t{self.power:.3e}")
+                print(f"Simulation Time:\t{t:.3e} sec")
+                print(f"Time Step Size:\t\t{self.dt:.3e} sec")
+                print(f"Total Power:\t\t{self.power:.3e} W")
+                P_avg = self.average_power_density
+                print(f"Average Power Density:\t{P_avg:.3e} W")
+                T_peak = np.max(self.temperature)
+                print(f"Peak Temperature:\t{T_peak:.3g} K")
                 T_avg = np.mean(self.temperature)
-                print(f"Average Temperature:\t{T_avg:.3g}")
+                print(f"Average Temperature:\t{T_avg:.3g} K")
 
         self.dt = dt_initial
         self.outputs.finalize_outputs()
