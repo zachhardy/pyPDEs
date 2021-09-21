@@ -1,13 +1,9 @@
-"""
-Cross section functions for `ramp.py` test problem.
-"""
-__all__ = ["xs_material_0", "xs_material_1",
-           "sigma_a_ramp", "sigma_a_step"]
-
 from numpy import ndarray
+from typing import List
 
 
-def sigma_a_ramp(g: int, t: float, sigma_a: float) -> float:
+def sigma_a_ramp(g: int, x: List[float], sigma_a: float) -> float:
+    t = x[0]
     if g == 1:
         if 0.0 <= t <= 0.2:
             return sigma_a * (1.0 - 0.11667 * t)
@@ -17,7 +13,8 @@ def sigma_a_ramp(g: int, t: float, sigma_a: float) -> float:
         return sigma_a
 
 
-def sigma_a_step(g: int, t: float, sigma_a: float) -> float:
+def sigma_a_step(g: int, x: List[float], sigma_a: float) -> float:
+    t = x[0]
     if g == 1 and t > 0.0:
         return 0.97666 * sigma_a
     else:
@@ -55,3 +52,6 @@ xs_material_1 = \
         "nu_prompt": nu_prompt, "nu_delayed": nu_delayed,
         "chi_prompt": chi_prompt, "chi_delayed": chi_delayed,
         "precursor_lambda": decay, "velocity": velocity}
+
+__all__ = ["xs_material_0", "xs_material_1",
+           "sigma_a_ramp", "sigma_a_step"]

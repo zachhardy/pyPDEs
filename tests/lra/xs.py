@@ -1,20 +1,21 @@
-"""
-Cross section functions for `run.py` test problem.
-"""
-__all__ = ["fuel_1_with_rod", "fuel_1_without_rod",
-           "fuel_2_with_rod", "fuel_2_without_rod",
-           "reflector", "sigma_t_generic"]
-
+import numpy as np
 from numpy import ndarray
+from typing import List
 
-def sigma_t_generic(g: int, t: float, sigma_t: ndarray) -> float:
-   if g == 1:
-      if t <= 2.0:
-         return sigma_t[g] * (1.0 - 0.0606184*t)
-      else:
-         return sigma_t[g] * 0.8787631
-   else:
-      return sigma_t[g]
+def sigma_a_generic(g: int, x: List[float], sigma_a: float) -> float:
+    assert len(x) == 4, "There must be 4 variables in `x` input."
+    t, T, T0, gamma = x[0], x[1], x[2], x[3]
+
+    if g == 0:
+        return sigma_a * (1.0 + gamma*(np.sqrt(T) - np.sqrt(T0)))
+
+    if g == 1:
+        if t <= 2.0:
+            return sigma_a * (1.0 - 0.0606184 * t)
+        else:
+            return sigma_a * 0.8787631
+    else:
+        return sigma_a
 
 beta_i = [0.0054, 0.001087]
 beta = sum(beta_i)
@@ -78,3 +79,6 @@ reflector = \
      "transfer_matrix":[[0.0, 0.04754], [0.0, 0.0]],
      "velocity": velocity}
 
+__all__ = ["fuel_1_with_rod", "fuel_1_without_rod",
+           "fuel_2_with_rod", "fuel_2_without_rod",
+           "reflector", "sigma_a_generic"]

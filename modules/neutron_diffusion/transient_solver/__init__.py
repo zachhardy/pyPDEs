@@ -22,16 +22,14 @@ class TransientSolver(KEigenvalueSolver):
     """Class for solving transinet multigroup diffusion problems.
     """
 
-    from ._fv import (_fv_feedback_matrix,
-                      _fv_mass_matrix,
+    from ._fv import (_fv_mass_matrix,
                       _fv_precursor_substitution_matrix,
                       _fv_old_precursor_source,
                       _fv_update_precursors,
                       _fv_compute_power_density,
                       _fv_compute_power)
 
-    from ._pwc import (_pwc_feedback_matrix,
-                       _pwc_mass_matrix,
+    from ._pwc import (_pwc_mass_matrix,
                        _pwc_precursor_substitution_matrix,
                        _pwc_old_precursor_source,
                        _pwc_update_precursors,
@@ -43,6 +41,8 @@ class TransientSolver(KEigenvalueSolver):
         """
         super().__init__()
         self.initial_conditions: list = None
+        self.normalize_fission: bool = True
+        self.phi_normalization: str = "TOTAL_POWER"
 
         # Time stepping parameters
         self.t_final: float = 0.1
@@ -62,13 +62,13 @@ class TransientSolver(KEigenvalueSolver):
 
         # Feedback related parameters
         self.use_feedback: bool = False
-        self.feedback_coeff: float = 1.0e-3
-        self.feedback_groups: List[int] = []
+        self.feedback_coeff: float = 0.0
 
         # Power related parameters
         self.power: float = 1.0  # W
         self.power_old: float = 1.0
         self.energy_per_fission: float = 3.2e-11  # J / fission
+        self.core_volume: float = 0.0  # cm^3
         self.power_density: ndarray = None
 
         # Heat generation parameters
@@ -103,6 +103,13 @@ class TransientSolver(KEigenvalueSolver):
             if xs.sigma_a_function is not None:
                 self.has_transient_xs = True
                 break
+
+        # Compute core volume
+        self.core_volume = 0.0
+        for cell in self.mesh.cells:
+            xs = self.material_xs[cell.material_id]
+            if xs.is_fissile:
+                self.core_volume += cell.volume
 
         # Set/check output frequency
         self._check_time_step()
@@ -306,7 +313,9 @@ class TransientSolver(KEigenvalueSolver):
             The time to evaluate the cross sections.
         """
         for cell in self.mesh.cells:
-            self.cellwise_xs[cell.id].update(t)
+            x = [t, self.temperature[cell.id],
+                 self.initial_temperature, self.feedback_coeff]
+            self.cellwise_xs[cell.id].update(x)
 
     def step_solutions(self) -> None:
         """Copy the current solutions to the old.
@@ -343,25 +352,11 @@ class TransientSolver(KEigenvalueSolver):
         A -= self.S + self.Fp
         if self.use_precursors and not self.lag_precursors:
             A -= self.precursor_substitution_matrix(m)
-        if self.use_feedback:
-            A += self.feedback_matrix()
         return self.apply_matrix_bcs(A)
 
     def assemble_transient_rhs(self, m: int = 0) -> ndarray:
         b = self.set_source() + self.set_old_source(m)
         return self.apply_vector_bcs(b)
-
-    def feedback_matrix(self) -> csr_matrix:
-        """Assemble the feedback matrix.
-
-        Returns
-        -------
-        csr_matrix (n_cells * n_groups,) * 2
-        """
-        if isinstance(self.discretization, FiniteVolume):
-            return self._fv_feedback_matrix()
-        elif isinstance(self.discretization, PiecewiseContinuous):
-            return self._pwc_feedback_matrix()
 
     def mass_matrix(self) -> csr_matrix:
         """Assemble the multigroup mass matrix.
@@ -436,12 +431,18 @@ class TransientSolver(KEigenvalueSolver):
             return self._pwc_old_precursor_source(m)
 
     def compute_power_density(self) -> None:
-        """Compute the fission rate averaged over a cell.
+        """Compute the fission power averaged over a cell.
         """
         if isinstance(self.discretization, FiniteVolume):
             self._fv_compute_power_density()
         elif isinstance(self.discretization, PiecewiseContinuous):
             self._pwc_compute_power_density()
+
+    @property
+    def average_power_density(self) -> float:
+        """Compute the fission power averaged over the reactor.
+        """
+        return self.power / self.core_volume
 
     def compute_power(self) -> float:
         """Compute the fission power in the system.
@@ -504,8 +505,9 @@ class TransientSolver(KEigenvalueSolver):
         # Initialize with a k-eigenvalue solver
         else:
             # Modify fission cross section
-            for xs in self.material_xs:
-                xs.sigma_f /= self.k_eff
+            if self.normalize_fission:
+                for xs in self.material_xs:
+                    xs.sigma_f /= self.k_eff
 
             # Reconstruct pompt/total and delayd matrices
             self.Fp = self.prompt_fission_matrix()
@@ -513,7 +515,10 @@ class TransientSolver(KEigenvalueSolver):
                 self.Fd = self.delayed_fission_matrix()
 
             # Normalize phi to initial power
-            self.phi *= self.power / self.compute_power()
+            if "POWER" in self.phi_normalization:
+                self.phi *= self.power / self.compute_power()
+                if self.phi_normalization == "AVERAGE_POWER":
+                    self.phi *= self.core_volume
 
             # Compute fission rate and precursors
             self.compute_power_density()

@@ -1,10 +1,9 @@
-__all__ = ["sigma_a_ramp_up", "sigma_a_ramp_down", "sigma_a_fast_ramp_up",
-           "xs_material_0_and_2", "xs_material_1"]
-
 from numpy import ndarray
+from typing import List
 
 
-def sigma_a_ramp_up(g: int, t: float, sigma_a: float) -> float:
+def sigma_a_ramp_up(g: int, x: List[float], sigma_a: float) -> float:
+    t = x[0]
     if g == 1 and 0.0 <= t <= 1.0:
         return sigma_a * (1.0 + t * 0.03)
     elif g == 1 and t > 1.0:
@@ -13,7 +12,8 @@ def sigma_a_ramp_up(g: int, t: float, sigma_a: float) -> float:
         return sigma_a
 
 
-def sigma_a_ramp_down(g: int, t: float, sigma_a: float) -> float:
+def sigma_a_ramp_down(g: int, x: List[float], sigma_a: float) -> float:
+    t = x[0]
     if g == 1 and 0.0 < t <= 1.0:
         return sigma_a * (1.0 - t * 0.01)
     elif g == 1 and t > 1.0:
@@ -22,7 +22,8 @@ def sigma_a_ramp_down(g: int, t: float, sigma_a: float) -> float:
         return sigma_a
 
 
-def sigma_a_fast_ramp_up(g: int, t: float, sigma_a: float) -> float:
+def sigma_a_fast_ramp_up(g: int, x: List[float], sigma_a: float) -> float:
+    t = x[0]
     if g == 1 and 0.0 <= t <= 0.01:
         return sigma_a * (1.0 - t/0.01 * 0.05)
     elif g == 1 and t > 0.01:
@@ -69,3 +70,6 @@ xs_material_1 = \
      "chi_prompt": chi_prompt, "chi_delayed": chi_delayed,
      "precursor_lambda": decay, "precursor_yield": gamma_i,
      "velocity": velocity}
+
+__all__ = ["sigma_a_ramp_up", "sigma_a_ramp_down", "sigma_a_fast_ramp_up",
+           "xs_material_0_and_2", "xs_material_1"]

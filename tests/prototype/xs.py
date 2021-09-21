@@ -1,14 +1,10 @@
-"""
-Cross section functions for `prototype.py` and
-`minicore.py` test problems.
-"""
-__all__ = ["sigma_a_material_1",  "sigma_a_material_2",
-           "sigma_a_material_3", "xs_vals"]
-
 from numpy import ndarray
+from typing import List
 
 
-def sigma_a_material_1(g: int, t: float, sigma_a: float) -> float:
+
+def sigma_a_material_1(g: int, x: List[float], sigma_a: float) -> float:
+    t = x[0]
     if t <= 0.1:
         return 1.1
     elif 0.1 < t <= 0.6:
@@ -17,7 +13,9 @@ def sigma_a_material_1(g: int, t: float, sigma_a: float) -> float:
     else:
         return 1.095
 
-def sigma_a_material_2(g: int, t: float, sigma_a: float) -> float:
+
+def sigma_a_material_2(g: int, x: List[float], sigma_a: float) -> float:
+    t = x[0]
     if t <= 0.1:
         return 1.1
     elif 0.1 < t <= 0.6:
@@ -31,7 +29,9 @@ def sigma_a_material_2(g: int, t: float, sigma_a: float) -> float:
     else:
         return 1.1
 
-def sigma_a_material_3(g: int, t: float, sigma_a: float) -> float:
+
+def sigma_a_material_3(g: int, x: List[float], sigma_a: float) -> float:
+    t = x[0]
     if t <= 0.1:
         return 1.1
     elif 0.1 < t <= 0.6:
@@ -47,3 +47,6 @@ xs_vals = {"n_groups": 1, "n_precursors": 1,
            "velocity": [1000.0],
            "nu_prompt": [0.994], "nu_delayed": [0.006],
            "precursor_lambda": [0.1]}
+
+__all__ = ["sigma_a_material_1",  "sigma_a_material_2",
+           "sigma_a_material_3", "xs_vals"]
