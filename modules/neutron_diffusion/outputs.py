@@ -16,10 +16,11 @@ if TYPE_CHECKING:
 class Outputs:
     def __init__(self):
         self.dim: int = 0
+        self.core_volume: float = 0.0
 
         self.grid: ndarray = []
         self.times: ndarray = []
-        self.system_power:ndarray = []
+        self.system_power: ndarray = []
 
         self.scalar_flux: ndarray = []
         self.precursors: ndarray = []
@@ -34,6 +35,7 @@ class Outputs:
             self.grid.clear()
             for point in solver.discretization.grid:
                 self.grid += [[point.x, point.y, point.z]]
+            self.core_volume = solver.core_volume
 
         # Store the current simulation time
         self.times += [time]
@@ -60,7 +62,8 @@ class Outputs:
 
         # Store the power density. This stores the cell-wise fission
         # rate multiplied by the energy released per fission event.
-        self.power_density += [solver.power_density]
+        Ef = solver.energy_per_fission
+        self.power_density += [Ef * solver.fission_density]
 
         # Store the temperatures, if feedback is being used.
         if solver.use_feedback:
@@ -100,6 +103,10 @@ class Outputs:
         # Write the system power at each time step
         system_power_path = os.path.join(path, "system_power.txt")
         np.savetxt(system_power_path, self.system_power)
+
+        # Write the average power at each time step
+        average_power_path = os.path.join(path, "average_power.txt")
+        np.savetxt(average_power_path, self.system_power / self.core_volume)
 
         # Write the group-wise scalar fluxes at each time step
         flux_dirpath = os.path.join(path, "flux")
@@ -251,8 +258,8 @@ class Outputs:
                 fig.colorbar(im)
             fig.tight_layout()
 
-    def plot_system_power(self, logscale: bool = False,
-                          normalize: bool = True) -> None:
+    def plot_power(self, logscale: bool = False,
+                   average: bool = True) -> None:
         """Plot the system power.
 
         Parameters
@@ -263,16 +270,16 @@ class Outputs:
             Flag to normalize to the initial power.
         """
         times = self.times
-        system_power = self.system_power
-        if normalize:
-            system_power /= system_power[0]
+        power = self.system_power
+        if average:
+            power /= self.core_volume
 
         fig: Figure = plt.figure()
         ax: Axes = fig.add_subplot(1, 1, 1)
         ax.set_xlabel("Time (sec)")
         ax.set_ylabel("System Power")
         plotter = ax.semilogy if logscale else ax.plot
-        plotter(times, system_power, "-*b")
+        plotter(times, power, "-*b")
         plt.grid(True)
         plt.tight_layout()
 
