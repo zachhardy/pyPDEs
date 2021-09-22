@@ -45,6 +45,8 @@ class TransientSolver(KEigenvalueSolver):
         self.core_volume: float = 0.0  # cm^3
 
         # Time stepping parameters
+        self.time: float = 0.0
+        self.t_start: float = 0.0
         self.t_final: float = 0.1
         self.dt: float = 2.0e-3
         self.method: str = "TBDF2"
@@ -58,7 +60,7 @@ class TransientSolver(KEigenvalueSolver):
         self.lag_precursors: bool = False
 
         # Flag for transient cross sections
-        self.has_transient_xs: bool = False
+        self.has_functional_xs: bool = False
 
         # Feedback related parameters
         self.use_feedback: bool = False
@@ -101,7 +103,7 @@ class TransientSolver(KEigenvalueSolver):
         # Set transient cross section flag
         for xs in self.material_xs:
             if xs.sigma_a_function is not None:
-                self.has_transient_xs = True
+                self.has_functional_xs = True
                 break
 
         # Compute core volume
@@ -146,21 +148,22 @@ class TransientSolver(KEigenvalueSolver):
         next_output = self.output_frequency
 
         # Time stepping loop
-        t, n_steps, dt_initial = 0.0, 0, self.dt
-        while t < self.t_final:
+        self.time = self.t_start
+        n_steps, dt_initial = 0, self.dt
+        while self.time < self.t_final:
 
             # Force coincidence with output time
-            if t + self.dt > next_output:
-                self.dt = next_output - t
+            if self.time + self.dt > next_output:
+                self.dt = next_output - self.time
 
             # Force coincidence with t_final
-            if t + self.dt > self.t_final:
-                self.dt = self.t_final - t
+            if self.time + self.dt > self.t_final:
+                self.dt = self.t_final - self.time
 
             # Solve time step
-            self.solve_time_step(t, m=0)
+            self.solve_time_step(m=0)
             if self.method == "TBDF2":
-                self.solve_time_step(t, m=1)
+                self.solve_time_step(m=1)
 
             self.power = self.compute_power()
 
@@ -169,12 +172,12 @@ class TransientSolver(KEigenvalueSolver):
                 self.refine_time_step()
 
             # Increment time
-            t = np.round(t + self.dt, 12)
+            self.time = np.round(self.time + self.dt, 12)
             n_steps += 1
 
             # Output solutions
-            if t == next_output:
-                self.outputs.store_outputs(self, t)
+            if self.time == next_output:
+                self.outputs.store_outputs(self, self.time)
                 next_output += self.output_frequency
                 next_output = np.round(next_output, 12)
                 if next_output > self.t_final:
@@ -192,7 +195,7 @@ class TransientSolver(KEigenvalueSolver):
             if verbose > 0:
                 print()
                 print(f"***** Time Step: {n_steps} *****")
-                print(f"Simulation Time:\t{t:.3e} sec")
+                print(f"Simulation Time:\t{self.time:.3e} sec")
                 print(f"Time Step Size:\t\t{self.dt:.3e} sec")
                 print(f"Total Power:\t\t{self.power:.3e} W")
                 P_avg = self.power / self.core_volume
@@ -214,9 +217,9 @@ class TransientSolver(KEigenvalueSolver):
             self.dt /= 2.0
 
             # Take the reduced time step
-            self.solve_time_step(t, m=0)
+            self.solve_time_step(m=0)
             if self.method == "TBDF2":
-                self.solve_time_step(t, m=1)
+                self.solve_time_step(m=1)
             self.power = self.compute_power()
 
             # Compute new change in power
@@ -231,20 +234,9 @@ class TransientSolver(KEigenvalueSolver):
             if self.dt > self.output_frequency:
                 self.dt = self.output_frequency
 
-    def solve_time_step(self, t: float, m: int = 0) -> None:
+    def solve_time_step(self, m: int = 0) -> None:
         """Solve the `m`'th step of a multi-step method.
-
-        Parameters
-        ----------
-        t : float
-            The time at t^{n}
         """
-        if self.has_transient_xs:
-            eff_dt = self.effective_time_step(m)
-            if m == 1: eff_dt = self.dt
-            self.update_cross_sections(t + eff_dt)
-            self.L = self.diffusion_matrix()
-
         self.update_phi(m)
         self.update_temperature(m)
         if self.use_precursors:
@@ -266,6 +258,7 @@ class TransientSolver(KEigenvalueSolver):
         A = self.assemble_transient_matrix(m)
         b = self.assemble_transient_rhs(m)
         self.phi = spsolve(A, b)
+        self.compute_fission_density()
 
     def update_precursors(self, m: int = 0) -> None:
         """Update the precursors for the `m`'th step.
@@ -344,6 +337,12 @@ class TransientSolver(KEigenvalueSolver):
         -------
         csr_matrix (n_cells * n_groups,) * 2
         """
+        if self.has_functional_xs:
+            eff_dt = self.effective_time_step(m)
+            if m == 1: eff_dt = self.dt
+            self.update_cross_sections(self.time + eff_dt)
+            self.L = self.diffusion_matrix()
+
         if self.method == "BE":
             A = self.L + self.M / self.dt
         elif self.method == "CN":
