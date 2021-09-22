@@ -41,7 +41,9 @@ class TransientSolver(KEigenvalueSolver):
         self.initial_conditions: list = None
         self.normalize_fission: bool = True
         self.exact_keff_for_ic: float = None
-        self.phi_norm_method: str = "TOTAL_POWER"
+        self.phi_norm_method: str = "TOTAL"
+
+        # Domain information
         self.core_volume: float = 0.0  # cm^3
 
         # Time stepping parameters
@@ -62,13 +64,12 @@ class TransientSolver(KEigenvalueSolver):
         # Flag for transient cross sections
         self.has_functional_xs: bool = False
 
-        # Feedback related parameters
-        self.use_feedback: bool = False
+        # Feedback coefficient
         self.feedback_coeff: float = 0.0
 
         # Power related parameters
         self.power: float = 1.0  # W
-        self.power_old: float = 1.0
+        self.power_old: float = 1.0  # W
         self.energy_per_fission: float = 3.2e-11  # J / fission
 
         # Heat generation parameters
@@ -85,9 +86,9 @@ class TransientSolver(KEigenvalueSolver):
         self.fission_density: ndarray = None
 
         # Temperatures
-        self.initial_temperature: float = 300.0
         self.temperature: ndarray = None
         self.temperature_old: ndarray = None
+        self.initial_temperature: float = 300.0  # K
 
         # Multi-step method vectors
         self.phi_aux: List[ndarray] = None
@@ -97,6 +98,19 @@ class TransientSolver(KEigenvalueSolver):
         # Output options
         self.output_frequency: float = None
         self.outputs: Outputs = Outputs()
+
+    @property
+    def average_power(self) -> float:
+        return self.power / self.core_volume
+
+    @property
+    def average_temperature(self) -> float:
+        T_avg = 0.0
+        for cell in self.mesh.cells:
+            xs = self.material_xs[cell.material_id]
+            if xs.is_fissile:
+                T_avg += self.temperature[cell.id] * cell.volume
+        return T_avg / self.core_volume
 
     def initialize(self) -> None:
         """Initialize the solver.
@@ -207,11 +221,9 @@ class TransientSolver(KEigenvalueSolver):
                 print(f"Simulation Time:\t{self.time:.3e} sec")
                 print(f"Time Step Size:\t\t{self.dt:.3e} sec")
                 print(f"Total Power:\t\t{self.power:.3e} W")
-                P_avg = self.power / self.core_volume
+                P_avg = self.average_power
                 print(f"Average Power Density:\t{P_avg:.3e} W")
-                T_peak = np.max(self.temperature)
-                print(f"Peak Temperature:\t{T_peak:.3g} K")
-                T_avg = np.mean(self.temperature)
+                T_avg = self.average_temperature
                 print(f"Average Temperature:\t{T_avg:.3g} K")
 
         self.dt = dt_initial
@@ -252,6 +264,8 @@ class TransientSolver(KEigenvalueSolver):
         for nit in range(50):
             self.update_phi(m)
             self.update_temperature(m)
+            if m == 0 and self.method == "TBDF2":
+                break
 
             change = norm(self.phi - phi_ell)
             change += norm(self.temperature - T_ell)
