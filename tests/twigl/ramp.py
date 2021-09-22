@@ -80,6 +80,6 @@ solver.execute(verbose=1)
 
 outputs = solver.outputs
 outputs.plot_2d_scalar_flux(times=[0.0, 0.2, 0.5])
-outputs.plot_system_power(normalize=True)
+outputs.plot_power(normalize=True)
 
 plt.show()

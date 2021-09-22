@@ -259,6 +259,7 @@ class Outputs:
             fig.tight_layout()
 
     def plot_power(self, logscale: bool = False,
+                   normalize: bool = True,
                    average: bool = True) -> None:
         """Plot the system power.
 
@@ -273,6 +274,8 @@ class Outputs:
         power = self.system_power
         if average:
             power /= self.core_volume
+        if normalize:
+            power /= power[0]
 
         fig: Figure = plt.figure()
         ax: Axes = fig.add_subplot(1, 1, 1)
