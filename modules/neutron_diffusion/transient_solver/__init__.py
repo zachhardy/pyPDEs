@@ -71,10 +71,6 @@ class TransientSolver(KEigenvalueSolver):
         # Heat generation parameters
         self.conversion_factor: float = 3.83e-11  # K-cm^3
 
-        # Output options
-        self.output_frequency: float = None
-        self.outputs: Outputs = Outputs()
-
         # Precomputed mass matrix storage
         self.M: csr_matrix = None
 
@@ -89,6 +85,10 @@ class TransientSolver(KEigenvalueSolver):
         self.initial_temperature: float = 300.0
         self.temperature: ndarray = None
         self.temperature_old: ndarray = None
+
+        # Output options
+        self.output_frequency: float = None
+        self.outputs: Outputs = Outputs()
 
     def initialize(self) -> None:
         """Initialize the solver.
