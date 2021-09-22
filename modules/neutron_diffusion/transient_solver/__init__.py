@@ -40,7 +40,8 @@ class TransientSolver(KEigenvalueSolver):
         super().__init__()
         self.initial_conditions: list = None
         self.normalize_fission: bool = True
-        self.phi_normalization_method: str = "TOTAL_POWER"
+        self.exact_keff_for_ic: float = None
+        self.phi_norm_method: str = "TOTAL_POWER"
         self.core_volume: float = 0.0  # cm^3
 
         # Time stepping parameters
@@ -450,11 +451,13 @@ class TransientSolver(KEigenvalueSolver):
         -------
         float
         """
-        Ef = self.energy_per_fission
-
         # Loop over cells
         power = 0.0
+        Ef = self.energy_per_fission
         for cell in self.mesh.cells:
+            xs = self.material_xs[cell.material_id]
+            if not xs.is_fissile:
+                continue
             power += Ef * self.fission_density[cell.id] * cell.volume
         return power
 
@@ -509,22 +512,28 @@ class TransientSolver(KEigenvalueSolver):
             # Modify fission cross section
             if self.normalize_fission:
                 for xs in self.material_xs:
-                    xs.sigma_f /= self.k_eff
+                    k = self.k_eff
+                    if self.exact_keff_for_ic is not None:
+                        k = self.exact_keff_for_ic
+                    xs.sigma_f /= k
 
             # Reconstruct pompt/total and delayd matrices
             self.Fp = self.prompt_fission_matrix()
             if self.use_precursors:
                 self.Fd = self.delayed_fission_matrix()
 
-            # Normalize phi to initial power
-            if "POWER" in self.phi_normalization_method:
+            # Normalize phi to initial power conditions
+            if self.phi_norm_method is not None:
                 self.compute_fission_density()
-                self.phi *= self.power / self.compute_power()
-                if self.phi_normalization_method == "AVERAGE_POWER":
-                    self.phi *= self.core_volume
+                if "TOTAL" in self.phi_norm_method:
+                    self.phi *= self.power / self.compute_power()
+                elif "AVERAGE" in self.phi_norm_method:
+                    P_avg = self.compute_power() / self.core_volume
+                    self.phi *= self.power / P_avg
 
             # Compute fission rate and precursors
             self.compute_fission_density()
+            self.power = self.compute_power()
             if self.use_precursors:
                 self.compute_precursors()
 
