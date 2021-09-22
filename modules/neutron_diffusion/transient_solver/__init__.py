@@ -244,8 +244,7 @@ class TransientSolver(KEigenvalueSolver):
 
         if m == 0 and self.method in ["CN", "TBDF2"]:
             self.phi = 2.0 * self.phi - self.phi_old
-
-        self.compute_fission_density()
+            self.compute_fission_density()
 
     def update_phi(self, m: int = 0) -> None:
         """Update the scalar flux for the `m`'th step.
