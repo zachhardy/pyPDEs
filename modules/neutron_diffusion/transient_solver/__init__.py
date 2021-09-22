@@ -89,6 +89,11 @@ class TransientSolver(KEigenvalueSolver):
         self.temperature: ndarray = None
         self.temperature_old: ndarray = None
 
+        # Multi-step method vectors
+        self.phi_aux: List[ndarray] = None
+        self.precursors_aux: List[ndarray] = None
+        self.temperature_aux: List[ndarray] = None
+
         # Output options
         self.output_frequency: float = None
         self.outputs: Outputs = Outputs()
@@ -116,24 +121,28 @@ class TransientSolver(KEigenvalueSolver):
         # Set/check output frequency
         self._check_time_step()
 
-        # Initalize old vectors
-        self.phi_old = np.copy(self.phi)
-        self.precursors_old = np.copy(self.precursors)
+        # Initialize temperature vectors
+        T0 = self.initial_temperature
+        self.iterate_temperature: bool = False
+        self.temperature = T0 * np.ones(self.mesh.n_cells)
 
         # Initialize fission density vector
         self.fission_density = np.zeros(self.mesh.n_cells)
 
-        # Initialize temperature vectors
-        T0 = self.initial_temperature
-        self.temperature = T0 * np.ones(self.mesh.n_cells)
-        self.temperature_old = T0 * np.ones(self.mesh.n_cells)
+        # Initalize old vectors
+        self.phi_old = np.copy(self.phi)
+        self.precursors_old = np.copy(self.precursors)
+        self.temperature_old = np.copy(self.temperature)
 
         # Evaluate initial conditions
         self.compute_initial_values()
         self.outputs.store_outputs(self, 0.0)
 
-        # Set the old power to set initial power
-        self.power_old = self.power
+        # Initialize auxilary vectors
+        if self.method == "TBDF2":
+            self.phi_aux = [np.copy(self.phi)]
+            self.precursors_aux = [np.copy(self.precursors)]
+            self.temperature_aux = [np.copy(self.temperature)]
 
         # Precompute matrices
         self.M = self.mass_matrix()
@@ -237,14 +246,35 @@ class TransientSolver(KEigenvalueSolver):
     def solve_time_step(self, m: int = 0) -> None:
         """Solve the `m`'th step of a multi-step method.
         """
-        self.update_phi(m)
-        self.update_temperature(m)
+        phi_ell = np.copy(self.phi_old)
+        T_ell = np.copy(self.temperature_old)
+
+        for nit in range(50):
+            self.update_phi(m)
+            self.update_temperature(m)
+
+            change = norm(self.phi - phi_ell)
+            change += norm(self.temperature - T_ell)
+            phi_ell[:] = self.phi
+            T_ell[:] = self.temperature
+
+            if change < 1.0e-4:
+                print(f"\nNon-linear solve converged in {nit} iterations.")
+                break
+
         if self.use_precursors:
             self.update_precursors(m)
 
         if m == 0 and self.method in ["CN", "TBDF2"]:
             self.phi = 2.0 * self.phi - self.phi_old
+            self.temperature = 2.0 * self.temperature - self.temperature_old
             self.compute_fission_density()
+
+            if self.method == "TBDF2":
+                self.phi_aux[0][:] = self.phi
+                self.temperature_aux[0][:] = self.temperature
+                if self.use_precursors:
+                    self.precursors_aux[0][:] = self.precursors
 
     def update_phi(self, m: int = 0) -> None:
         """Update the scalar flux for the `m`'th step.
@@ -289,18 +319,14 @@ class TransientSolver(KEigenvalueSolver):
 
         T_old = self.temperature_old
         if m == 1:
-            T = self.temperature
-            T_old = (4.0*self.temperature - T_old) / 3.0
+            T = self.temperature_aux[0]
+            T_old = (4.0*T - T_old) / 3.0
 
         # Loop over cells
         for cell in self.mesh.cells:
             Sf = self.fission_density[cell.id]
             self.temperature[cell.id] = \
-                T_old[cell.id] + self.conversion_factor * Sf
-
-        if m == 0 and self.method in ["CN", "TBDF2"]:
-            self.temperature = \
-                2.0 * self.temperature - self.temperature_old
+                T_old[cell.id] + eff_dt * self.conversion_factor * Sf
 
     def update_cross_sections(self, t: float) -> None:
         """Update the cell-wise cross sections.
@@ -410,7 +436,8 @@ class TransientSolver(KEigenvalueSolver):
         elif self.method == "TBDF2" and m == 0:
             b = 4.0 * self.M / self.dt @ self.phi_old
         elif self.method == "TBDF2" and m == 1:
-            b = self.M / self.dt @ (4.0 * self.phi - self.phi_old)
+            phi = self.phi_aux[0]
+            b = self.M / self.dt @ (4.0 * phi - self.phi_old)
 
         # Add old time step precursors
         if self.use_precursors:

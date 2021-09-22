@@ -123,13 +123,13 @@ def _pwc_precursor_substitution_matrix(self: "TransientSolver",
         # Loop over precursors
         for p in range(xs.n_precursors):
             lambda_p = xs.precursor_lambda[p]
-            gamma_p = xs.precursor_yield[p]
+            yield_p = xs.precursor_yield[p]
 
             # Loop over groups
             for g in range(self.n_groups):
                 chi_d = xs.chi_delayed[g][p]
                 coeff = chi_d*lambda_p / (1.0 + eff_dt*lambda_p)
-                coeff *= eff_dt * gamma_p
+                coeff *= eff_dt * yield_p
 
                 # Loop over groups
                 for gp in range(self.n_groups):
@@ -178,7 +178,7 @@ def _pwc_old_precursor_source(self: "TransientSolver", m: int = 0) -> ndarray:
             # Get the precursors
             c_old = self.precursors_old[ip]
             if m == 1 and not self.lag_precursors:
-                c = self.precursors[ip]
+                c = self.precursors_aux[0][ip]
                 c_old = (4.0*c - c_old) / 3.0
 
             # Loop over groups
@@ -231,16 +231,16 @@ def _pwc_update_precursors(self: "TransientSolver", m: int = 0) -> None:
         for p in range(xs.n_precursors):
             ip = cell.id * c_ukm.total_components + p
             lambda_p = xs.precursor_lambda[p]
-            gamma_p = xs.precursor_yield[p]
+            yield_p = xs.precursor_yield[p]
 
             # Get the precursors
             c_old = self.precursors_old[ip]
             if m == 1:
-                c = self.precursors[ip]
+                c = self.precursors_aux[0][ip]
                 c_old = (4.0*c - c_old) / 3.0
 
             coeff = 1.0 / (1.0 + eff_dt*lambda_p)
-            self.precursors[ip] = coeff * (c_old + eff_dt*gamma_p * f_d)
+            self.precursors[ip] = coeff * (c_old + eff_dt*yield_p * f_d)
 
 
 def _pwc_compute_fission_density(self: "TransientSolver") -> None:
