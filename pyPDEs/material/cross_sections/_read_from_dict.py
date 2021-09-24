@@ -53,7 +53,7 @@ def read_from_xs_dict(
 
     # Get analytic buckling
     if "buckling" in xs:
-        buckling = np.array(xs.get("buckling"))
+        buckling = xs.get("buckling")
         if isinstance(buckling, float):
             buckling = [buckling] * self.n_groups
         if len(buckling) != self.n_groups:
