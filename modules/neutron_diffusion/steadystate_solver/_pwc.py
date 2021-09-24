@@ -34,6 +34,7 @@ def _pwc_diffusion_matrix(self: "SteadyStateSolver") -> csr_matrix:
         for g in range(self.n_groups):
             D = xs.D[g]
             sig_t = xs.sigma_t[g]
+            B_sq = xs.B_sq[g]
 
             # Loop over nodes
             for i in range(view.n_nodes):
@@ -43,7 +44,8 @@ def _pwc_diffusion_matrix(self: "SteadyStateSolver") -> csr_matrix:
 
                     mass_ij = view.intV_shapeI_shapeJ[i][j]
                     stiff_ij = view.intV_gradI_gradJ[i][j]
-                    A[ig, jg] += D * stiff_ij + sig_t * mass_ij
+                    A[ig, jg] += D * stiff_ij + \
+                                 (sig_t + D*B_sq) * mass_ij
     return A.tocsr()
 
 

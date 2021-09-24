@@ -51,6 +51,15 @@ def read_from_xs_dict(
             raise ValueError(f"sigma_a {incompat_w_G}.")
         self.sigma_a = density * sig_a
 
+    # Get analytic buckling
+    if "buckling" in xs:
+        buckling = np.array(xs.get("buckling"))
+        if isinstance(buckling, float):
+            buckling = [buckling] * self.n_groups
+        if len(buckling) != self.n_groups:
+            raise ValueError(f"buckling {incompat_w_G}.")
+        self.B_sq = np.array(buckling)
+
     # Get transfer matrix
     if "transfer_matrix" in xs:
         trnsfr = np.array(xs.get("transfer_matrix"))

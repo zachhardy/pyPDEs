@@ -10,9 +10,9 @@ class LightWeightCrossSections:
         self._xs = xs
         self.sigma_t = xs.sigma_t
         self.D = xs.D
+        self.B_sq = xs.B_sq
 
     def update(self, x: List[float]) -> None:
-        self.D = self._xs.D
         if self._xs.sigma_a_function is not None:
             f_sig_a = self._xs.sigma_a_function
             for g in range(self._xs.n_groups):

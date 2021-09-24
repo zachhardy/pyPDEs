@@ -30,6 +30,7 @@ class CrossSections(MaterialProperty):
         self.sigma_s: ndarray = []
         self.transfer_matrix: ndarray = []
         self.D: ndarray = []
+        self.B_sq: ndarray = []
 
         self.nu: ndarray = []
         self.nu_prompt: ndarray = []
@@ -191,6 +192,7 @@ class CrossSections(MaterialProperty):
         self.sigma_r = np.zeros(self.n_groups)
         self.sigma_f = np.zeros(self.n_groups)
         self.D = np.zeros(self.n_groups)
+        self.B_sq = np.zeros(self.n_groups)
 
         # Transfer matrix
         self.transfer_matrix = np.zeros((self.n_groups,) * 2)

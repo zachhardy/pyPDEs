@@ -38,6 +38,7 @@ def _fv_diffusion_matrix(self: "SteadyStateSolver") -> csr_matrix:
         for g in range(self.n_groups):
             ig = fv.map_dof(cell, 0, uk_man, 0, g)
             A[ig, ig] += xs.sigma_t[g] * volume
+            A[ig, ig] += xs.D[g] * xs.B_sq[g] * volume
 
         # Loop over faces
         for face in cell.faces:

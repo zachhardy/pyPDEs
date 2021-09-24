@@ -98,6 +98,9 @@ def read_from_xs_file(self: "CrossSections", filename: str,
             if line[0] == "DIFFUSION_COEFF_BEGIN":
                 read_1d_xs("DIFFUSION_COEFF", self.D, lines, line_num)
 
+            if (line[0] == "BUCKLING_BEGIN"):
+                read_1d_xs("BUCKLING", self.B_sq, lines, line_num)
+
             if line[0] == "SIGMA_F_BEGIN":
                 read_1d_xs("SIGMA_F", self.sigma_f, lines, line_num)
                 self.sigma_f *= density
