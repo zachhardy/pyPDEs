@@ -66,8 +66,7 @@ class Outputs:
         self.power_density += [Ef * solver.fission_density]
 
         # Store the temperatures, if feedback is being used.
-        if solver.use_feedback:
-            self.temperature += [solver.temperature]
+        self.temperature += [solver.temperature]
 
     def finalize_outputs(self) -> None:
         self.grid = np.array(self.grid)
