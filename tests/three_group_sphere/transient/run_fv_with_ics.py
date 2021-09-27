@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -7,6 +8,8 @@ from pyPDEs.material import CrossSections, MultiGroupSource
 from pyPDEs.utilities.boundaries import *
 
 from modules.neutron_diffusion import *
+
+abs_path = os.path.dirname(os.path.abspath(__file__))
 
 # Create mesh and discretization
 mesh = create_1d_mesh([0.0, 6.0], [100], coord_sys="SPHERICAL")
@@ -45,9 +48,11 @@ solver.t_final = 0.1
 solver.dt = 2.0e-3
 solver.method = "TBDF2"
 
+# Output informations
+solver.write_outputs = True
+solver.output_directory = \
+    os.path.join(abs_path, "outputs/fv")
+
 # Run the problem
 solver.initialize()
 solver.execute(verbose=1)
-
-solver.plot_solution(title="Final Solution")
-plt.show()
