@@ -15,7 +15,6 @@ from typing import List, Union
 from pyPDEs.spatial_discretization import *
 
 from .. import KEigenvalueSolver
-from ..outputs import Outputs
 
 
 class TransientSolver(KEigenvalueSolver):
