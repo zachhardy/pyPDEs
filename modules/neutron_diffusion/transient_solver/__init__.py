@@ -54,6 +54,11 @@ class TransientSolver(KEigenvalueSolver):
         self.dt: float = 2.0e-3
         self.method: str = "TBDF2"
 
+        # Nonlinear parameters
+        self.is_nonlinear: bool = False
+        self.nonlinear_tolerance: float = 1.0e-8
+        self.nonlinear_max_iterations: int = 50
+
         # Adaptive time stepping parameters
         self.adaptivity: bool = False
         self.refine_level: float = 0.05
@@ -269,23 +274,32 @@ class TransientSolver(KEigenvalueSolver):
     def solve_time_step(self, m: int = 0) -> None:
         """Solve the `m`'th step of a multi-step method.
         """
-        phi_ell = np.copy(self.phi_old)
-        T_ell = np.copy(self.temperature_old)
-
-        for nit in range(50):
+        if not self.is_nonlinear:
             self.update_phi(m)
             self.update_temperature(m)
-            if m == 0 and self.method == "TBDF2":
-                break
+        else:
+            phi_ell = np.copy(self.phi_old)
+            T_ell = np.copy(self.temperature_old)
+            converged = False
+            for nit in range(self.nonlinear_max_iterations):
+                self.update_phi(m)
+                self.update_temperature(m)
+                if m == 0 and self.method == "TBDF2":
+                    converged = True
+                    break
 
-            change = norm(self.phi - phi_ell)
-            change += norm(self.temperature - T_ell)
-            phi_ell[:] = self.phi
-            T_ell[:] = self.temperature
+                change = norm(self.phi - phi_ell)
+                change += norm(self.temperature - T_ell)
+                phi_ell[:] = self.phi
+                T_ell[:] = self.temperature
 
-            if change < 1.0e-4:
-                print(f"\nNon-linear solve converged in {nit} iterations.")
-                break
+                if change < self.nonlinear_tolerance:
+                    converged = True
+                    break
+
+            if not converged:
+                print("\n!!! WARNING: Nonlinear iterations "
+                      "did not converge !!!\n")
 
         if self.use_precursors:
             self.update_precursors(m)
