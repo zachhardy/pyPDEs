@@ -205,7 +205,6 @@ def write_snapshot(self: "TransientSolver",
         f.write(struct.pack("Q", self.mesh.n_cells))
 
         power_density = self.energy_per_fission * self.fission_density
-        print(min(power_density), max(power_density))
         for cell in self.mesh.cells:
             f.write(struct.pack("Q", cell.id))
             f.write(struct.pack("d", power_density[cell.id]))
