@@ -16,8 +16,8 @@ from modules.neutron_diffusion import *
 from xs import *
 
 # Create mesh, assign material IDs
-x_verts = np.linspace(0.0, 165.0, 34)
-y_verts = np.linspace(0.0, 165.0, 34)
+x_verts = np.linspace(0.0, 165.0, 12)
+y_verts = np.linspace(0.0, 165.0, 12)
 mesh = create_2d_mesh(x_verts, y_verts, verbose=True)
 
 for cell in mesh.cells:
@@ -37,8 +37,6 @@ for cell in mesh.cells:
     else:
         cell.material_id = 4
 
-mesh.plot_material_ids()
-
 # Create discretizations
 discretization = FiniteVolume(mesh)
 
@@ -49,7 +47,7 @@ xs0.sigma_t_function = sigma_a_with_rod
 
 xs1 = CrossSections()
 xs1.read_from_xs_dict(fuel_1_without_rod)
-xs1.sigma_a_function = sigma_a_without_rod
+xs1.sigma_a_function = sigma_a_with_rod
 
 xs2 = CrossSections()
 xs2.read_from_xs_dict(fuel_2_with_rod)
@@ -57,7 +55,7 @@ xs2.sigma_a_function = sigma_a_with_rod
 
 xs3 = CrossSections()
 xs3.read_from_xs_dict(fuel_2_without_rod)
-xs3.sigma_a_function = sigma_a_without_rod
+xs3.sigma_a_function = sigma_a_with_rod
 
 xs4 = CrossSections()
 xs4.read_from_xs_dict(reflector)
@@ -84,26 +82,27 @@ solver.use_precursors = True
 solver.lag_precursors = False
 
 # Set feedback options
-solver.use_feedback = True
 solver.feedback_coeff = 3.034e-3
 solver.energy_per_fission = 3.204e-11
 solver.conversion_factor= 3.83e-11
 
 # Initial power
 solver.power = 1.0e-6
-solver.phi_normalization_method = "AVERAGE_POWER"
+solver.phi_norm_method = "AVERAGE"
+# solver.exact_keff_for_ic = 0.99633
 
 # Set time stepping options
 solver.t_final = 3.0
 solver.dt = 0.005
-solver.method = "BE"
+solver.method = "CN"
+
+solver.adaptivity = True
+solver.refine_level = 0.12
+solver.coarsen_level = 0.01
 
 # Run the problem
 solver.initialize()
-solver.plot_flux()
-
 solver.execute(verbose=1)
 
 solver.outputs.plot_power(logscale=True, normalize=False, average=True)
-
 plt.show()
