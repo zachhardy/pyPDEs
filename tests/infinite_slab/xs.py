@@ -71,5 +71,9 @@ xs_material_1 = \
      "precursor_lambda": decay, "precursor_yield": gamma_i,
      "velocity": velocity}
 
+tolerance = 1.0e-12
+max_iterations = int(1.0e4)
+
 __all__ = ["sigma_a_ramp_up", "sigma_a_ramp_down", "sigma_a_fast_ramp_up",
-           "xs_material_0_and_2", "xs_material_1"]
+           "xs_material_0_and_2", "xs_material_1", "tolerance",
+           "max_iterations"]

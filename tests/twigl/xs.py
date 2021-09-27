@@ -53,5 +53,9 @@ xs_material_1 = \
         "chi_prompt": chi_prompt, "chi_delayed": chi_delayed,
         "precursor_lambda": decay, "velocity": velocity}
 
+tolerance = 1.0e-12
+max_iterations = int(1.0e4)
+
 __all__ = ["xs_material_0", "xs_material_1",
-           "sigma_a_ramp", "sigma_a_step"]
+           "sigma_a_ramp", "sigma_a_step", "tolerance",
+           "max_iterations"]

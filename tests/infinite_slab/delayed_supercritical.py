@@ -45,8 +45,8 @@ solver.discretization = discretization
 solver.boundaries = boundaries
 solver.material_xs = [xs0, xs1, xs2]
 
-solver.max_iterations = 50000
-solver.tolerance = 1.0e-8
+solver.tolerance = tolerance
+solver.max_iterations = max_iterations
 
 # Set options
 solver.use_precursors = True

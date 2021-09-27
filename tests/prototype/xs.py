@@ -48,5 +48,9 @@ xs_vals = {"n_groups": 1, "n_precursors": 1,
            "nu_prompt": [0.994], "nu_delayed": [0.006],
            "precursor_lambda": [0.1]}
 
+tolerance = 1.0e-12
+max_iterations = int(1.0e4)
+
 __all__ = ["sigma_a_material_1",  "sigma_a_material_2",
-           "sigma_a_material_3", "xs_vals"]
+           "sigma_a_material_3", "xs_vals", "tolerance",
+           "max_iterations"]
