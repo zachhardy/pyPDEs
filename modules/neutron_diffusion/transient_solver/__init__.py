@@ -34,6 +34,8 @@ class TransientSolver(KEigenvalueSolver):
                        _pwc_update_precursors,
                        _pwc_compute_fission_density)
 
+    from ._write_outputs import write_snapshot
+
     def __init__(self) -> None:
         """Class constructor.
         """
@@ -96,8 +98,9 @@ class TransientSolver(KEigenvalueSolver):
         self.temperature_aux: List[ndarray] = None
 
         # Output options
+        self.write_outputs: bool = False
         self.output_frequency: float = None
-        self.outputs: Outputs = Outputs()
+        self.output_directory: str = None
 
     @property
     def average_power(self) -> float:
@@ -148,9 +151,17 @@ class TransientSolver(KEigenvalueSolver):
         self.precursors_old = np.copy(self.precursors)
         self.temperature_old = np.copy(self.temperature)
 
+        # Check output information
+        if self.write_outputs:
+            print(self.output_directory)
+            if not os.path.isdir(self.output_directory):
+                os.makedirs(self.output_directory)
+            elif len(os.listdir(self.output_directory)) > 0:
+                os.system(f"rm -r {self.output_directory}/*")
+
         # Evaluate initial conditions
         self.compute_initial_values()
-        self.outputs.store_outputs(self, 0.0)
+        self.write_snapshot(0)
 
         # Initialize auxilary vectors
         if self.method == "TBDF2":
@@ -169,10 +180,11 @@ class TransientSolver(KEigenvalueSolver):
         verbose : int, default 0
         """
         next_output = self.output_frequency
+        dt_initial = self.dt
 
         # Time stepping loop
         self.time = self.t_start
-        n_steps, dt_initial = 0, self.dt
+        n_steps, n_output = 0, 0
         while self.time < self.t_final:
 
             # Force coincidence with output time
@@ -200,7 +212,8 @@ class TransientSolver(KEigenvalueSolver):
 
             # Output solutions
             if self.time == next_output:
-                self.outputs.store_outputs(self, self.time)
+                n_output += 1
+                self.write_snapshot(n_output)
                 next_output += self.output_frequency
                 next_output = np.round(next_output, 12)
                 if next_output > self.t_final:
@@ -227,7 +240,6 @@ class TransientSolver(KEigenvalueSolver):
                 print(f"Average Temperature:\t{T_avg:.3g} K")
 
         self.dt = dt_initial
-        self.outputs.finalize_outputs()
 
     def refine_time_step(self) -> None:
         """Refine the time step.
@@ -578,8 +590,8 @@ class TransientSolver(KEigenvalueSolver):
 
         self.step_solutions()
 
-    def write_outputs(self, path: str = ".") -> None:
-        self.outputs.write_outputs(path)
+    # def write_outputs(self, path: str = ".") -> None:
+    #     self.outputs.write_outputs(path)
 
     def _check_time_step(self) -> None:
         if self.output_frequency is None:
