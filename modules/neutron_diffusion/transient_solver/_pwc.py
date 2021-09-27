@@ -206,8 +206,7 @@ def _pwc_update_precursors(self: "TransientSolver", m: int = 0) -> None:
         The step in a multi-step method.
     """
     pwc: PiecewiseContinuous = self.discretization
-    phi_ukm = self.phi_uk_man
-    c_ukm = self.precursor_uk_man
+    uk_man = self.phi_uk_man
     eff_dt = self.effective_time_step(m)
 
     # Loop over cells
@@ -223,13 +222,13 @@ def _pwc_update_precursors(self: "TransientSolver", m: int = 0) -> None:
         for g in range(self.n_groups):
             nud_sigf = xs.nu_delayed_sigma_f[g]
             for i in range(view.n_nodes):
-                ig = pwc.map_dof(cell, i, phi_ukm, 0, g)
+                ig = pwc.map_dof(cell, i, uk_man, 0, g)
                 f_d += nud_sigf * self.phi[ig] * \
                        view.intV_shapeI[i] / volume
 
         # Loop pver precursors
         for p in range(xs.n_precursors):
-            ip = cell.id * c_ukm.total_components + p
+            ip = cell.id * self.max_precursors + p
             lambda_p = xs.precursor_lambda[p]
             yield_p = xs.precursor_yield[p]
 
