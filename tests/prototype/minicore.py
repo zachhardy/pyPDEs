@@ -1,5 +1,4 @@
-import time
-
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -14,6 +13,8 @@ from pyPDEs.utilities.boundaries import *
 from modules.neutron_diffusion import *
 
 from xs import *
+
+abs_path = os.path.dirname(os.path.abspath(__file__))
 
 # Create mesh and discretization
 zones = [0.0, 16.0, 20.0, 24.0, 56.0, 64.0, 80.0]
@@ -46,6 +47,9 @@ solver.discretization = discretization
 solver.boundaries = boundaries
 solver.material_xs = [xs0, xs1, xs2, xs3]
 
+solver.max_iterations = 50000
+solver.tolerance = 1.0e-12
+
 # Set options
 solver.use_precursors = True
 solver.lag_precursors = False
@@ -55,14 +59,11 @@ solver.t_final = 2.0
 solver.dt = 0.01
 solver.method = "TBDF2"
 
-solver.max_iterations = 50000
-solver.tolerance = 1.0e-12
+# Output informations
+solver.write_outputs = True
+solver.output_directory = \
+    os.path.join(abs_path, "outputs/minicore")
 
 # Run the problem
 solver.initialize()
 solver.execute(verbose=1)
-
-outputs = solver.outputs
-outputs.plot_1d_scalar_flux(times=[0.0, 0.6, 1.1, 2.0])
-outputs.plot_system_power(normalize=True)
-plt.show()

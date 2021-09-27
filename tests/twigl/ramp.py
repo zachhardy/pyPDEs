@@ -1,5 +1,4 @@
-import sys
-
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -14,6 +13,8 @@ from pyPDEs.utilities.boundaries import *
 from modules.neutron_diffusion import *
 
 from xs import *
+
+abs_path = os.path.dirname(os.path.abspath(__file__))
 
 # Create mesh, assign material IDs
 x_verts = np.linspace(0.0, 80.0, 41)
@@ -62,6 +63,9 @@ solver.discretization = discretization
 solver.boundaries = boundaries
 solver.material_xs = [xs0, xs1, xs2]
 
+solver.max_iterations = 50000
+solver.tolerance = 1.0e-8
+
 # Set options
 solver.use_precursors = True
 solver.lag_precursors = False
@@ -71,15 +75,11 @@ solver.t_final = 0.5
 solver.dt = 1.0e-2
 solver.method = "TBDF2"
 
-solver.max_iterations = 50000
-solver.tolerance = 1.0e-8
+# Output informations
+solver.write_outputs = True
+solver.output_directory = \
+    os.path.join(abs_path, "outputs/ramp")
 
 # Run the problem
 solver.initialize()
 solver.execute(verbose=1)
-
-outputs = solver.outputs
-outputs.plot_2d_scalar_flux(times=[0.0, 0.2, 0.5])
-outputs.plot_power(normalize=True)
-
-plt.show()

@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -12,6 +13,8 @@ from pyPDEs.utilities.boundaries import *
 from modules.neutron_diffusion import *
 
 from xs import *
+
+abs_path = os.path.dirname(os.path.abspath(__file__))
 
 # Create mesh and discretization
 zones = [0.0, 40.0, 200.0, 240.0]
@@ -54,11 +57,11 @@ solver.method = "TBDF2"
 solver.max_iterations = 50000
 solver.tolerance = 1.0e-8
 
+# Output informations
+solver.write_outputs = True
+solver.output_directory = \
+    os.path.join(abs_path, "outputs/subcritical")
+
 # Run the problem
 solver.initialize()
 solver.execute(verbose=1)
-
-outputs = solver.outputs
-outputs.plot_1d_scalar_flux(times=[0.0, 1.0, 2.0])
-
-plt.show()
