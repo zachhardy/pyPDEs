@@ -1,5 +1,6 @@
 import os
 import struct
+import sys
 
 from pyPDEs.spatial_discretization import *
 
@@ -24,11 +25,15 @@ def write_snapshot(self: "TransientSolver",
 
     header_info = \
         b"pyPDEs neutron_diffusion TransientSolver: Snapshot file\n" \
-        b"Header size: 1500 bytes\n" \
+        b"Header size: 1650 bytes\n" \
         b"Structure(type-info):\n" \
         b"uint64_t      time_step_index\n" \
         b"double        time\n" \
         b"double        system_power\n" \
+        b"double        peak_power_density\n" \
+        b"double        average_power_density\n" \
+        b"double        peak_fuel_temperature\n" \
+        b"double        average_fuel_temperature\n" \
         b"uint64_t      num_global_cells\n" \
         b"uint64_t      num_global_nodes\n" \
         b"uint64_t      num_groups\n" \
@@ -76,14 +81,20 @@ def write_snapshot(self: "TransientSolver",
         b"       double      power_density_value\n"
 
     header_size = len(header_info)
-    header_info += b"-" * (1499 - header_size)
+    header_info += b"-" * (1649 - header_size)
 
     with open(file_path, "wb") as f:
-        f.write(bytearray(header_info))
+        peak_power = self.energy_per_fission * max(self.fission_density)
+        peak_temperature = max(self.temperature)
 
+        f.write(bytearray(header_info))
         f.write(struct.pack("Q", output_num))
         f.write(struct.pack("d", self.time))
         f.write(struct.pack("d", self.power))
+        f.write(struct.pack("d", peak_power))
+        f.write(struct.pack("d", self.average_power))
+        f.write(struct.pack("d", peak_temperature))
+        f.write(struct.pack("d", self.average_temperature))
         f.write(struct.pack("Q", self.mesh.n_cells))
         f.write(struct.pack("Q", self.discretization.n_nodes))
         f.write(struct.pack("Q", 1))
