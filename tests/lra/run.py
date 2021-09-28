@@ -1,5 +1,5 @@
+import os
 import sys
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -14,6 +14,8 @@ from pyPDEs.utilities.boundaries import *
 from modules.neutron_diffusion import *
 
 from xs import *
+
+abs_path = os.path.dirname(os.path.abspath(__file__))
 
 # Create mesh, assign material IDs
 x_verts = np.linspace(0.0, 165.0, 12)
@@ -43,11 +45,11 @@ discretization = FiniteVolume(mesh)
 # Create cross sections and sources
 xs0 = CrossSections()
 xs0.read_from_xs_dict(fuel_1_with_rod)
-xs0.sigma_t_function = sigma_a_with_rod
+xs0.sigma_a_function = sigma_a_with_rod
 
 xs1 = CrossSections()
 xs1.read_from_xs_dict(fuel_1_without_rod)
-xs1.sigma_a_function = sigma_a_with_rod
+xs1.sigma_a_function = sigma_a_without_rod
 
 xs2 = CrossSections()
 xs2.read_from_xs_dict(fuel_2_with_rod)
@@ -55,7 +57,7 @@ xs2.sigma_a_function = sigma_a_with_rod
 
 xs3 = CrossSections()
 xs3.read_from_xs_dict(fuel_2_without_rod)
-xs3.sigma_a_function = sigma_a_with_rod
+xs3.sigma_a_function = sigma_a_without_rod
 
 xs4 = CrossSections()
 xs4.read_from_xs_dict(reflector)
@@ -74,8 +76,12 @@ solver.boundaries = boundaries
 solver.material_xs = [xs0, xs1, xs2, xs3, xs4]
 
 # Iterative parameters
-solver.max_iterations = 50000
-solver.tolerance = 1.0e-8
+solver.tolerance = 1.0e-12
+solver.max_iterations = int(1.0e4)
+
+solver.is_nonlinear = True
+solver.nonlinear_tolerance = 1.0e-8
+solver.nonlinear_max_iterations = 50
 
 # Set precursor options
 solver.use_precursors = True
@@ -100,9 +106,11 @@ solver.adaptivity = True
 solver.refine_level = 0.12
 solver.coarsen_level = 0.01
 
+# Output informations
+solver.write_outputs = True
+solver.output_directory = \
+    os.path.join(abs_path, "outputs")
+
 # Run the problem
 solver.initialize()
 solver.execute(verbose=1)
-
-solver.outputs.plot_power(logscale=True, normalize=False, average=True)
-plt.show()
