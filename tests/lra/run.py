@@ -18,8 +18,8 @@ from xs import *
 abs_path = os.path.dirname(os.path.abspath(__file__))
 
 # Create mesh, assign material IDs
-x_verts = np.linspace(0.0, 165.0, 12)
-y_verts = np.linspace(0.0, 165.0, 12)
+x_verts = np.linspace(0.0, 165.0, 45)
+y_verts = np.linspace(0.0, 165.0, 45)
 mesh = create_2d_mesh(x_verts, y_verts, verbose=True)
 
 for cell in mesh.cells:
@@ -53,7 +53,7 @@ xs1.sigma_a_function = sigma_a_without_rod
 
 xs2 = CrossSections()
 xs2.read_from_xs_dict(fuel_2_with_rod)
-xs2.sigma_a_function = sigma_a_with_rod
+xs2.sigma_a_function = sigma_a_without_rod
 
 xs3 = CrossSections()
 xs3.read_from_xs_dict(fuel_2_without_rod)
@@ -99,7 +99,7 @@ solver.phi_norm_method = "AVERAGE"
 
 # Set time stepping options
 solver.t_final = 3.0
-solver.dt = 0.005
+solver.dt = 0.01
 solver.method = "CN"
 
 solver.adaptivity = True
