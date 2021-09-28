@@ -49,7 +49,7 @@ xs_vals = {"n_groups": 1, "n_precursors": 1,
            "precursor_lambda": [0.1]}
 
 tolerance = 1.0e-12
-max_iterations = int(1.0e4)
+max_iterations = int(5.0e4)
 
 __all__ = ["sigma_a_material_1",  "sigma_a_material_2",
            "sigma_a_material_3", "xs_vals", "tolerance",
