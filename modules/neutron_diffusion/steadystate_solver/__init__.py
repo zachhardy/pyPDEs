@@ -100,13 +100,14 @@ class SteadyStateSolver:
         self.phi = np.zeros(sd.n_dofs(self.phi_uk_man))
 
         # Initialize precursor information
-        self.n_precursors = 0
-        self.max_precursors = 0
-        for xs in self.material_xs:
-            self.n_precursors += xs.n_precursors
-            if xs.n_precursors > self.max_precursors:
-                self.max_precursors = xs.n_precursors
-        if self.n_precursors == 0.0:
+        if self.use_precursors:
+            self.n_precursors = 0
+            self.max_precursors = 0
+            for xs in self.material_xs:
+                self.n_precursors += xs.n_precursors
+                if xs.n_precursors > self.max_precursors:
+                    self.max_precursors = xs.n_precursors
+        if self.n_precursors == 0:
             self.use_precursors = False
 
         if self.use_precursors:
