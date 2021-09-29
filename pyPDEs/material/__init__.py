@@ -37,5 +37,5 @@ class Material:
         self.properties.extend(properties)
 
 
-__all__ = ["Material", "ScalarProperty", "MaterialProperty",
+__all__ = ["Material", "ScalarProperty", "MultiGroupSource",
            "CrossSections", "LightWeightCrossSections"]
