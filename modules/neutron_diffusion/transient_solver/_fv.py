@@ -205,7 +205,7 @@ def _fv_update_precursors(self: "TransientSolver", m: int = 0) -> None:
             self.precursors[ip] = coeff * (c_old + eff_dt*yield_p * f_d)
 
 
-def _fv_compute_fission_density(self: "TransientSolver") -> None:
+def _fv_compute_fission_rate(self: "TransientSolver") -> None:
     """Compute the point-wise fission rate.
     """
     fv: FiniteVolume = self.discretization
