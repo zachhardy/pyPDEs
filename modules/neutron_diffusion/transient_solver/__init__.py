@@ -44,9 +44,6 @@ class TransientSolver(KEigenvalueSolver):
         self.exact_keff_for_ic: float = None
         self.phi_norm_method: str = "TOTAL"
 
-        # Domain information
-        self.core_volume: float = 0.0  # cm^3
-
         # Time stepping parameters
         self.time: float = 0.0
         self.t_start: float = 0.0
@@ -74,7 +71,6 @@ class TransientSolver(KEigenvalueSolver):
         self.power: float = 1.0  # W
         self.power_old: float = 1.0  # W
         self.avg_power_density: float = 1.0  # W / cm^3
-        self.peak_power_density: float  = 1.0  # W / cm^3
 
         # Physics paramaters
         self.feedback_coeff: float = 0.0  # K^{1/2}
@@ -95,8 +91,6 @@ class TransientSolver(KEigenvalueSolver):
         self.temperature: ndarray = None
         self.temperature_old: ndarray = None
         self.initial_temperature: float = 300.0  # K
-        self.avg_temperature: float = 300.0  # K
-        self.peak_temperature: float = 300.0  # K
 
         # Multi-step method vectors
         self.phi_aux: List[ndarray] = None
@@ -109,17 +103,8 @@ class TransientSolver(KEigenvalueSolver):
         self.output_directory: str = None
 
     @property
-    def average_power(self) -> float:
-        return self.power / self.core_volume
-
-    @property
-    def average_temperature(self) -> float:
-        T_avg = 0.0
-        for cell in self.mesh.cells:
-            xs = self.material_xs[cell.material_id]
-            if xs.is_fissile:
-                T_avg += self.temperature[cell.id] * cell.volume
-        return T_avg / self.core_volume
+    def power_density(self) -> ndarray:
+        return self.energy_per_fission * self.fission_rate
 
     def initialize(self) -> None:
         """Initialize the solver.
@@ -134,20 +119,11 @@ class TransientSolver(KEigenvalueSolver):
                 self.has_functional_xs = True
                 break
 
-        # Compute core volume
-        self.core_volume = 0.0
-        for cell in self.mesh.cells:
-            xs = self.material_xs[cell.material_id]
-            if xs.is_fissile:
-                self.core_volume += cell.volume
-
         # Set/check output frequency
         self._check_time_step()
 
         # Initialize temperature vectors
         T0 = self.initial_temperature
-        self.avg_temperature = T0
-        self.peak_temperature = T0
         self.temperature = T0 * np.ones(self.mesh.n_cells)
 
         # Initialize fission density vector
@@ -240,8 +216,8 @@ class TransientSolver(KEigenvalueSolver):
                 print(f"Simulation Time:\t{self.time:.3e} sec")
                 print(f"Time Step Size:\t\t{self.dt:.3e} sec")
                 print(f"Total Power:\t\t{self.power:.3e} W")
-                P_avg = self.average_power
-                print(f"Average Power Density:\t{P_avg:.3e} W")
+                P_avg = self.average_power_density
+                print(f"Average Power Density:\t{P_avg:.3e} W/cm^3")
                 T_avg = self.average_temperature
                 print(f"Average Temperature:\t{T_avg:.3g} K")
 
@@ -520,15 +496,32 @@ class TransientSolver(KEigenvalueSolver):
         """
         # Loop over cells
         power = 0.0
-        Ef = self.energy_per_fission
         for cell in self.mesh.cells:
             xs = self.material_xs[cell.material_id]
             if xs.is_fissile:
-                Sf = self.fission_rate[cell.id]
-                power += Ef * Sf * cell.volume
+                P = self.power_density[cell.id]
+                power += P * cell.volume
         return power
 
-    def compute_average_temperature(self) -> float:
+    @property
+    def average_power_density(self) -> float:
+        """Compute the average power density.
+
+        Parameters
+        ----------
+        float
+        """
+        intgrl, volume = 0.0, 0.0
+        for cell in self.mesh.cells:
+            xs = self.material_xs[cell.material_id]
+            if xs.is_fissile:
+                P = self.power_density[cell.id]
+                intgrl += P * cell.volume
+                volume += cell.volume
+        return intgrl / volume
+
+    @property
+    def average_temperature(self) -> float:
         """Compute the average fuel temperature.
 
         Returns
@@ -539,9 +532,30 @@ class TransientSolver(KEigenvalueSolver):
         for cell in self.mesh.cells:
             xs = self.material_xs[cell.material_id]
             if xs.is_fissile:
-                intgrl += self.temperature[cell.id] * cell.volume
+                T = self.temperature[cell.id]
+                intgrl += T * cell.volume
                 volume += cell.volume
         return intgrl / volume
+
+    @property
+    def peak_power_density(self) -> float:
+        """Get the peak power density.
+
+        Returns
+        -------
+        float
+        """
+        return max(self.power_density)
+
+    @property
+    def peak_temperature(self) -> float:
+        """Get the peak temperature in the system.
+
+        Returns
+        -------
+        float
+        """
+        return max(self.temperature)
 
     def effective_time_step(self, m: int = 0) -> float:
         """Compute the effective time step for step `m`.
@@ -610,7 +624,7 @@ class TransientSolver(KEigenvalueSolver):
                 if "TOTAL" in self.phi_norm_method:
                     self.phi *= self.power / self.compute_power()
                 elif "AVERAGE" in self.phi_norm_method:
-                    P_avg = self.compute_power() / self.core_volume
+                    P_avg = self.average_power_density
                     self.phi *= self.power / P_avg
 
             # Compute fission rate and precursors

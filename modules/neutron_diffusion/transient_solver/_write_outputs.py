@@ -84,16 +84,13 @@ def write_snapshot(self: "TransientSolver",
     header_info += b"-" * (1649 - header_size)
 
     with open(file_path, "wb") as f:
-        peak_power = self.energy_per_fission * max(self.fission_rate)
-        peak_temperature = max(self.temperature)
-
         f.write(bytearray(header_info))
         f.write(struct.pack("Q", output_num))
         f.write(struct.pack("d", self.time))
         f.write(struct.pack("d", self.power))
-        f.write(struct.pack("d", peak_power))
-        f.write(struct.pack("d", self.average_power))
-        f.write(struct.pack("d", peak_temperature))
+        f.write(struct.pack("d", self.peak_power_density))
+        f.write(struct.pack("d", self.average_power_density))
+        f.write(struct.pack("d", self.peak_temperature))
         f.write(struct.pack("d", self.average_temperature))
         f.write(struct.pack("Q", self.mesh.n_cells))
         f.write(struct.pack("Q", self.discretization.n_nodes))
