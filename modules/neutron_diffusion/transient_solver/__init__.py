@@ -70,7 +70,6 @@ class TransientSolver(KEigenvalueSolver):
         # Power related parameters
         self.power: float = 1.0  # W
         self.power_old: float = 1.0  # W
-        self.avg_power_density: float = 1.0  # W / cm^3
 
         # Physics paramaters
         self.feedback_coeff: float = 0.0  # K^{1/2}
