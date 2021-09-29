@@ -206,7 +206,6 @@ class TransientSolver(KEigenvalueSolver):
             self.solve_time_step(m=0)
             if self.method == "TBDF2":
                 self.solve_time_step(m=1)
-
             self.power = self.compute_power()
 
             # Refinements, if adaptivity is used
@@ -367,8 +366,9 @@ class TransientSolver(KEigenvalueSolver):
         # Loop over cells
         for cell in self.mesh.cells:
             Sf = self.fission_rate[cell.id]
+            alpha = self.conversion_factor
             self.temperature[cell.id] = \
-                T_old[cell.id] + eff_dt * self.conversion_factor * Sf
+                T_old[cell.id] + eff_dt * alpha * Sf
 
     def update_cross_sections(self, t: float) -> None:
         """Update the cell-wise cross sections.
@@ -524,7 +524,8 @@ class TransientSolver(KEigenvalueSolver):
         for cell in self.mesh.cells:
             xs = self.material_xs[cell.material_id]
             if xs.is_fissile:
-                power += Ef * self.fission_rate[cell.id] * cell.volume
+                Sf = self.fission_rate[cell.id]
+                power += Ef * Sf * cell.volume
         return power
 
     def compute_average_temperature(self) -> float:
