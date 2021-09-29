@@ -70,15 +70,13 @@ class TransientSolver(KEigenvalueSolver):
         # Flag for transient cross sections
         self.has_functional_xs: bool = False
 
-        # Feedback coefficient
-        self.feedback_coeff: float = 0.0
-
         # Power related parameters
         self.power: float = 1.0  # W
         self.power_old: float = 1.0  # W
-        self.energy_per_fission: float = 3.2e-11  # J / fission
 
-        # Heat generation parameters
+        # Physics paramaters
+        self.feedback_coeff: float = 0.0  # K^{1/2}
+        self.energy_per_fission: float = 3.2e-11  # J / fission
         self.conversion_factor: float = 3.83e-11  # K-cm^3
 
         # Precomputed mass matrix storage
@@ -89,12 +87,12 @@ class TransientSolver(KEigenvalueSolver):
         self.precursors_old: ndarray = None
 
         # Fission density
-        self.fission_density: ndarray = None
+        self.fission_rate: ndarray = None
 
         # Temperatures
+        self.initial_temperature: float = 300.0  # K
         self.temperature: ndarray = None
         self.temperature_old: ndarray = None
-        self.initial_temperature: float = 300.0  # K
 
         # Multi-step method vectors
         self.phi_aux: List[ndarray] = None
@@ -148,7 +146,7 @@ class TransientSolver(KEigenvalueSolver):
         self.temperature = T0 * np.ones(self.mesh.n_cells)
 
         # Initialize fission density vector
-        self.fission_density = np.zeros(self.mesh.n_cells)
+        self.fission_rate = np.zeros(self.mesh.n_cells)
 
         # Initalize old vectors
         self.phi_old = np.copy(self.phi)
@@ -363,7 +361,7 @@ class TransientSolver(KEigenvalueSolver):
 
         # Loop over cells
         for cell in self.mesh.cells:
-            Sf = self.fission_density[cell.id]
+            Sf = self.fission_rate[cell.id]
             self.temperature[cell.id] = \
                 T_old[cell.id] + eff_dt * self.conversion_factor * Sf
 
@@ -522,7 +520,7 @@ class TransientSolver(KEigenvalueSolver):
             xs = self.material_xs[cell.material_id]
             if not xs.is_fissile:
                 continue
-            power += Ef * self.fission_density[cell.id] * cell.volume
+            power += Ef * self.fission_rate[cell.id] * cell.volume
         return power
 
     def effective_time_step(self, m: int = 0) -> float:

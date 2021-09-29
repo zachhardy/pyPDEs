@@ -249,7 +249,7 @@ def _pwc_compute_fission_density(self: "TransientSolver") -> None:
     uk_man = self.phi_uk_man
 
     # Loop over cells
-    self.fission_density *= 0.0
+    self.fission_rate *= 0.0
     for cell in self.mesh.cells:
         volume = cell.volume
         view = pwc.fe_views[cell.id]
@@ -264,6 +264,6 @@ def _pwc_compute_fission_density(self: "TransientSolver") -> None:
             # Loop over groups
             for g in range(self.n_groups):
                 ig = pwc.map_dof(cell, i, uk_man, 0, g)
-                self.fission_density[cell.id] += \
+                self.fission_rate[cell.id] += \
                     xs.sigma_f[g] * self.phi[ig] * \
                     intV_shapeI / volume
