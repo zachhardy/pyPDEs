@@ -635,9 +635,6 @@ class TransientSolver(KEigenvalueSolver):
 
         self.step_solutions()
 
-    # def write_outputs(self, path: str = ".") -> None:
-    #     self.outputs.write_outputs(path)
-
     def _check_time_step(self) -> None:
         self.time = self.t_start
         if self.output_frequency is None:
