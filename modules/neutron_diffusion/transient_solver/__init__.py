@@ -105,12 +105,13 @@ class TransientSolver(KEigenvalueSolver):
     def power_density(self) -> ndarray:
         return self.energy_per_fission * self.fission_rate
 
-    def initialize(self) -> None:
+    def initialize(self, verbose: int = 0) -> None:
         """Initialize the solver.
         """
         KEigenvalueSolver.initialize(self)
-        KEigenvalueSolver.execute(self, verbose=1)
-        time.sleep(2.5)
+        KEigenvalueSolver.execute(self, verbose=verbose)
+        if verbose > 0:
+            time.sleep(2.0)
 
         # Set transient cross section flag
         for xs in self.material_xs:
