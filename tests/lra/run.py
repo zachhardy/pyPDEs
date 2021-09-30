@@ -18,8 +18,8 @@ from xs import *
 abs_path = os.path.dirname(os.path.abspath(__file__))
 
 # Create mesh, assign material IDs
-x_verts = np.linspace(0.0, 165.0, 45)
-y_verts = np.linspace(0.0, 165.0, 45)
+x_verts = np.linspace(0.0, 165.0, 12)
+y_verts = np.linspace(0.0, 165.0, 12)
 mesh = create_2d_mesh(x_verts, y_verts, verbose=True)
 
 for cell in mesh.cells:

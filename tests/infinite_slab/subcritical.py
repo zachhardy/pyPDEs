@@ -66,5 +66,5 @@ solver.output_directory = \
     os.path.join(abs_path, "outputs/subcritical")
 
 # Run the problem
-solver.initialize()
+solver.initialize(verbose=1)
 solver.execute(verbose=1)
