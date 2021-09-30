@@ -86,12 +86,6 @@ def write_snapshot(self: "TransientSolver",
     with open(file_path, "wb") as f:
         f.write(bytearray(header_info))
         f.write(struct.pack("Q", output_num))
-        f.write(struct.pack("d", self.time))
-        f.write(struct.pack("d", self.power))
-        f.write(struct.pack("d", self.peak_power_density))
-        f.write(struct.pack("d", self.average_power_density))
-        f.write(struct.pack("d", self.peak_temperature))
-        f.write(struct.pack("d", self.average_temperature))
         f.write(struct.pack("Q", self.mesh.n_cells))
         f.write(struct.pack("Q", self.discretization.n_nodes))
         f.write(struct.pack("Q", 1))
@@ -99,6 +93,13 @@ def write_snapshot(self: "TransientSolver",
         f.write(struct.pack("Q", self.n_precursors))
         f.write(struct.pack("Q", self.max_precursors))
         f.write(struct.pack("I", 4))
+
+        f.write(struct.pack("d", self.time))
+        f.write(struct.pack("d", self.power))
+        f.write(struct.pack("d", self.peak_power_density))
+        f.write(struct.pack("d", self.average_power_density))
+        f.write(struct.pack("d", self.peak_temperature))
+        f.write(struct.pack("d", self.average_temperature))
 
         # Write grid information
         for cell in self.mesh.cells:
