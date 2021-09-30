@@ -28,13 +28,13 @@ xs0 = CrossSections()
 xs0.read_from_xs_dict(xs_vals)
 
 xs1 = deepcopy(xs0)
-xs1.sigma_a_function = sigma_a_material_1
+xs1.sigma_a_function = sigma_a_material_0
 
 xs2 = deepcopy(xs0)
-xs2.sigma_a_function = sigma_a_material_2
+xs2.sigma_a_function = sigma_a_material_1
 
 xs3 = deepcopy(xs0)
-xs3.sigma_a_function = sigma_a_material_3
+xs3.sigma_a_function = sigma_a_material_2
 
 # Create boundary conditions
 boundaries = [VacuumBoundary(xs0.n_groups),
