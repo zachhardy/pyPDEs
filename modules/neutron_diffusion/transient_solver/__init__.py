@@ -136,7 +136,6 @@ class TransientSolver(KEigenvalueSolver):
 
         # Check output information
         if self.write_outputs:
-            print(self.output_directory)
             if not os.path.isdir(self.output_directory):
                 os.makedirs(self.output_directory)
             elif len(os.listdir(self.output_directory)) > 0:
