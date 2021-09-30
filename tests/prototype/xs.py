@@ -2,7 +2,7 @@ from numpy import ndarray
 from typing import List
 
 
-def sigma_a_material_0(g: int, x: List[float], sigma_a: float) -> float:
+def sigma_a_material_1(g: int, x: List[float], sigma_a: float) -> float:
     t = x[0]
     if t <= 0.1:
         return 1.1
@@ -13,7 +13,7 @@ def sigma_a_material_0(g: int, x: List[float], sigma_a: float) -> float:
         return 1.095
 
 
-def sigma_a_material_1(g: int, x: List[float], sigma_a: float) -> float:
+def sigma_a_material_2(g: int, x: List[float], sigma_a: float) -> float:
     t = x[0]
     if t <= 0.1:
         return 1.1
@@ -29,7 +29,7 @@ def sigma_a_material_1(g: int, x: List[float], sigma_a: float) -> float:
         return 1.1
 
 
-def sigma_a_material_2(g: int, x: List[float], sigma_a: float) -> float:
+def sigma_a_material_3(g: int, x: List[float], sigma_a: float) -> float:
     t = x[0]
     if t <= 0.1:
         return 1.1
@@ -50,6 +50,6 @@ xs_vals = {"n_groups": 1, "n_precursors": 1,
 tolerance = 1.0e-12
 max_iterations = int(5.0e4)
 
-__all__ = ["sigma_a_material_0", "sigma_a_material_1",
-           "sigma_a_material_2", "xs_vals", "tolerance",
+__all__ = ["sigma_a_material_1", "sigma_a_material_2",
+           "sigma_a_material_3", "xs_vals", "tolerance",
            "max_iterations"]
