@@ -36,3 +36,12 @@ sim.plot_flux_moments(0, 0, [0.0, 0.2, 0.5])
 sim.plot_power()
 plt.show()
 
+from rom.dmd import DMD
+X = sim.create_simulation_matrix()
+dmd = DMD(svd_rank=10, opt=False)
+dmd.fit(X, sim.times)
+
+dmd.plot_singular_values()
+dmd.plot_error_decay()
+dmd.plot_timestep_errors()
+plt.show()

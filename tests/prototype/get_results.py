@@ -39,7 +39,7 @@ plt.show()
 
 from rom.dmd import DMD
 X = sim.create_simulation_matrix()
-dmd = DMD(svd_rank=20, opt=False)
+dmd = DMD(svd_rank=1.0, opt=False)
 dmd.fit(X, sim.times)
 
 dmd.plot_singular_values()
