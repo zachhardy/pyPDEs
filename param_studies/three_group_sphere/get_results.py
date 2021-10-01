@@ -39,7 +39,6 @@ X = sim.create_simulation_matrix()
 dmd = DMD(svd_rank=1.0-1.0e-12)
 dmd.fit(X, sim.times)
 
-dmd.plot_singular_values()
 dmd.plot_error_decay()
 dmd.plot_timestep_errors()
 plt.show()
