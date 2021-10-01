@@ -65,14 +65,11 @@ tstart = time.time()
 svd_rank = 1.0 - 1.0e-12
 pod = POD(svd_rank=svd_rank)
 pod.fit(X_train, Y_train, verbose=True)
-pod.plot_singular_values()
-
 offline_time = time.time() - tstart
 
 tstart = time.time()
 X_pred = pod.predict(Y_test, "CUBIC")
 predict_time = time.time() - tstart
-predict_time_ps = predict_time / len(X_test)
 
 # Format POD predictions for DMD
 X_pred = dataset.unstack_simulation_vector(X_pred)
@@ -89,10 +86,7 @@ for i in range(len(X_pred)):
 
     x_dmd = dmd.reconstructed_data.real
     errors[i] = norm(X_pred[i] - x_dmd) / norm(X_test[i])
-dmd_time_ps = dmd_time / len(X_pred)
-
 query_time = predict_time + dmd_time
-query_time_ps = predict_time_ps + dmd_time_ps
 
 # Print aggregated DMD results
 msg = f"===== Summary of {errors.size} DMD Models ====="
