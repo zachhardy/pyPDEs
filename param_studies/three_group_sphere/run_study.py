@@ -1,7 +1,6 @@
 import os
 import sys
 import itertools
-
 import numpy as np
 
 from pyPDEs.mesh import create_1d_mesh
@@ -35,7 +34,6 @@ for arg in sys.argv:
 study_name = "density"
 study_name += "_size" if with_size else ""
 study_name += "_ics" if with_ics else "_k"
-
 
 # Define parameter space
 parameters = {}
@@ -74,7 +72,7 @@ rf = mesh.vertices[-1].z
 ics = [lambda r: 1.0 - r**2 / rf**2,
        lambda r: 1.0 - r**2 / rf**2,
        lambda r: 0.0]
-solver.ics = ics if with_ics else None
+solver.initial_conditions = ics if with_ics else None
 
 solver.t_final = 0.1
 solver.dt = 2.0e-3
