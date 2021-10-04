@@ -34,7 +34,7 @@ def step(g, x, sigma_a) -> float:
 script_path = os.path.dirname(os.path.abspath(__file__))
 
 
-multiplier = np.linspace(0.97, 0.99, 21)
+multiplier = np.linspace(0.96, 0.99, 31)
 
 parameters = {}
 parameters["multiplier"] = np.round(multiplier, 6)

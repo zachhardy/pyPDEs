@@ -36,7 +36,6 @@ sim.read_simulation_data()
 
 n = int(sys.argv[1])
 params = np.loadtxt(base+"/params.txt")[n]
-print(params)
 
 # sim.plot_flux_moments(0, 1, [0.0, 0.2, 0.5])
 sim.plot_power()
