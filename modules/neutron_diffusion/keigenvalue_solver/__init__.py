@@ -24,6 +24,16 @@ class KEigenvalueSolver(SteadyStateSolver):
         self.tolerance: float = 1.0e-8
         self.max_iterations: int = 500
 
+    def initialize(self, verbose: int = 0) -> None:
+        """Initialize the k-eigenvalue multigroup diffusion solver.
+
+        Parameters
+        ----------
+        verbose : int, default 0
+        """
+        SteadyStateSolver.initialize(self)
+        self.k_eff = 1.0
+
     def execute(self, verbose: int = 0) -> None:
         """Execute the k-eigenvalue multigroup diffusion solver.
 

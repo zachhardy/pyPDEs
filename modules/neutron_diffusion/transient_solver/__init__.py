@@ -70,6 +70,7 @@ class TransientSolver(KEigenvalueSolver):
         # Power related parameters
         self.power: float = 1.0  # W
         self.power_old: float = 1.0  # W
+        self.initial_power: float = 1.0 # W
 
         # Physics paramaters
         self.feedback_coeff: float = 0.0  # K^{1/2}
@@ -121,6 +122,10 @@ class TransientSolver(KEigenvalueSolver):
 
         # Set/check output frequency
         self._check_time_step()
+
+        # Initialize power
+        self.power = self.initial_power
+        self.power_old = self.initial_power
 
         # Initialize temperature vectors
         T0 = self.initial_temperature
