@@ -93,7 +93,7 @@ solver.energy_per_fission = 3.204e-11
 solver.conversion_factor= 3.83e-11
 
 # Initial power
-solver.power = 1.0e-6
+solver.initial_power = 1.0e-6
 solver.phi_norm_method = "AVERAGE"
 # solver.exact_keff_for_ic = 0.99633
 
