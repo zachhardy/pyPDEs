@@ -36,7 +36,7 @@ script_path = os.path.dirname(os.path.abspath(__file__))
 script_path = os.path.dirname(os.path.abspath(__file__))
 
 # Define paramter space
-multiplier = np.linspace(0.01, 0.04, 31)
+multiplier = np.linspace(1.01, 1.04, 31)
 
 parameters = {}
 parameters["multiplier"] = np.round(multiplier, 6)
@@ -86,8 +86,8 @@ solver.t_final = 2.0
 solver.dt = 0.04
 solver.method = "TBDF2"
 
-solver.max_iterations = 50000
-solver.tolerance = 1.0e-8
+solver.max_iterations = max_iterations
+solver.tolerance = tolerance
 
 # Output informations
 solver.write_outputs = True
@@ -131,7 +131,7 @@ for n, params in enumerate(values):
         ind = keys.index("multiplier")
         def function(g, x, sigma_a) -> float:
             if g == 1 and x[0] > 0.0:
-                return (1.0 + params[ind]) * sigma_a
+                return params[ind] * sigma_a
             else:
                 return sigma_a
         solver.material_xs[0].sigma_a_function = function
