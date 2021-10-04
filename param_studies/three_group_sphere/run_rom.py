@@ -69,7 +69,7 @@ Y_train = np.vstack((Y_train, Y[bndry]))
 
 # Construct POD model, predict test data
 tstart = time.time()
-svd_rank = 1.0 - 1.0e-6
+svd_rank = 1.0 - 1.0e-12
 pod = POD(svd_rank=svd_rank)
 pod.fit(X_train, Y_train, verbose=True)
 offline_time = time.time() - tstart

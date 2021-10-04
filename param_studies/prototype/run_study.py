@@ -1,5 +1,5 @@
-import itertools
 import os
+import itertools
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -39,7 +39,7 @@ keys = list(parameters.keys())
 values = list(itertools.product(*parameters.values()))
 
 
-# Setup the problem
+# Create mesh and discretization
 zones = [0.0, 16.0, 20.0, 24.0, 56.0, 64.0, 80.0]
 n_cells = [80, 20, 20, 160, 40, 80]
 material_ids = [0, 1, 2, 0, 3, 0]

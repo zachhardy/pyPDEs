@@ -33,7 +33,6 @@ sim.read_simulation_data()
 sim.plot_flux_moments(0, [0, 1], [0.0, 0.05, 0.1])
 plt.show()
 
-
 from rom.dmd import DMD
 X = sim.create_simulation_matrix()
 dmd = DMD(svd_rank=1.0-1.0e-12)
