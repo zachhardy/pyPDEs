@@ -144,8 +144,11 @@ class CrossSections(MaterialProperty):
                     "are present in the cross section set.")
 
             has_nu_delayed = sum(self.nu_delayed) > 0.0
-            chi_dj_sums = np.sum(self.chi_delayed, axis=0)
-            has_chi_delayed = all([s > 0.0 for s in chi_dj_sums])
+            has_chi_delayed = len(self.chi_delayed) > 0
+            if has_chi_delayed:
+                chi_dj_sums = np.sum(self.chi_delayed, axis=0)
+                has_chi_delayed = all([s > 0.0 for s in chi_dj_sums])
+
             has_delayed = has_nu_delayed and has_chi_delayed
             if has_delayed:
                 self.chi_delayed /= chi_dj_sums
