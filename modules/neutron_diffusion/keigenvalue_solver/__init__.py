@@ -11,7 +11,7 @@ from .. import SteadyStateSolver
 
 
 class KEigenvalueSolver(SteadyStateSolver):
-    """Class for solving a k-eigenvalue multigroup diffusion problems.
+    """k-eigenvalue multigroup diffusion.
     """
 
     def __init__(self) -> None:

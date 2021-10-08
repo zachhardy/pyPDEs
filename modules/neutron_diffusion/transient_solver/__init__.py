@@ -18,7 +18,7 @@ from .. import KEigenvalueSolver
 
 
 class TransientSolver(KEigenvalueSolver):
-    """Class for solving transinet multigroup diffusion problems.
+    """Transinet multigroup diffusion.
     """
 
     from ._fv import (_fv_mass_matrix,

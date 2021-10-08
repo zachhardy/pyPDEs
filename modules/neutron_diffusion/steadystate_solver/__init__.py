@@ -5,8 +5,6 @@ from numpy import ndarray
 from numpy.linalg import norm
 from scipy.sparse.linalg import spsolve
 from scipy.sparse import csr_matrix
-from matplotlib.figure import Figure
-from matplotlib.axes import Axes
 from typing import List
 
 from pyPDEs.mesh import Mesh
@@ -16,7 +14,7 @@ from pyPDEs.utilities import UnknownManager
 from pyPDEs.utilities.boundaries import *
 
 class SteadyStateSolver:
-    """Class for solving steady-state multigroup diffusion problems.
+    """Steady-state multigroup diffusion
     """
 
     from ._fv import (_fv_diffusion_matrix,
