@@ -81,6 +81,9 @@ def _check_materials(self: "SteadyStateSolver") -> None:
         raise AssertionError(
             "Material cross sections must be attached to the solver.")
 
+    # Set the number of groups
+    self.n_groups = self.material_xs[0].n_groups
+
     # Check each xs set
     for xs in self.material_xs:
         # Is this a CrossSections object?

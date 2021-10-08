@@ -47,6 +47,12 @@ class SteadyStateSolver:
     def __init__(self) -> None:
         """Class constructor.
         """
+        self.n_groups: int = 0
+        self.n_precursors: int = 0
+        self.max_precursors: int = 0
+
+        self.use_precursors: bool = False
+
         # Domain objects
         self.mesh: Mesh = None
         self.discretization: SpatialDiscretization = None
@@ -56,12 +62,6 @@ class SteadyStateSolver:
         self.material_xs: List[CrossSections] = []
         self.material_src: List[MultiGroupSource] = []
         self.cellwise_xs: List[LightWeightCrossSections] = []
-
-        self.n_precursors: int = 0
-        self.max_precursors: int = 0
-
-        # Physics options
-        self.use_precursors: bool = False
 
         # Precomputed matrices
         self.L: csr_matrix = None
@@ -75,16 +75,6 @@ class SteadyStateSolver:
 
         # Precursor solution vector
         self.precursors: ndarray = None
-
-    @property
-    def n_groups(self) -> int:
-        """Get the number of energy groups.
-
-        Returns
-        -------
-        int
-        """
-        return self.material_xs[0].n_groups
 
     def initialize(self) -> None:
         """Initialize the solver.
@@ -253,5 +243,5 @@ class SteadyStateSolver:
     def _check_inputs(self) -> None:
         self._check_mesh()
         self._check_discretization()
-        self._check_boundaries()
         self._check_materials()
+        self._check_boundaries()
