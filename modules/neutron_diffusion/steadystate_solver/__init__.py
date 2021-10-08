@@ -71,7 +71,7 @@ class SteadyStateSolver:
 
         # Scalar flux solution vector
         self.phi: ndarray = None
-        self.phi_uk_man: UnknownManager = UnknownManager()
+        self.phi_uk_man: UnknownManager = None
 
         # Precursor solution vector
         self.precursors: ndarray = None
@@ -83,7 +83,7 @@ class SteadyStateSolver:
         sd = self.discretization
 
         # Initialize phi information
-        self.phi_uk_man.clear()
+        self.phi_uk_man = UnknownManager()
         self.phi_uk_man.add_unknown(self.n_groups)
         self.phi = np.zeros(sd.n_dofs(self.phi_uk_man))
 
