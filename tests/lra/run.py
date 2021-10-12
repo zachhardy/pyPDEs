@@ -107,11 +107,15 @@ solver.t_final = 3.0
 solver.dt = 0.01
 solver.method = "TBDF2"
 
+solver.adaptivity = True
+solver.refine_level = 0.1
+solver.coarsen_level = 0.01
+
 # Output informations
 solver.write_outputs = True
 solver.output_directory = \
     os.path.join(abs_path, "outputs")
 
 # Run the problem
-solver.initialize()
+solver.initialize(verbose=1)
 solver.execute(verbose=1)
