@@ -18,63 +18,8 @@ FEBasis = Tuple[List[poly1d], List[poly1d]]
 
 class SlabFEView(CellFEView):
     """Finite element slab view.
-
-    Attributes
-    ----------
-    degree : int
-        The finite element polynomial degree.
-    face_node_mapping : List[List[int]]
-        A map the maps each face node ID to its corresponding cell node.
-
-        The outer list corresponds to the faces of the cells and
-        the inner list corresponds to the vertices on each face.
-
-        face_node_mapping[face_id][i] will return the cell node ID
-        corresponding to node `i` on face `face_id`.
-    node_ids : List[int]
-        The IDs of the nodes that live on the cell used to construct
-        this object.
-    nodes : List[Vector]
-        The coordinates of the nodes that live on the cell used to
-        construct this object.
-    quadrature : Quadrature
-        A dim-dimensional quadrature formula.
-    face_quadrature : Quadrature
-        A (dim-1)-dimensional quadrature formula.
-    shape_values : ndarray (n_nodes, n_qpoints)
-        All shape functions evaluated at all quadrature points.
-    grad_shape_values : ndarray (n_nodes, n_qpoints)
-        All shape function gradients evaluated at all quadrature points.
-        Note that this entries are of type Vector.
-    intV_shapeI : ndarray (n_nodes,)
-        Integrals of each shape function over the cell.
-    intV_shapeI_shapeJ : ndarray (n_nodes, n_nodes)
-        Integrals of shape function i times shape function j
-        for i, j = 0, ..., n_nodes over the cell.
-    intV_gradI_gradJ : ndarray (n_nodes, n_nodes)
-        Integrals of shape function i gradient dotted with
-        shape function j gradient for i, j = 0, ..., n_nodes
-        over the cell.
-    intV_shapeI_gradJ : ndarray (n_nodes, n_nodes), type Vector
-        Integrals of shape function i times shape function j gradient
-        for i, j = 0, ..., n_nodes over the cell.
-    intS_shapeI : List[ndarray (n_nodes,)]
-        Integrals of each shape function over each face.
-    intS_shapeI_shapeJ : List[ndarray (n_nodes, n_nodes)]
-        Integrals of shape function i times shape function j
-        for i, j = 0, ..., n_nodes over each face.
-    intS_shapeI_gradJ : List[ndarray (n_nodes, n_nodes)], type Vector
-        Integrals of shape function i times shape function gradient j
-        for i, j = 0, ..., n_nodes over each face.
-    coord_sys : {"CARTESIAN", "CYLINDRICAL", "SPHERICAL"}
-        The coordinate system of the cell.
-    v0 : Vector
-        The left vertex of the slab cell. This is used
-        for mapping between the reference and real cell.
-    h : float
-        The cell Jacobian, which is simply the cell width
-        divided by the quadrature width.
     """
+
     def __init__(self, fe: 'PiecewiseContinuous',
                  quadrature: LineQuadrature,
                  cell: Cell) -> None:

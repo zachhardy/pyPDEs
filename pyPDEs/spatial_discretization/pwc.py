@@ -12,30 +12,6 @@ from pyPDEs.spatial_discretization.views.fe_slab_view import SlabFEView
 
 class PiecewiseContinuous(SpatialDiscretization):
     """Piecwise continuous finite element discretization.
-
-    Attributes
-    ----------
-    type : str
-        The discretization type.
-    mesh : Mesh
-        The mesh being discretized.
-    dim : int
-        The dimentsion of the mesh being discretized.
-    coord_sys : {"CARTESIAN", "CYLINDER", "SPHERICAL"}
-        The coordinate system of the mesh.
-    degree : int
-        The finite element polynomial degree.
-    order : int
-        The polynomial order that should be integrated exactly
-        by quadrature formulas.
-    nodes : List[Vector]
-        A list of the node locations that define the
-        discretization.
-    fe_views : List[CellFEView]
-        A list of `CellFEView` objects that contain real-
-        to-reference mapping information, quadrature information,
-        integration routines, etc.. For more information, see
-        the `CellFEView` class or its children.
     """
 
     def __init__(self, mesh: Mesh, degree: int = 1,

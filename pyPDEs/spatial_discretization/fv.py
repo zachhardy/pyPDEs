@@ -9,17 +9,6 @@ from pyPDEs.utilities import UnknownManager, Vector
 
 class FiniteVolume(SpatialDiscretization):
     """Finite volume spatial discreatization.
-
-    Attributes
-    ----------
-    type : str
-        The discretization type.
-    mesh : Mesh
-        The mesh being discretized.
-    dim : int
-        The dimentsion of the mesh being discretized.
-    coord_sys : {"CARTESIAN", "CYLINDER", "SPHERICAL"}
-        The coordinate system of the mesh.
     """
 
     def __init__(self, mesh: Mesh) -> None:
