@@ -39,6 +39,8 @@ class PiecewiseContinuous(SpatialDiscretization):
         self.nodes: List[Vector] = None
         self.fe_views: List[CellFEView] = None
 
+        self.line_quadrature = LineQuadrature(self.order)
+
         self.create_nodes()
         self.create_cell_views()
 
@@ -132,16 +134,11 @@ class PiecewiseContinuous(SpatialDiscretization):
 
     def create_cell_views(self) -> None:
         """Create the finite element cell views."""
-        quadrature: Quadrature = None
-        face_quadrature: Quadrature = None
-        if self.mesh.type == "LINE":
-            quadrature = LineQuadrature(self.order)
-
         self.fe_views = []
         for cell in self.mesh.cells:
             if cell.cell_type == "SLAB":
                 view: CellFEView = SlabFEView(
-                    self, quadrature, cell)
+                    self, self.line_quadrature, cell)
                 self.fe_views.append(view)
             else:
                 raise NotImplementedError(

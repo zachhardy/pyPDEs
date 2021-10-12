@@ -42,7 +42,7 @@ class SlabFEView(CellFEView):
         v1 = fe.mesh.vertices[cell.vertex_ids[1]]
         self.v0: Vector = v0
 
-        domain = quadrature.domain
+        domain = quadrature.get_domain()
         self.h: float = (v1 - v0).norm() / (domain[1] - domain[0])
 
         # Node IDs and face-to-node mapping
@@ -55,7 +55,7 @@ class SlabFEView(CellFEView):
         for nid in self.node_ids:
             self.nodes.append(fe.nodes[nid])
 
-        tmp = lagrange_elements(degree, quadrature.domain)
+        tmp = lagrange_elements(degree, quadrature.get_domain())
         self._shape = tmp[0]
         self._grad_shape = tmp[1]
 
@@ -75,7 +75,7 @@ class SlabFEView(CellFEView):
         Vector
             The mapped point in the real cell.
         """
-        domain = self.quadrature.domain
+        domain = self.quadrature.get_domain()
         if not min(domain) < point.z < max(domain):
             raise ValueError(
                 f"Provided point not in volume quadrature domain.")
@@ -162,11 +162,9 @@ class SlabFEView(CellFEView):
         """
         # ======================================== Compute volume integrals
         n = self.n_nodes
-        self.intV_shapeI = [0.0 for _ in range(n)]
-        self.intV_shapeI_shapeJ = \
-            [[0.0 for _ in range(n)] for _ in range(n)]
-        self.intV_gradI_gradJ = \
-            [[0.0 for _ in range(n)] for _ in range(n)]
+        self.intV_shapeI = np.zeros(n)
+        self.intV_shapeI_shapeJ = np.zeros((n, n))
+        self.intV_gradI_gradJ = np.zeros((n, n))
         self.intV_shapeI_gradJ = \
             [[Vector() for _ in range(n)] for _ in range(n)]
 

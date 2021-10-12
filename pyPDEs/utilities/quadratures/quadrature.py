@@ -22,7 +22,7 @@ class Quadrature:
         self.order: int = order
         self.qpoints: List[Vector] = None
         self.weights: List[float] = None
-        self.domain: Tuple[float] = None  # only for 1D
+        self._domain: Tuple[float, float] = None  # only for 1D
 
     @property
     def n_qpoints(self) -> int:
@@ -33,3 +33,25 @@ class Quadrature:
         int
         """
         return len(self.qpoints)
+
+    def get_domain(self) -> Tuple[float, float]:
+        return self._domain
+
+    def set_domain(self, domain: Tuple[float, float]) -> None:
+        new_domain = domain
+        old_domain = self.get_domain()
+
+        h_new = new_domain[1] - new_domain[0]
+        h_old = old_domain[1] - old_domain[0]
+
+        assert h_new > 0.0, "Invalid quadrature range."
+        assert self.n_qpoints > 0, "Quadrature not initialized."
+
+        for i in range(self.n_qpoints):
+            f = h_new/h_old
+            self.qpoints[i].z = \
+                new_domain[0] + f*(self.qpoints[i].z - old_domain[0])
+            self.weights *= f
+        self._domain = domain
+
+

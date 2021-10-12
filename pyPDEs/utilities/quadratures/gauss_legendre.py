@@ -29,4 +29,4 @@ class GaussLegendre(Quadrature):
 
         self.qpoints = [Vector(z=pt) for pt in pts]
         self.weights = wts
-        self.domain = (-1.0, 1.0)
+        self._domain = (-1.0, 1.0)
