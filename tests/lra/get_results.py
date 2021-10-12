@@ -20,16 +20,16 @@ sim.plot_temperatures(mode=0)
 plt.show()
 
 from rom.dmd import DMD
-X = sim.create_simulation_matrix(variables="power_density")
+X = sim.create_simulation_matrix()
 
 dmd = DMD(svd_rank=10, opt=True)
 dmd.fit(X[:137], sim.times[:137])
 
-dmd1 = DMD(svd_rank=-1)
-dmd1.fit(X[136:151], sim.times[136:151])
+dmd1 = DMD(svd_rank=13)
+dmd1.fit(X[137:151], sim.times[137:151])
 
 dmd2 = DMD(svd_rank=40)
-dmd2.fit(X[150:], sim.times[150:])
+dmd2.fit(X[151:], sim.times[151:])
 
 plt.show()
 
