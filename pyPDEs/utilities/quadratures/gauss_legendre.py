@@ -10,23 +10,22 @@ class GaussLegendre(Quadrature):
     """ Gauss-Legendre 1D quadrature.
     """
 
-    def __init__(self, order: int = 2) -> None:
+    def __init__(self, n_qpoints: int = 2) -> None:
         """GaussLegendre constructor.
 
         Parameters
         ----------
-        order : int, default 2
-            The maximum monomial order the quadrature set
-            can integrate exactly. For GaussLegendre, the
-            number of points this will yield is
-            `n_qpoints = ceil(0.5 * (order + 1)`.
+        n_qpoints : int, default 2
+            The number of quadrature points and weights to
+            generate. A quadrature set with `n_qpoints` quadrature
+            points can integrate polynomials of up to degree
+            2*`n_qpoints`-1 exactly.
         """
-        super().__init__(order)
+        super().__init__(2*n_qpoints - 1)
 
         # Get the quadrature points and weights
-        n_pts = int(np.ceil((order + 1.0) / 2.0))
-        pts, wts = leggauss(n_pts)
+        pts, wts = leggauss(n_qpoints)
 
         self.qpoints = [Vector(z=pt) for pt in pts]
-        self.weights = wts
+        self.weights = list(wts)
         self._domain = (-1.0, 1.0)

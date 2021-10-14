@@ -16,7 +16,7 @@ class Quadrature:
         Parameters
         ----------
         order : int, default 2
-            The maximum monomial order the quadrature set
+            The maximum polynomial order the quadrature set
             can integrate exactly.
         """
         self.order: int = order
