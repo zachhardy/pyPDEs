@@ -7,7 +7,7 @@ from typing import List
 
 from pyPDEs.mesh import create_1d_mesh
 from pyPDEs.spatial_discretization import *
-from pyPDEs.material import CrossSections, IsotropicMultiGroupSource
+from pyPDEs.material import *
 from pyPDEs.utilities.boundaries import *
 
 from modules.neutron_diffusion import *
@@ -23,27 +23,31 @@ material_ids = [0, 1, 2]
 mesh = create_1d_mesh(zones, n_cells, material_ids, coord_sys="CARTESIAN")
 discretization = FiniteVolume(mesh)
 
-# Create cross sections and sources
-xs0 = CrossSections()
-xs0.read_from_xs_dict(xs_material_0_and_2)
-xs0.sigma_a_function = sigma_a_ramp_down
+# Create materials
+materials = []
+materials.append(Material("Material 0"))
+materials.append(Material("Material 1"))
+materials.append(Material("Material 2"))
 
-xs1 = CrossSections()
-xs1.read_from_xs_dict(xs_material_1)
-
-xs2 = CrossSections()
-xs2.read_from_xs_dict(xs_material_0_and_2)
+xs = [CrossSections() for _ in range(len(materials))]
+data = [xs_material_0_and_2, xs_material_1, xs_material_0_and_2]
+fcts = [sigma_a_ramp_down, None, None]
+for i in range(len(materials)):
+    xs[i].read_from_xs_dict(data[i])
+    xs[i].sigma_a_function = fcts[i]
+    materials[i].add_properties(xs[i])
 
 # Create boundary conditions
-boundaries = [ZeroFluxBoundary(xs0.n_groups),
-              ZeroFluxBoundary(xs0.n_groups)]
+n_groups = xs[0].n_groups
+boundaries = [ZeroFluxBoundary(n_groups),
+              ZeroFluxBoundary(n_groups)]
 
 # Initialize solver and attach objects
 solver = TransientSolver()
 solver.mesh = mesh
 solver.discretization = discretization
+solver.materials = materials
 solver.boundaries = boundaries
-solver.material_xs = [xs0, xs1, xs2]
 
 solver.tolerance = tolerance
 solver.max_iterations = max_iterations
