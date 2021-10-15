@@ -7,7 +7,7 @@ from copy import deepcopy
 
 from pyPDEs.mesh import create_2d_mesh
 from pyPDEs.spatial_discretization import *
-from pyPDEs.material import CrossSections, IsotropicMultiGroupSource
+from pyPDEs.material import *
 from pyPDEs.utilities.boundaries import *
 
 from modules.neutron_diffusion import *
@@ -39,16 +39,25 @@ for cell in mesh.cells:
 # Create discretizations
 discretization = FiniteVolume(mesh)
 
-# Create cross sections and sources
+# Create materials
+materials = []
+materials.append(Material("Fuel 0"))
+materials.append(Material("Fuel 1"))
+materials.append(Material("Fuel 2"))
+
 xs0 = CrossSections()
+xs1 = CrossSections()
+xs2 = CrossSections()
+
 xs0.read_from_xs_dict(xs_material_0)
+xs1.read_from_xs_dict(xs_material_0)
+xs2.read_from_xs_dict(xs_material_1)
+
 xs0.sigma_a_function = sigma_a_step
 
-xs1 = CrossSections()
-xs1.read_from_xs_dict(xs_material_0)
-
-xs2 = CrossSections()
-xs2.read_from_xs_dict(xs_material_1)
+materials[0].add_properties(xs0)
+materials[1].add_properties(xs1)
+materials[2].add_properties(xs2)
 
 # Create boundary conditions
 boundaries = [ReflectiveBoundary(xs0.n_groups),
@@ -60,8 +69,8 @@ boundaries = [ReflectiveBoundary(xs0.n_groups),
 solver = TransientSolver()
 solver.mesh = mesh
 solver.discretization = discretization
+solver.materials = materials
 solver.boundaries = boundaries
-solver.material_xs = [xs0, xs1, xs2]
 
 solver.tolerance = tolerance
 solver.max_iterations = max_iterations
