@@ -81,7 +81,7 @@ class ZeroFluxBoundary(DirichletBoundary):
         n_groups : int, default 1
             The number of components.
         """
-        super().__init__([0.0] * n_components)
+        super().__init__([0.0] * n_groups)
 
 
 __all__ = ["ReflectiveBoundary", "MarshakBoundary",
