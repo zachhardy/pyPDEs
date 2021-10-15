@@ -20,9 +20,9 @@ class Material:
     name : str
         A name for the material. This is currently unused.
     """
-    def __init__(self) -> None:
+    def __init__(self, name: str = "Generic Material") -> None:
         self.properties: Properties = []
-        self.name: str = "Generic Material"
+        self.name: str = name
 
     def add_properties(self, properties: Properties) -> None:
         """Add material properties to the material.
