@@ -3,7 +3,7 @@ from numpy import ndarray
 from typing import List, NewType
 
 from .material_property import MaterialProperty
-from .material_property import ScalarProperty, MultiGroupSource
+from .material_property import ScalarProperty, MultiGroupIsotropicSource
 from .cross_sections import CrossSections
 from .lightweight_xs import LightWeightCrossSections
 
@@ -37,5 +37,5 @@ class Material:
         self.properties.extend(properties)
 
 
-__all__ = ["Material", "ScalarProperty", "MultiGroupSource",
+__all__ = ["Material", "ScalarProperty", "MultiGroupIsotropicSource",
            "CrossSections", "LightWeightCrossSections"]
