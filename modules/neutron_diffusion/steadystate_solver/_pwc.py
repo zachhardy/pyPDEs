@@ -63,7 +63,9 @@ def _pwc_scattering_matrix(self: "SteadyStateSolver") -> csr_matrix:
     A = lil_matrix((pwc.n_dofs(uk_man),) * 2)
     for cell in self.mesh.cells:
         view = pwc.fe_views[cell.id]
-        xs = self.material_xs[cell.material_id]
+
+        xs_id = self.matid_to_xs_map[cell.material_id]
+        xs = self.material_xs[xs_id]
 
         # Loop over to/from groups
         for g in range(self.n_groups):
@@ -96,7 +98,9 @@ def _pwc_prompt_fission_matrix(self: "SteadyStateSolver") -> csr_matrix:
     A = lil_matrix((pwc.n_dofs(uk_man),) * 2)
     for cell in self.mesh.cells:
         view = pwc.fe_views[cell.id]
-        xs = self.material_xs[cell.material_id]
+
+        xs_id = self.matid_to_xs_map[cell.material_id]
+        xs = self.material_xs[xs_id]
         if not xs.is_fissile:
             continue
 
@@ -112,13 +116,13 @@ def _pwc_prompt_fission_matrix(self: "SteadyStateSolver") -> csr_matrix:
                 if self.use_precursors:
                     nu_sig_f = xs.nu_prompt_sigma_f[gp]
 
-                    # Loop over nodes
-                    for i in range(view.n_nodes):
-                        ig = pwc.map_dof(cell, i, uk_man, 0, g)
-                        for j in range(view.n_nodes):
-                            jgp = pwc.map_dof(cell, j, uk_man, 0, gp)
-                            mass_ij = view.intV_shapeI_shapeJ[i][j]
-                            A[ig, jgp] += chi * nu_sig_f * mass_ij
+                # Loop over nodes
+                for i in range(view.n_nodes):
+                    ig = pwc.map_dof(cell, i, uk_man, 0, g)
+                    for j in range(view.n_nodes):
+                        jgp = pwc.map_dof(cell, j, uk_man, 0, gp)
+                        mass_ij = view.intV_shapeI_shapeJ[i][j]
+                        A[ig, jgp] += chi * nu_sig_f * mass_ij
     return A.tocsr()
 
 
@@ -136,7 +140,9 @@ def _pwc_delayed_fission_matrix(self: "SteadyStateSolver") -> csr_matrix:
     A = lil_matrix((pwc.n_dofs(uk_man),) * 2)
     for cell in self.mesh.cells:
         view = pwc.fe_views[cell.id]
-        xs = self.material_xs[cell.material_id]
+
+        xs_id = self.matid_to_xs_map[cell.material_id]
+        xs = self.material_xs[xs_id]
         if not xs.is_fissile:
             continue
 
@@ -177,7 +183,12 @@ def _pwc_set_source(self: "SteadyStateSolver") -> ndarray:
     b = np.zeros(pwc.n_dofs(uk_man))
     for cell in self.mesh.cells:
         view = pwc.fe_views[cell.id]
-        src = self.material_src[cell.material_id]
+
+        src_id = self.matid_to_src_map[cell.material_id]
+        if src_id < 0:
+            continue
+
+        src = self.material_src[src_id]
 
         # Loop over groups
         for g in range(self.n_groups):
@@ -201,7 +212,9 @@ def _pwc_compute_precursors(self: "SteadyStateSolver") -> None:
     for cell in self.mesh.cells:
         volume = cell.volume
         view = pwc.fe_views[cell.id]
-        xs = self.material_xs[cell.material_id]
+
+        xs_id = self.matid_to_xs_map[cell.material_id]
+        xs = self.material_xs[xs_id]
         if not xs.is_fissile:
             continue
 

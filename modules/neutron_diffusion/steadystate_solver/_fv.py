@@ -44,7 +44,7 @@ def _fv_diffusion_matrix(self: "SteadyStateSolver") -> csr_matrix:
         for face in cell.faces:
             if face.has_neighbor:  # interior faces
                 nbr_cell = self.mesh.cells[face.neighbor_id]
-                nbr_xs = self.material_xs[nbr_cell.material_id]
+                nbr_xs = self.cellwise_xs[nbr_cell.id]
 
                 # Geometric quantities
                 d_pn = (cell.centroid - nbr_cell.centroid).norm()
@@ -78,7 +78,9 @@ def _fv_scattering_matrix(self: "SteadyStateSolver") -> csr_matrix:
     A = lil_matrix((fv.n_dofs(uk_man),) * 2)
     for cell in self.mesh.cells:
         volume = cell.volume
-        xs = self.material_xs[cell.material_id]
+
+        xs_id = self.matid_to_xs_map[cell.material_id]
+        xs = self.material_xs[xs_id]
 
         # Loop over groups
         for g in range(self.n_groups):
@@ -103,7 +105,9 @@ def _fv_prompt_fission_matrix(self: "SteadyStateSolver") -> csr_matrix:
     A = lil_matrix((fv.n_dofs(uk_man),) * 2)
     for cell in self.mesh.cells:
         volume = cell.volume
-        xs = self.material_xs[cell.material_id]
+
+        xs_id = self.matid_to_xs_map[cell.material_id]
+        xs = self.material_xs[xs_id]
         if not xs.is_fissile:
             continue
 
@@ -139,7 +143,9 @@ def _fv_delayed_fission_matrix(self: "SteadyStateSolver") -> csr_matrix:
     A = lil_matrix((fv.n_dofs(uk_man),) * 2)
     for cell in self.mesh.cells:
         volume = cell.volume
-        xs = self.material_xs[cell.material_id]
+
+        xs_id = self.matid_to_xs_map[cell.material_id]
+        xs = self.material_xs[xs_id]
         if not xs.is_fissile:
             continue
 
@@ -172,7 +178,12 @@ def _fv_set_source(self: "SteadyStateSolver") -> ndarray:
     b = np.zeros(fv.n_dofs(uk_man))
     for cell in self.mesh.cells:
         volume = cell.volume
-        src = self.material_src[cell.material_id]
+
+        src_id = self.matid_to_src_map[cell.material_id]
+        if src_id < 0:
+            continue
+
+        src = self.material_src[src_id]
 
         # Loop over groups
         for g in range(self.n_groups):
@@ -190,7 +201,8 @@ def _fv_compute_precursors(self: "SteadyStateSolver") -> None:
     # Loop over cells
     self.precursors *= 0.0
     for cell in self.mesh.cells:
-        xs = self.material_xs[cell.material_id]
+        xs_id = self.matid_to_xs_map[cell.material_id]
+        xs = self.material_xs[xs_id]
         if not xs.is_fissile:
             continue
 
@@ -228,7 +240,7 @@ def _fv_apply_matrix_bcs(self: "SteadyStateSolver",
     # Loop over boundary cells
     for bndry_cell_id in self.mesh.boundary_cell_ids:
         cell = self.mesh.cells[bndry_cell_id]
-        xs = self.material_xs[cell.material_id]
+        xs = self.cellwise_xs[cell.id]
 
         # Loop over faces
         for face in cell.faces:
@@ -274,7 +286,7 @@ def _fv_apply_vector_bcs(self: "SteadyStateSolver", b: ndarray) -> ndarray:
     # Loop over boundary cells
     for bndry_cell_id in self.mesh.boundary_cell_ids:
         cell = self.mesh.cells[bndry_cell_id]
-        xs = self.material_xs[cell.material_id]
+        xs = self.cellwise_xs[cell.id]
 
         # Loop over faces
         for face in cell.faces:
