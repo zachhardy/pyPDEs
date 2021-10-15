@@ -14,224 +14,114 @@ class AngularQuadrature:
     """Base class for angular quadratures.
     """
 
-    def __init__(self, n_polar: int, n_azimuthal: int = 0,
-                 quadrature_type: str = "GL") -> None:
+    def __init__(self, n: int) -> None:
         """Constructor.
 
         Parameters
         ----------
-        n_polar : int
-            This corresponds to the number of polar angles.
-        n_azimuthal : int
-            This corresponds to the number of azimuthal angles.
-        quadrature_type : str, default "GL"
-            The type of quadrature to use.
-            Currently, only Gauss-Legendre ("GL" is supported.
+        n : int
+            The number of angles to use.
         """
-        if not n_polar % 2 == 0 or n_polar == 0:
+        if not n % 2 == 0 or n == 0:
             raise ValueError("n_polar must be a positive even number.")
-        if quadrature_type not in ["GL"]:
-            raise NotImplementedError("Only Gauss-Legendre is supported.")
 
-        self.azimuthal: List[float] = []
-        self.polar: List[float] = []
-
-        self.abscissae: List[Angle] = []
+        self.mu: List[float] = []
         self.weights: List[float] = []
-        self.omegas: List[float] = []
-
-        self.ell_m_map: List["HarmonicIndex"] = []
 
         self.M: ndarray =  None
         self.D: ndarray = None
 
-        if quadrature_type == "GL":
-            self.initialize_gl(n_polar)
+        gl = GaussLegendre(n)
+        self.mu = [qpoint.z for qpoint in gl.qpoints]
+        self.weights = list(gl.weights)
 
-    def initialize_gl(self, n_polar: int) -> None:
-        """Initialize with Gauss-Legendre quadratures.
+        self._mu_half: List[float] = None
+        self._alphas: List[float] = None
+        self._betas: List[float] = None
 
-        This is only valid for 1D problems.
+    @property
+    def mu_half(self) -> List[float]:
+        """Get the edge values for the quadrature set.
+
+        Returns
+        -------
+        List[float]
         """
-        gl = GaussLegendre(n_polar)
+        if self._mu_half is None:
+            self._mu_half = [-1.0]
+            for n in range(len(self.mu)):
+                mu_half = self._mu_half[n] + self.weights[n]
+                if abs(mu_half) < 1.0e-12:
+                    mu_half = 0.0
+                self._mu_half.append(mu_half)
+        return self._mu_half
 
-        # 1D, only azumuthal angle is 0.0
-        self.azimuthal.append(0.0)
+    @property
+    def alphas(self) -> List[float]:
+        """Coefficients to preserve the constant solution.
 
-        # Compute the polar angles in radians
-        # This orders the polar angles in increasing order
-        for i in range(n_polar):
-            theta = np.pi - np.arccos(gl.qpoints[i].z)
-            self.polar.append(theta)
+        These coefficients preseve the constant solution in
+        spherical geometries and are defined on the angular
+        cell edges.
 
-        # Define the abscissae and weights
-        for i in range(len(self.polar)):
-            abscissa = Angle(self.azimuthal[0], self.polar[i])
-            self.abscissae.append(abscissa)
-            self.weights.append(gl.weights[i])
-
-        # Define the omegas
-        for qpoint in self.abscissae:
-            x = np.sin(qpoint.theta) * np.cos(qpoint.varphi)
-            y = np.sin(qpoint.theta) * np.sin(qpoint.varphi)
-            z = np.cos(qpoint.theta)
-            self.omegas.append(Vector(x, y, z))
-
-    def generate_harmonic_indices(self, scattering_order: int,
-                                  dimension: int) -> None:
-        """Generate the harmonic index list.
-
-        Parameters
-        ----------
-        scattering_order : int
-            The scattering order to use. This determines the
-            maximum value of ell.
-        dimension : int
-            The dimension of the problem. This determines the
-            values of m that are used, if any.
+        Returns
+        -------
+        List[float]
         """
-        if self.ell_m_map == []:
-            if dimension == 1:
-                for ell in range(scattering_order + 1):
-                    ind = HarmonicIndex(ell, 0)
-                    self.ell_m_map.append(ind)
-            elif dimension == 2:
-                for ell in range(scattering_order + 1):
-                    for m in range(-ell, ell, 2):
-                        if ell == 0 or m != 0:
-                            ind = HarmonicIndex(ell, m)
-                            self.ell_m_map.append(ind)
-            elif dimension == 3:
-                for ell in range(scattering_order + 1):
-                    for m in range(-ell, ell):
-                        ind = HarmonicIndex(ell, m)
-                        self.ell_m_map.append(ind)
+        if self._alphas is None:
+            self._alphas = [0.0]  # by definition
+            for n in range(len(self.mu)):
+                alpha = self._alphas[n] - 2.0*self.weights[n]*self.mu[n]
+                self._alphas.append(alpha)
+            self._alphas.append(0.0)  # by definition
+        return self._alphas
 
-    def assemble_discrete_to_moment_matrix(
-            self, scattering_order: int, dimension: int) -> None:
-        """Assembe the discrete to moment operator.
+    @property
+    def beta(self) -> List[float]:
+        """Weighted diamond difference coefficients.
 
-        Parameters
-        ----------
-        scattering_order : int
-            The scattering order to use. This determines the
-            maximum value of ell.
-        dimension : int
-            The dimension of the problem. This determines the
-            values of m that are used, if any.
+        These coefficients are used for the modified diamond
+        difference equation in spherical geometries.
+
+        Returns
+        -------
+        List[float]
         """
-        self.D = []
-        self.generate_harmonic_indices(scattering_order, dimension)
-
-        for ell_m in self.ell_m_map:
-            moment_ell_m = []
-            for n in range(len(self.abscissae)):
-                w = self.weights[n]
-                angle = self.abscissae[n]
-                Ylm_val = Y_lm(ell_m.ell, ell_m.m, angle)
-                moment_ell_m.append(Ylm_val * w)
-            self.D.append(moment_ell_m)
-        self.D = np.array(self.D)
-
-    def assemble_moment_to_discrete(
-            self, scattering_order: int, dimension: int) -> None:
-        """Assembe the moment to discrete operator.
-
-        Parameters
-        ----------
-        scattering_order : int
-            The scattering order to use. This determines the
-            maximum value of ell.
-        dimension : int
-            The dimension of the problem. This determines the
-            values of m that are used, if any.
-        """
-        self.M = []
-        self.generate_harmonic_indices(scattering_order, dimension)
-
-        norm = sum(self.weights)
-        for ell_m in self.ell_m_map:
-            moment_ell_m = []
-            for n in range(len(self.abscissae)):
-                angle = self.abscissae[n]
-                w = (2.0 * ell_m.ell + 1.0) / norm
-                Ylm_val = Y_lm(ell_m.ell, ell_m.m, angle)
-                moment_ell_m.append(Ylm_val * w)
-            self.M.append(moment_ell_m)
-        self.M = np.array(self.M)
+        if self._betas is None:
+            self._betas = []
+            for n in range(len(self.mu)):
+                mu = self.mu[n]
+                mu_l = self.mu_half[n]
+                mu_r = self.mu_half[n+1]
+                beta = (mu - mu_l) / (mu_r - mu_l)
+                self._betas.append(beta)
+        return self._betas
 
 
-class Angle:
-    def __init__(self, varphi: float, theta: float) -> None:
-        self.varphi: float = varphi
-        self.theta: float = theta
-
-
-class HarmonicIndex:
-    def __init__(self, ell: int, m: int) -> None:
-        self.ell = ell
-        self.m = m
-
-    def __eq__(self, other: "HarmonicIndex") -> bool:
-        return self.ell == other.ell and self.m == other.m
-
-
-def Y_lm(ell: int, m: int, angle: Angle) -> float:
-    """Spherical harmonic functions.
-
-    Parameters
-    ----------
-    ell : int
-    m : int
-    angle : Angle
-
-    Returns
-    -------
-    float
-        The ell, m'th spherical harmonic evaluated at
-        the specified angle.
-    """
-
-    Plm = P_lm(ell, abs(m), np.cos(angle.theta))
-    if m == 0:
-        return Plm
-    else:
-        Clm = pow(-1, abs(m))
-        Clm *= sqrt(2.0 * fac(ell - abs(m))/fac(ell + abs(m)))
-        if m < 0:
-            return Clm * Plm * np.sin(abs(m)*angle.varphi)
-        else:
-            return Clm * Plm * np.cos(m*angle.varphi)
-
-
-def P_lm(ell: int, m: int, x: float) -> float:
+def legendre(n: int, x: float) -> float:
     """Legendre polynomials.
 
     Parameters
     ----------
-    ell : int
-    m : int
+    n : int
+        The index of the Legendre polynomial.
     x : float
+        The argument of the Legendre polynomial.
 
     Returns
     -------
     float
     """
-    assert abs(m) <= ell, "abs(m) <= ell was violated."
+    if n < 0:
+        raise ValueError("Invalid Legendre polynomial index.")
+    if x < -1.0 or x > 1.0:
+        raise ValueError("Argument must lie within [-1.0, 1.0].")
 
-    if ell == 0:
+    if n == 0:
         return 1.0
-    elif ell == 1:
-        if m == 0:
-            return x
-        elif m == 1:
-            return -sqrt(1.0 - x**2)
+    elif n == 1:
+        return x
     else:
-        if ell == m:
-            c = -(2*ell -1) * sqrt(1.0 - x**2)
-            return c * P_lm(ell-1, m-1, x)
-        else:
-            Pml = (2*ell - 1)*x * P_lm(ell-1, m, x)
-            Pml -= (ell + m - 1) * P_lm(ell-2, m, x)
-            return Pml / (ell - m)
-
+      rhs = (2.0 * n + 1) * x * legendre(n - 1, x)
+      rhs -= n * legendre(n - 2, x)
+      return rhs / (n + 1)
