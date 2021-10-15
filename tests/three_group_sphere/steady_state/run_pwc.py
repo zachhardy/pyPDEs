@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 from pyPDEs.mesh import create_1d_mesh
 from pyPDEs.spatial_discretization import *
-from pyPDEs.material import CrossSections, MultiGroupSource
+from pyPDEs.material import CrossSections, MultiGroupIsotropicSource
 from pyPDEs.utilities.boundaries import *
 
 from modules.neutron_diffusion import *
@@ -15,7 +15,7 @@ discretization = PiecewiseContinuous(mesh, degree=2)
 # Create cross sections and sources
 xs = CrossSections()
 xs.read_from_xs_file('xs/three_grp_us.cxs', density=0.05)
-src = MultiGroupSource(np.ones(xs.n_groups))
+src = MultiGroupIsotropicSource(np.ones(xs.n_groups))
 
 # Create boundary conditions
 boundaries = [ReflectiveBoundary(xs.n_groups),

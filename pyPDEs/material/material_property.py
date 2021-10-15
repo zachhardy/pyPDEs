@@ -40,7 +40,7 @@ class ScalarProperty(MaterialProperty):
         self.value: float = value
 
 
-class MultiGroupSource(MaterialProperty):
+class MultiGroupIsotropicSource(MaterialProperty):
     """Multi-group source for neutronics.
 
     Attributes
@@ -56,8 +56,8 @@ class MultiGroupSource(MaterialProperty):
     """
     def __init__(self, values: ndarray) -> None:
         super().__init__()
-        self.type = "MULTIGROUP_SOURCE"
+        self.type = "ISOTROPIC"
         self.values: ndarray = np.array(values)
         self.n_groups: int = len(self.values)
 
-__all__ = ["ScalarProperty", "MultiGroupSource"]
+__all__ = ["ScalarProperty", "MultiGroupIsotropicSource"]
