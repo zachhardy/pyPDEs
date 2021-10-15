@@ -89,7 +89,7 @@ class CrossSections(MaterialProperty):
                 "must be provided.")
 
         # Compute sigma_s from transfer matrix
-        self.sigma_s = np.sum(self.transfer_matrix, axis=1)
+        self.sigma_s = np.sum(self.transfer_matrix[0], axis=1)
 
         # Enfore sigma_t = sigma_a + sigma_s
         if has_sig_a:
@@ -102,7 +102,7 @@ class CrossSections(MaterialProperty):
             self.D = (3.0 * self.sigma_t) ** (-1.0)
 
         # Compute removal cross sections
-        self.sigma_r = self.sigma_t - np.diag(self.transfer_matrix)
+        self.sigma_r = self.sigma_t - np.diag(self.transfer_matrix[0])
 
         # Set fissile
         self.is_fissile = sum(self.sigma_f) > 0.0
@@ -196,9 +196,6 @@ class CrossSections(MaterialProperty):
         self.sigma_f = np.zeros(self.n_groups)
         self.D = np.zeros(self.n_groups)
         self.B_sq = np.zeros(self.n_groups)
-
-        # Transfer matrix
-        self.transfer_matrix = np.zeros((self.n_groups,) * 2)
 
         # Fission neutron production data
         self.nu = np.zeros(self.n_groups)

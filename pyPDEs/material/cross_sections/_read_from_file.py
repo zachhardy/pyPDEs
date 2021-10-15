@@ -34,16 +34,17 @@ def read_from_xs_file(self: "CrossSections", filename: str,
             words = f[ln + 1].split()
         ln += 1
 
-    def read_transfer_matrix(key, xs, f, ln):
+    def read_transfer_matrix(key, matrix, f, ln):
         words = f[ln + 1].split()
         while words[0] != f"{key}_END":
             ln += 1
             if words[0] == "M_GPRIME_G_VAL":
-                if words[1] == "0":
-                    gprime = int(words[2])
-                    group = int(words[3])
-                    value = float(words[4])
-                    xs[gprime][group] = value
+                m = int(words[1])
+                gprime = int(words[2])
+                group = int(words[3])
+                value = float(words[4])
+                if m < self.n_moments:
+                    matrix[m][gprime][group] = value
             words = f[ln + 1].split()
         ln += 1
 
@@ -80,7 +81,14 @@ def read_from_xs_file(self: "CrossSections", filename: str,
                 self.n_groups = int(line[1])
                 self.initialize_groupwise_data()
 
+            if line[0] == "NUM_MOMENTS":
+                assert self.n_groups > 0
+                self.n_moments = int(line[1])
+                self.transfer_matrix = \
+                    np.zeros((self.n_moments, self.n_groups, self.n_groups))
+
             if line[0] == "NUM_PRECURSORS":
+                assert self.n_groups > 0
                 self.n_precursors = int(line[1])
                 if self.n_precursors > 0:
                     self.initialize_precursor_data()

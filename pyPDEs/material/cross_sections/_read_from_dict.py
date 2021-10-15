@@ -20,6 +20,7 @@ def read_from_xs_dict(
     """
     not_found = "must be provided"
     incompat_w_G = "is incompatible with n_groups"
+    incompat_w_M = "is incompatible with n_moments"
     incompat_w_J = "is incompatible with n_precursors"
 
     # Get number of groups
@@ -27,6 +28,13 @@ def read_from_xs_dict(
     if not self.n_groups:
         raise KeyError(f"n_groups {not_found}.")
     self.initialize_groupwise_data()
+
+    # Get number of moments
+    self.n_moments = xs.get("n_moments")
+    if not self.n_moments:
+        self.n_moments = 1
+    self.transfer_matrix = \
+        np.zeros((self.n_moments, self.n_groups, self.n_groups))
 
     # Get number of precursors
     self.n_precursors = xs.get("n_precursors")
@@ -63,9 +71,12 @@ def read_from_xs_dict(
     # Get transfer matrix
     if "transfer_matrix" in xs:
         trnsfr = np.array(xs.get("transfer_matrix"))
-        if trnsfr.shape != (self.n_groups,) * 2:
-            raise ValueError(
-                f"transfer_matrix {incompat_w_G}.")
+        if trnsfr.shape == (self.n_groups,) * 2:
+            trnsfr = trnsfr.reshape(1, self.n_groups, self.n_groups)
+        if len(trnsfr) != self.n_moments:
+            raise ValueError(f"transfer_matrix {incompat_w_M}.")
+        if not trnsfr.shape[1] == trnsfr.shape[2] == self.n_groups:
+            raise ValueError(f"transfer_matrix {incompat_w_G}.")
         self.transfer_matrix = density * trnsfr
 
     # Get diffusion coefficient or set to default
