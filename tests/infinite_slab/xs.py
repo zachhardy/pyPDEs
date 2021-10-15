@@ -22,7 +22,7 @@ def sigma_a_ramp_down(g: int, x: List[float], sigma_a: float) -> float:
         return sigma_a
 
 
-def sigma_a_fast_ramp_up(g: int, x: List[float], sigma_a: float) -> float:
+def sigma_a_fast_ramp_down(g: int, x: List[float], sigma_a: float) -> float:
     t = x[0]
     if g == 1 and 0.0 <= t <= 0.01:
         return sigma_a * (1.0 - t/0.01 * 0.05)
@@ -74,6 +74,6 @@ xs_material_1 = \
 tolerance = 1.0e-12
 max_iterations = int(1.0e4)
 
-__all__ = ["sigma_a_ramp_up", "sigma_a_ramp_down", "sigma_a_fast_ramp_up",
+__all__ = ["sigma_a_ramp_up", "sigma_a_ramp_down", "sigma_a_fast_ramp_down",
            "xs_material_0_and_2", "xs_material_1", "tolerance",
            "max_iterations"]
