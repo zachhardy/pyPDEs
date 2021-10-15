@@ -43,7 +43,7 @@ def read_from_xs_file(self: "CrossSections", filename: str,
                 gprime = int(words[2])
                 group = int(words[3])
                 value = float(words[4])
-                if m < self.n_moments:
+                if m < len(matrix):
                     matrix[m][gprime][group] = value
             words = f[ln + 1].split()
         ln += 1
@@ -86,7 +86,7 @@ def read_from_xs_file(self: "CrossSections", filename: str,
                 M = int(line[1])
                 self.scattering_order = M - 1
                 self.transfer_matrix = \
-                    np.zeros((self.n_moments, self.n_groups, self.n_groups))
+                    np.zeros((M, self.n_groups, self.n_groups))
 
             if line[0] == "NUM_PRECURSORS":
                 assert self.n_groups > 0
