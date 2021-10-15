@@ -19,6 +19,11 @@ class SteadyStateSolver:
     """Steady state neutron transport solver.
     """
 
+    from ._input_checks import (_check_mesh,
+                                _check_discretization,
+                                _check_materials,
+                                _check_boundaries)
+
     def __init__(self) -> None:
         """Constructor.
         """
@@ -40,7 +45,7 @@ class SteadyStateSolver:
 
         # Materials information
         self.material_xs: List[CrossSections] = []
-        self.material_src: List[MultiGroupSource] = []
+        self.material_src: List[IsotropicMultiGroupSource] = []
         self.cellwise_xs: List[LightWeightCrossSections] = []
 
         # Unknown managers
@@ -53,10 +58,17 @@ class SteadyStateSolver:
         self.psi: ndarray = None
         self.precursors: ndarray = None
 
+        # Iteration parameters
+        self.tolerance: float = 1.0e-8
+        self.max_iterations: int = 500
+
     def initialize(self) -> None:
         """Initialize the neutron transport solver.
         """
-        pass
+        self._check_inputs()
 
     def _check_inputs(self) -> None:
-        pass
+        self._check_mesh()
+        self._check_discretization()
+        self._check_materials()
+        self._check_boundaries()

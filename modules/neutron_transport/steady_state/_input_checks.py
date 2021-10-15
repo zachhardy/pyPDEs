@@ -1,7 +1,7 @@
 import numpy as np
 
-from pyPDEs.material import CrossSections, MultiGroupSource
-from ..boundaries import *
+from pyPDEs.material import CrossSections, IsotropicMultiGroupSource
+from pyPDEs.utilities.boundaries import *
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -17,14 +17,9 @@ def _check_mesh(self: "SteadyStateSolver") -> None:
             "There must be a mesh attached to the solver.")
 
     # Is it a valid mesh?
-    if self.mesh.dim > 1:
+    if self.mesh.dim > 2:
         raise NotImplementedError(
-            "Only 1D meshes are implemented.")
-
-    if self.mesh.coord_sys not in ["CARTESIAN", "SPHERICAL"]:
-        raise NotImplementedError(
-            "Only Cartesian and spherical coordinate systems "
-            "are supported.")
+            "Only 1D and 2D meshes are implemented.")
 
 
 def _check_discretization(self: "SteadyStateSolver") -> None:
@@ -36,10 +31,10 @@ def _check_discretization(self: "SteadyStateSolver") -> None:
             "There must be a discretization attached to the solver.")
 
     # Is it a supported discretization type?
-    if self.discretization.type not in ["FV"]:
+    if self.discretization.type not in ["FV", "PWC"]:
         raise NotImplementedError(
-            "Only finite volume spatial discretizations "
-            "are implemented.")
+            "Only finite volume and piecewise continuous spatial "
+            "discretizations are implemented.")
 
 
 def _check_boundaries(self: "SteadyStateSolver") -> None:
@@ -62,74 +57,102 @@ def _check_boundaries(self: "SteadyStateSolver") -> None:
             "There must be 4 boundary conditions for 2D problems.")
 
     # Do the boundary components agree with n_groups?
-    bc_types = ["ISOTROPIC", "ANGULAR", "VACUUM", "REFLECTIVE"]
     for b, bc in enumerate(self.boundaries):
         error = False
 
-        if bc.type not in bc_types:
-            raise NotImplementedError(f"Invalid boundary type.")
-
-        if bc.type == "ISOTROPIC":
-            bc: IncidentIsotropicFlux = bc
+        if hasattr(bc, "values"):
             if len(bc.values) != self.n_groups:
-                raise ValueError(
-                    f"There must be a value provided for all "
-                    f"{self.n_groups} groups.")
+                error = True
+        if hasattr(bc, "a"):
+            vals = [bc.a, bc.b, bc.f]
+            if any([len(v) != self.n_groups for v in vals]):
+                error = True
 
-        if bc.type == "ANGULAR":
-            bc: IncidentAngularFlux = bc
-            if len(bc.values) != self.quadrature.n_angles:
-                raise ValueError(
-                    f"There must be group-wise values provided for "
-                    f"all {self.quadrature.n_angles} angles.")
-            for n in range(self.quadrature.n_angles):
-                if len(bc.values[n]) != self.n_groups:
-                    raise ValueError(
-                        f"There must be a value provided for each "
-                        f"{self.n_groups} groups for each of the "
-                        f"{self.quadrature.n_angles} angles.")
+        if error:
+            raise AssertionError(
+                f"Invalid number of components found in boundary {b}.")
 
 
 def _check_materials(self: "SteadyStateSolver") -> None:
     """Ensure valid material properties are attached.
     """
     # Are there materials?
-    if len(self.material_xs) == 0:
+    if len(self.materials) == 0:
         raise AssertionError(
-            "Material cross sections must be attached to the solver.")
+            "Material must be attached to the solver.")
+
+    # Get number of materials and material IDs
+    n_materials = len(self.materials)
+    material_ids = \
+        np.unique([cell.material_id for cell in self.mesh.cells])
+
+    # Clear material xs and sources
+    self.material_xs.clear()
+    self.material_src.clear()
+    self.matid_to_xs_map = [-1 for _ in range(n_materials)]
+    self.matid_to_src_map = [-1 for _ in range(n_materials)]
+
+    # Loop over material IDs
+    for mat_id in material_ids:
+        if mat_id < 0 or mat_id >= n_materials:
+            raise ValueError("Invalid material ID encountered.")
+
+        # Get the material for this material ID
+        material = self.materials[mat_id]
+
+        # Loop over properties
+        found_xs = False
+        for prop in material.properties:
+
+            # Get cross sections
+            if prop.type == "XS":
+                self.material_xs.append(prop)
+                self.matid_to_xs_map[mat_id] = len(self.material_xs) - 1
+                found_xs = True
+
+            # Get sources
+            if prop.type == "ISOTROPIC":
+                self.material_src.append(prop)
+                self.matid_to_src_map[mat_id] = len(self.material_src) - 1
+
+        # Check that cross sections were found
+        if not found_xs:
+            raise ValueError("Each material must have cross sections.")
+
+        # Check sources
+        xs_id = self.matid_to_xs_map[mat_id]
+        src_id = self.matid_to_src_map[mat_id]
+
+        xs = self.material_xs[xs_id]
+        if src_id >= 0:
+            src = self.material_src[src_id]
+            if xs.n_groups != len(src.values):
+                raise ValueError(
+                    "Number of isotropic multi-group source values "
+                    "does not agree with the number of groups in the "
+                    "cross section set.")
+
+    # Check for material compatibility
+    n_groups = self.material_xs[0].n_groups
+    for xs in self.material_xs:
+        if xs.n_groups != n_groups:
+            raise ValueError(
+                "All cross sections must have the same number "
+                "of groups.")
 
     # Set the number of groups
     self.n_groups = self.material_xs[0].n_groups
 
-    # Check each xs set
+    # Set the precursor counts
+    self.n_precursors = 0
+    self.max_precursors = 0
     for xs in self.material_xs:
-        # Is this a CrossSections object?
-        if not isinstance(xs, CrossSections):
-            raise TypeError(
-                "All items in the material_xs list must be of "
-                "type CrossSections.")
+        # Increment the precursor count
+        self.n_precursors += xs.n_precursors
 
-        # Do the group structures agree?
-        if xs.n_groups != self.n_groups:
-            raise AssertionError(
-                "All cross section sets must have the same number "
-                "of groups.")
+        # Set the max precursor per material
+        if xs.n_precursors > self.max_precursors:
+            self.max_precursors = xs.n_precursors
 
-    # Check the material sources
-    for src in self.material_src:
-        # Is this a MultiGroupSource object?
-        if not isinstance(src, MultiGroupSource):
-            raise TypeError(
-                "All items in the material_src list must be of "
-                "type MultiGroupSource.")
-
-        # Do the group structures agree?
-        if len(src.values) != self.n_groups:
-            raise AssertionError(
-                "All source must have the same number of groups "
-                "as the cross section sets.")
-
-    n_srcs_to_add = len(self.material_xs) - len(self.material_src)
-    for _ in range(n_srcs_to_add):
-        src = MultiGroupSource(np.zeros(self.n_groups))
-        self.material_src += [src]
+    if self.n_precursors == 0:
+        self.use_precursors = False
