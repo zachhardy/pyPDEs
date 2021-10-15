@@ -9,15 +9,15 @@ class ReflectiveBoundary(NeumannBoundary):
     This imposes a zero Neumann boundary.
     """
 
-    def __init__(self, n_components: int = 1) -> None:
+    def __init__(self, n_groups: int = 1) -> None:
         """Constructor.
 
         Parameters
         ----------
-        n_components : int, default 1
-            The number of components.
+        n_groups : int, default 1
+            The number of groups.
         """
-        super().__init__(0.0, n_components)
+        super().__init__([0.0] * n_groups)
 
 
 class MarshakBoundary(RobinBoundary):
@@ -29,7 +29,7 @@ class MarshakBoundary(RobinBoundary):
     f = 2.0 * f^m, where f^m is the incident current
     at the boundary.
     """
-    def __init__(self, j_hat: List[float], n_components: int = 1) -> None:
+    def __init__(self, j_hat: List[float]) -> None:
         """
         Constructor.
 
@@ -39,13 +39,14 @@ class MarshakBoundary(RobinBoundary):
             The incident current. This gets multiplied
             by two as part of the defintion of a Marshak
             boundary condition.
-        n_components : int, default 1
-            The number of components.
         """
         if isinstance(j_hat, float):
-            f = [j_hat] * n_components
-        f = [2.0 * f[i] for i in range(len(f))]
-        super().__init__(-0.5, 1.0, f, n_components)
+            j_hat = [j_hat]
+
+        a = [-0.5 for i in range(len(j_hat))]
+        b = [1.0 for i in range(len(j_hat))]
+        f = [2.0 * j_hat[i] for i in range(len(j_hat))]
+        super().__init__(a, b, f)
 
 
 class VacuumBoundary(MarshakBoundary):
@@ -55,15 +56,15 @@ class VacuumBoundary(MarshakBoundary):
     zero incident current.
     """
 
-    def __init__(self, n_components: int = 1) -> None:
+    def __init__(self, n_groups: int = 1) -> None:
         """Constructor.
 
         Parameters
         ----------
-        n_components : int, default 1
+        n_groups : int, default 1
             The number of components.
         """
-        super().__init__(0.0, n_components)
+        super().__init__([0.0] * n_groups)
 
 
 class ZeroFluxBoundary(DirichletBoundary):
@@ -72,15 +73,15 @@ class ZeroFluxBoundary(DirichletBoundary):
     This imposes a zero Dirichlet boundary.
     """
 
-    def __init__(self, n_components: int = 1) -> None:
+    def __init__(self, n_groups: int = 1) -> None:
         """Constructor.
 
         Parameters
         ----------
-        n_components : int, default 1
+        n_groups : int, default 1
             The number of components.
         """
-        super().__init__(0.0, n_components)
+        super().__init__([0.0] * n_components)
 
 
 __all__ = ["ReflectiveBoundary", "MarshakBoundary",
