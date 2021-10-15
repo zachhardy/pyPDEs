@@ -45,25 +45,20 @@ materials.append(Material("Fuel 0"))
 materials.append(Material("Fuel 1"))
 materials.append(Material("Fuel 2"))
 
-xs0 = CrossSections()
-xs1 = CrossSections()
-xs2 = CrossSections()
-
-xs0.read_from_xs_dict(xs_material_0)
-xs1.read_from_xs_dict(xs_material_0)
-xs2.read_from_xs_dict(xs_material_1)
-
-xs0.sigma_a_function = sigma_a_step
-
-materials[0].add_properties(xs0)
-materials[1].add_properties(xs1)
-materials[2].add_properties(xs2)
+xs = [CrossSections() for _ in range(len(materials))]
+data = [xs_material_0, xs_material_0, xs_material_1]
+fcts = [sigma_a_step, None, None]
+for i in range(len(materials)):
+    xs[i].read_from_xs_dict(data[i])
+    xs[i].sigma_a_function = fcts[i]
+    materials[i].add_properties(xs[i])
 
 # Create boundary conditions
-boundaries = [ReflectiveBoundary(xs0.n_groups),
-              VacuumBoundary(xs0.n_groups),
-              VacuumBoundary(xs0.n_groups),
-              ReflectiveBoundary(xs0.n_groups)]
+n_groups = xs[0].n_groups
+boundaries = [ReflectiveBoundary(n_groups),
+              VacuumBoundary(n_groups),
+              VacuumBoundary(n_groups),
+              ReflectiveBoundary(n_groups)]
 
 # Initialize solver and attach objects
 solver = TransientSolver()
