@@ -63,7 +63,7 @@ class SteadyStateSolver:
         self.materials: List[Material] = []
 
         self.material_xs: List[CrossSections] = []
-        self.material_src: List[MultiGroupIsotropicSource] = []
+        self.material_src: List[IsotropicMultiGroupSource] = []
         self.matid_to_xs_map: List[int] = []
         self.matid_to_src_map: List[int] = []
         self.cellwise_xs: List[LightWeightCrossSections] = []
