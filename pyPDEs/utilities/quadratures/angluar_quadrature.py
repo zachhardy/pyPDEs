@@ -19,6 +19,8 @@ class AngularQuadrature:
         if not n % 2 == 0 or n == 0:
             raise ValueError("n_polar must be a positive even number.")
 
+        self.n_angles: int = n
+
         gl = GaussLegendre(n)
         self.mu: List[float] = [p.z for p in gl.qpoints]
         self.weights: List[float] = list(gl.weights)

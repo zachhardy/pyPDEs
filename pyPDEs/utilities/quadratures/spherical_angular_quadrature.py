@@ -25,7 +25,7 @@ class SphericalAngularQuadrature(AngularQuadrature):
         """
         w = self.weights  # shorthand
         mu_half = [-1.0]  # by definition
-        for n in range(len(self.mu)):
+        for n in range(self.n_angles):
             mu_half.append(mu_half[n] + w[n])
             if abs(mu_half[n+1]) < 1.0e-14:
                 mu_half[n+1] = 0.0
@@ -47,7 +47,7 @@ class SphericalAngularQuadrature(AngularQuadrature):
 
         alpha = []
         alpha.append(0.0)  # by definition
-        for n in range(len(self.mu) - 1):
+        for n in range(self.n_angles - 1):
             alpha.append(alpha[n] - 2.0*w[n]*self.mu[n])
         alpha.append(0.0)  # by definition
 
@@ -61,7 +61,8 @@ class SphericalAngularQuadrature(AngularQuadrature):
         mu_half = self.mu_half  # shorthand
 
         beta = []
-        for n, mu in range(self.mu):
+        for n in range(self.n_angles):
+            mu = self.mu[n]
             mu_l = mu_half[n]
             mu_r = mu_half[n+1]
             beta.append((mu - mu_l) / (mu_r - mu_l))
