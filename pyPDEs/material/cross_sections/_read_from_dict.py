@@ -30,11 +30,12 @@ def read_from_xs_dict(
     self.initialize_groupwise_data()
 
     # Get number of moments
-    self.n_moments = xs.get("n_moments")
+    M = xs.get("n_moments")
     if not self.n_moments:
-        self.n_moments = 1
+        M = 1
+    self.scattering_order = M - 1
     self.transfer_matrix = \
-        np.zeros((self.n_moments, self.n_groups, self.n_groups))
+        np.zeros((M, self.n_groups, self.n_groups))
 
     # Get number of precursors
     self.n_precursors = xs.get("n_precursors")
@@ -78,6 +79,7 @@ def read_from_xs_dict(
         if not trnsfr.shape[1] == trnsfr.shape[2] == self.n_groups:
             raise ValueError(f"transfer_matrix {incompat_w_G}.")
         self.transfer_matrix = density * trnsfr
+
 
     # Get diffusion coefficient or set to default
     if "D" in xs:
