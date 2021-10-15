@@ -68,7 +68,7 @@ def _pwc_scattering_matrix(self: "SteadyStateSolver") -> csr_matrix:
         # Loop over to/from groups
         for g in range(self.n_groups):
             for gp in range(self.n_groups):
-                sig_s = xs.transfer_matrix[gp][g]
+                sig_s = xs.transfer_matrix[0][gp][g]
 
                 # Loop over nodes
                 for i in range(view.n_nodes):
