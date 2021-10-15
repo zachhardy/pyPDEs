@@ -8,7 +8,7 @@ from copy import deepcopy
 
 from pyPDEs.mesh import create_2d_mesh
 from pyPDEs.spatial_discretization import *
-from pyPDEs.material import CrossSections, IsotropicMultiGroupSource
+from pyPDEs.material import *
 from pyPDEs.utilities.boundaries import *
 
 from modules.neutron_diffusion import *
@@ -44,42 +44,39 @@ for cell in mesh.cells:
 # Create discretizations
 discretization = FiniteVolume(mesh)
 
-# Create cross sections and sources
-xs0 = CrossSections()
-xs0.read_from_xs_dict(fuel_1_with_rod)
-xs0.sigma_a_function = sigma_a_without_rod
+# Create materials
+materials = []
+materials.append(Material("Fuel 1 with Rod"))
+materials.append(Material("Fuel 1 without Rod"))
+materials.append(Material("Fuel 2 with Rod"))
+materials.append(Material("Rod Ejection Region"))
+materials.append(Material("Fuel 2 without Rod"))
+materials.append(Material("Reflector"))
 
-xs1 = CrossSections()
-xs1.read_from_xs_dict(fuel_1_without_rod)
-xs1.sigma_a_function = sigma_a_without_rod
-
-xs2 = CrossSections()
-xs2.read_from_xs_dict(fuel_2_with_rod)
-xs2.sigma_a_function = sigma_a_without_rod
-
-xs3 = CrossSections()
-xs3.read_from_xs_dict(fuel_2_with_rod)
-xs3.sigma_a_function = sigma_a_with_rod
-
-xs4 = CrossSections()
-xs4.read_from_xs_dict(fuel_2_without_rod)
-xs4.sigma_a_function = sigma_a_without_rod
-
-xs5 = CrossSections()
-xs5.read_from_xs_dict(reflector)
+xs = [CrossSections() for _ in range(len(materials))]
+data = [fuel_1_with_rod, fuel_1_without_rod,
+        fuel_2_with_rod, fuel_2_with_rod, fuel_2_without_rod,
+        reflector]
+fcts = [sigma_a_without_rod, sigma_a_without_rod, sigma_a_without_rod,
+        sigma_a_with_rod, sigma_a_without_rod, None]
+for i in range(len(materials)):
+    xs[i].read_from_xs_dict(data[i])
+    xs[i].sigma_a_function = fcts[i]
+    materials[i].add_properties(xs[i])
 
 # Create boundary conditions
-boundaries = [ReflectiveBoundary(xs0.n_groups),
-              ZeroFluxBoundary(xs0.n_groups),
-              ZeroFluxBoundary(xs0.n_groups),
-              ReflectiveBoundary(xs0.n_groups)]
+n_groups = xs[0].n_groups
+boundaries = [ReflectiveBoundary(n_groups),
+              ZeroFluxBoundary(n_groups),
+              ZeroFluxBoundary(n_groups),
+              ReflectiveBoundary(n_groups)]
 
 # Initialize solver and attach objects
 solver = TransientSolver()
 solver.mesh = mesh
 solver.discretization = discretization
+solver.materials = materials
 solver.boundaries = boundaries
-solver.material_xs = [xs0, xs1, xs2, xs3, xs4, xs5]
 
 # Iterative parameters
 solver.tolerance = 1.0e-12
