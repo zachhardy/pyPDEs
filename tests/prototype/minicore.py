@@ -7,7 +7,7 @@ from typing import List
 
 from pyPDEs.mesh import create_1d_mesh
 from pyPDEs.spatial_discretization import *
-from pyPDEs.material import CrossSections, IsotropicMultiGroupSource
+from pyPDEs.material import *
 from pyPDEs.utilities.boundaries import *
 
 from modules.neutron_diffusion import *
@@ -23,29 +23,33 @@ material_ids = [0, 1, 2, 0, 3, 0]
 mesh = create_1d_mesh(zones, n_cells, material_ids, coord_sys="CARTESIAN")
 discretization = FiniteVolume(mesh)
 
-# Create cross sections and sources
-xs0 = CrossSections()
-xs0.read_from_xs_dict(xs_vals)
+# Create materials
+materials = []
+materials.append(Material("Material 0"))
+materials.append(Material("Material 1"))
+materials.append(Material("Material 2"))
+materials.append(Material("Material 4"))
 
-xs1 = deepcopy(xs0)
-xs1.sigma_a_function = sigma_a_material_1
+xs = [CrossSections() for _ in range(len(materials))]
+fct = [None, sigma_a_material_1,
+        sigma_a_material_2, sigma_a_material_3]
 
-xs2 = deepcopy(xs0)
-xs2.sigma_a_function = sigma_a_material_2
-
-xs3 = deepcopy(xs0)
-xs3.sigma_a_function = sigma_a_material_3
+for i in range(len(materials)):
+    xs[i].read_from_xs_dict(xs_vals)
+    xs[i].sigma_a_function = fct[i]
+    materials[i].add_properties(xs[i])
 
 # Create boundary conditions
-boundaries = [VacuumBoundary(xs0.n_groups),
-              VacuumBoundary(xs0.n_groups)]
+n_groups = xs[0].n_groups
+boundaries = [VacuumBoundary(n_groups),
+              VacuumBoundary(n_groups)]
 
 # Initialize solver and attach objects
 solver = TransientSolver()
 solver.mesh = mesh
 solver.discretization = discretization
+solver.materials = materials
 solver.boundaries = boundaries
-solver.material_xs = [xs0, xs1, xs2, xs3]
 
 solver.tolerance = tolerance
 solver.max_iterations = max_iterations
