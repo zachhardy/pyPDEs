@@ -11,7 +11,8 @@ from pyPDEs.mesh import Mesh
 from pyPDEs.material import *
 from pyPDEs.spatial_discretization import *
 from pyPDEs.utilities import UnknownManager
-from pyPDEs.utilities.boundaries import *
+from pyPDEs.utilities.boundaries import Boundary
+
 
 class SteadyStateSolver:
     """Steady-state multigroup diffusion
