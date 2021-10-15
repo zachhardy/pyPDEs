@@ -60,8 +60,12 @@ class SteadyStateSolver:
         self.boundaries: List[Boundary] = []
 
         # Materials information
+        self.materials: List[Material] = []
+
         self.material_xs: List[CrossSections] = []
-        self.material_src: List[MultiGroupSource] = []
+        self.material_src: List[MultiGroupIsotropicSource] = []
+        self.matid_to_xs_map: List[int] = []
+        self.matid_to_src_map: List[int] = []
         self.cellwise_xs: List[LightWeightCrossSections] = []
 
         # Precomputed matrices
@@ -87,17 +91,6 @@ class SteadyStateSolver:
         self.phi_uk_man = UnknownManager()
         self.phi_uk_man.add_unknown(self.n_groups)
         self.phi = np.zeros(sd.n_dofs(self.phi_uk_man))
-
-        # Initialize precursor information
-        if self.use_precursors:
-            self.n_precursors = 0
-            self.max_precursors = 0
-            for xs in self.material_xs:
-                self.n_precursors += xs.n_precursors
-                if xs.n_precursors > self.max_precursors:
-                    self.max_precursors = xs.n_precursors
-        if self.n_precursors == 0:
-            self.use_precursors = False
 
         if self.use_precursors:
             n_dofs = self.n_precursors * self.mesh.n_cells
