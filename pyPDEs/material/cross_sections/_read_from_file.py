@@ -83,7 +83,8 @@ def read_from_xs_file(self: "CrossSections", filename: str,
 
             if line[0] == "NUM_MOMENTS":
                 assert self.n_groups > 0
-                self.n_moments = int(line[1])
+                M = int(line[1])
+                self.scattering_order = M - 1
                 self.transfer_matrix = \
                     np.zeros((self.n_moments, self.n_groups, self.n_groups))
 
@@ -144,7 +145,6 @@ def read_from_xs_file(self: "CrossSections", filename: str,
             if line[0] == "PRECURSOR_LAMBDA_BEGIN":
                 read_1d_xs(
                     "PRECURSOR_LAMBDA", self.precursor_lambda, lines, line_num)
-
 
             if line[0] == "PRECURSOR_YIELD_BEGIN":
                 read_1d_xs(
