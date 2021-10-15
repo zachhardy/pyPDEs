@@ -85,7 +85,7 @@ def _fv_scattering_matrix(self: "SteadyStateSolver") -> csr_matrix:
             ig = fv.map_dof(cell, 0, uk_man, 0, g)
             for gp in range(self.n_groups):
                 igp = fv.map_dof(cell, 0, uk_man, 0, gp)
-                A[ig, igp] += xs.transfer_matrix[gp][g] * volume
+                A[ig, igp] += xs.transfer_matrix[0][gp][g] * volume
     return A.tocsr()
 
 

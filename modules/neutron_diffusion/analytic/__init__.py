@@ -194,7 +194,7 @@ class AnalyticSolution:
             for gp in range(self.n_groups):
                 A[g][gp] += \
                     self.xs.chi[g] * self.xs.nu_sigma_f[gp] + \
-                    self.xs.transfer_matrix[gp][g]
+                    self.xs.transfer_matrix[0][gp][g]
             A[g] *= self.xs.velocity[g]
         return eig(A, left=True, right=True)
 
