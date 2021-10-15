@@ -15,43 +15,6 @@ if TYPE_CHECKING:
     from . import TransientSolver
 
 
-def _pwc_feedback_matrix(self: "TransientSolver") -> csr_matrix:
-    """Assemble the feedback matrix.
-
-    Returns
-    -------
-    csr_matrix (n_cells * n_groups,) * 2
-    """
-    pwc: PiecewiseContinuous = self.discretization
-    uk_man = self.phi_uk_man
-
-    T = self.temperature
-    T0 = self.initial_temperature
-
-    # Loop over cells
-    A = lil_matrix((fv.n_dofs(uk_man),) * 2)
-    for cell in self.mesh.cells:
-        view = pwc.fe_views[cell.id]
-        xs = self.material_xs[cell.material_id]
-
-        # Compute feedback coefficient
-        f = self.feedback_coeff * (sqrt(T[cell.id]) - sqrt(T0))
-
-        # Loop over groups
-        for g in range(self.n_groups):
-            if g in self.feedback_groups:
-                sig_t = xs.sigma_t(g)
-
-                # Loop over nodes
-                for i in range(view.n_nodes):
-                    ig = pwc.map_dof(cell, i, uk_man, 0, g)
-                    for j in range(view.n_nodes):
-                        jg = pwc.map_dof(cell, j, uk_man, 0, g)
-                        mass_ij = view.intV_shapeI_shapeJ[i][j]
-                        A[ig, jg] += sig_t * f * mass_ij
-    return A.tocsr()
-
-
 def _pwc_mass_matrix(self: "TransientSolver",
                      lumped: bool = True) -> csr_matrix:
     """Assemble the multigroup mass matrix.
@@ -72,7 +35,9 @@ def _pwc_mass_matrix(self: "TransientSolver",
     A = lil_matrix((pwc.n_dofs(uk_man),) * 2)
     for cell in self.mesh.cells:
         view = pwc.fe_views[cell.id]
-        xs = self.material_xs[cell.material_id]
+
+        xs_id = self.matid_to_xs_map[cell.material_id]
+        xs = self.material_xs[xs_id]
 
         # Loop over groups
         for g in range(self.n_groups):
@@ -116,7 +81,9 @@ def _pwc_precursor_substitution_matrix(self: "TransientSolver",
     for cell in self.mesh.cells:
         volume = cell.volume
         view = pwc.fe_views[cell.id]
-        xs = self.material_xs[cell.material_id]
+
+        xs_id = self.matid_to_xs_map[cell.material_id]
+        xs = self.material_xs[xs_id]
         if not xs.is_fissile:
             continue
 
@@ -165,7 +132,9 @@ def _pwc_old_precursor_source(self: "TransientSolver", m: int = 0) -> ndarray:
     b = np.zeros(pwc.n_dofs(uk_man))
     for cell in self.mesh.cells:
         view = pwc.fe_views[cell.id]
-        xs = self.material_xs[cell.material_id]
+
+        xs_id = self.matid_to_xs_map[cell.material_id]
+        xs = self.material_xs[xs_id]
         if not xs.is_fissile:
             continue
 
@@ -213,7 +182,9 @@ def _pwc_update_precursors(self: "TransientSolver", m: int = 0) -> None:
     for cell in self.mesh.cells:
         volume = cell.volume
         view = pwc.fe_views[cell.id]
-        xs = self.material_xs[cell.material_id]
+
+        xs_id = self.matid_to_xs_map[cell.material_id]
+        xs = self.material_xs[xs_id]
         if not xs.is_fissile:
             continue
 
@@ -253,7 +224,9 @@ def _pwc_compute_fission_rate(self: "TransientSolver") -> None:
     for cell in self.mesh.cells:
         volume = cell.volume
         view = pwc.fe_views[cell.id]
-        xs = self.material_xs[cell.material_id]
+
+        xs_id = self.matid_to_xs_map[cell.material_id]
+        xs = self.material_xs[xs_id]
         if not xs.is_fissile:
             continue
 

@@ -14,36 +14,6 @@ if TYPE_CHECKING:
     from . import TransientSolver
 
 
-def _fv_feedback_matrix(self: "TransientSolver") -> csr_matrix:
-    """Assemble the feedback matrix.
-
-    Returns
-    -------
-    csr_matrix (n_cells * n_groups,) * 2
-    """
-    fv: FiniteVolume = self.discretization
-    uk_man = self.phi_uk_man
-
-    T = self.temperature
-    T0 = self.initial_temperature
-
-    # Loop over cells
-    A = lil_matrix((fv.n_dofs(uk_man),) * 2)
-    for cell in self.mesh.cells:
-        volume = cell.volume
-        xs = self.material_xs[cell.material_id]
-
-        # Compute feedback coefficient
-        f = self.feedback_coeff * (sqrt(T[cell.id]) - sqrt(T0))
-
-        # Loop over groups
-        for g in range(self.n_groups):
-            if g in self.feedback_groups:
-                ig = fv.map_dof(cell, 0, uk_man, 0, g)
-                A[ig, ig] += xs.sigma_t(g) * f * volume
-    return A.tocsr()
-
-
 def _fv_mass_matrix(self: "TransientSolver") -> csr_matrix:
     """Assemble the multigroup mass matrix.
 
@@ -58,7 +28,9 @@ def _fv_mass_matrix(self: "TransientSolver") -> csr_matrix:
     A = lil_matrix((fv.n_dofs(uk_man),) * 2)
     for cell in self.mesh.cells:
         volume = cell.volume
-        xs = self.material_xs[cell.material_id]
+
+        xs_id = self.matid_to_xs_map[cell.material_id]
+        xs = self.material_xs[xs_id]
 
         # Loop over groups
         for g in range(self.n_groups):
@@ -88,7 +60,9 @@ def _fv_precursor_substitution_matrix(self: "TransientSolver",
     A = lil_matrix((fv.n_dofs(uk_man),) * 2)
     for cell in self.mesh.cells:
         volume = cell.volume
-        xs = self.material_xs[cell.material_id]
+
+        xs_id = self.matid_to_xs_map[cell.material_id]
+        xs = self.material_xs[xs_id]
         if not xs.is_fissile:
             continue
 
@@ -134,7 +108,9 @@ def _fv_old_precursor_source(self: "TransientSolver", m: int = 0) -> ndarray:
     b = np.zeros(fv.n_dofs(uk_man))
     for cell in self.mesh.cells:
         volume = cell.volume
-        xs = self.material_xs[cell.material_id]
+
+        xs_id = self.matid_to_xs_map[cell.material_id]
+        xs = self.material_xs[xs_id]
         if not xs.is_fissile:
             continue
 
@@ -178,7 +154,8 @@ def _fv_update_precursors(self: "TransientSolver", m: int = 0) -> None:
 
     # Loop over cells
     for cell in self.mesh.cells:
-        xs = self.material_xs[cell.material_id]
+        xs_id = self.matid_to_xs_map[cell.material_id]
+        xs = self.material_xs[xs_id]
         if not xs.is_fissile:
             continue
 
@@ -215,7 +192,9 @@ def _fv_compute_fission_rate(self: "TransientSolver") -> None:
     self.fission_rate *= 0.0
     for cell in self.mesh.cells:
         volume = cell.volume
-        xs = self.material_xs[cell.material_id]
+
+        xs_id = self.matid_to_xs_map[cell.material_id]
+        xs = self.material_xs[xs_id]
         if not xs.is_fissile:
             continue
 
