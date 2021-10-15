@@ -15,7 +15,7 @@ class PiecewiseContinuous(SpatialDiscretization):
     """
 
     def __init__(self, mesh: Mesh, degree: int = 1,
-                 order: int = None) -> None:
+                 n_qpoints: int = None) -> None:
         """Piecwise continuous discretization constructor.
 
         Parameters
@@ -23,23 +23,24 @@ class PiecewiseContinuous(SpatialDiscretization):
         mesh : Mesh
         degree : int, default 1
             The finite element polynomial degree.
-        order : int, default None
-            The polynomial order to integrate exactly with
-            quadrature formulas. If None, this is set to two
-            times the degree in order to integrate
-            varphi_i * varphi_j exactly.
+        n_qpoints : int, default None
+            The number of quadrature points and weights to
+            generate. A quadrature set with `n_qpoints` quadrature
+            points can integrate polynomials of up to degree
+            2*`n_qpoints`-1 exactly.
         """
         super().__init__(mesh)
         self.type = "PWC"
         self.degree: int = degree
-        self.order: int = order
-        if self.order is None:
-            self.order = 2.0 * self.degree
+        self.n_qpoints: int = n_qpoints
+        if self.n_qpoints is None:
+            max_deg = 2*self.degree
+            self.n_qpoints = int(np.ceil((max_deg + 1)/2))
 
         self.nodes: List[Vector] = None
         self.fe_views: List[CellFEView] = None
 
-        self.line_quadrature = LineQuadrature(self.order)
+        self.line_quadrature = LineQuadrature(self.n_qpoints)
 
         self.create_nodes()
         self.create_cell_views()

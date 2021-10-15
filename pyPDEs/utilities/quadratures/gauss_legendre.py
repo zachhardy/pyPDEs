@@ -21,7 +21,7 @@ class GaussLegendre(Quadrature):
             points can integrate polynomials of up to degree
             2*`n_qpoints`-1 exactly.
         """
-        super().__init__(2*n_qpoints - 1)
+        super().__init__()
 
         # Get the quadrature points and weights
         pts, wts = leggauss(n_qpoints)

@@ -10,16 +10,9 @@ class Quadrature:
     """Base class for quadratures.
     """
 
-    def __init__(self, order: int = 2) -> None:
+    def __init__(self) -> None:
         """Quadrature constructor.
-
-        Parameters
-        ----------
-        order : int, default 2
-            The maximum polynomial order the quadrature set
-            can integrate exactly.
         """
-        self.order: int = order
         self.qpoints: List[Vector] = None
         self.weights: List[float] = None
         self._domain: Tuple[float, float] = None  # only for 1D
