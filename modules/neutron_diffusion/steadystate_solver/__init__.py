@@ -99,7 +99,8 @@ class SteadyStateSolver:
         # Initialize cell-wise cross sections
         self.cellwise_xs.clear()
         for cell in self.mesh.cells:
-            xs = self.material_xs[cell.material_id]
+            xs_id = self.matid_to_xs_map[cell.material_id]
+            xs = self.material_xs[xs_id]
             self.cellwise_xs += [LightWeightCrossSections(xs)]
 
         # Precompute matrices
