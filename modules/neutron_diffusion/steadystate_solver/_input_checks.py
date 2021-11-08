@@ -144,26 +144,6 @@ def _check_materials(self: "SteadyStateSolver") -> None:
     self.n_groups = self.material_xs[0].n_groups
 
     # Set the precursor counts
-    self.n_precursors = 0
-    self.max_precursors = 0
-    for xs in self.material_xs:
-        # Increment the precursor count
-        self.n_precursors += xs.n_precursors
-
-        # Set the max precursor per material
-        if xs.n_precursors > self.max_precursors:
-            self.max_precursors = xs.n_precursors
-
-    if self.n_precursors == 0:
-        self.use_precursors = False
-
-        # Do the group structures agree?
-        if len(src.values) != self.n_groups:
-            raise AssertionError(
-                "All source must have the same number of groups "
-                "as the cross section sets.")
-
-    # Set the precursor counts
     if self.use_precursors:
         self.n_precursors = 0
         self.max_precursors = 0
@@ -175,7 +155,5 @@ def _check_materials(self: "SteadyStateSolver") -> None:
             if xs.n_precursors > self.max_precursors:
                 self.max_precursors = xs.n_precursors
 
-    n_srcs_to_add = len(self.material_xs) - len(self.material_src)
-    for _ in range(n_srcs_to_add):
-        src = MultiGroupSource(np.zeros(self.n_groups))
-        self.material_src += [src]
+    if self.n_precursors == 0:
+        self.use_precursors = False
