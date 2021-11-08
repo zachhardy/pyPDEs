@@ -622,20 +622,20 @@ class TransientSolver(KEigenvalueSolver):
             if self.use_precursors:
                 self.Fd = self.delayed_fission_matrix()
 
-            # Normalize phi to initial power conditions
-            if self.phi_norm_method is not None:
-                self.compute_fission_rate()
-                if "TOTAL" in self.phi_norm_method:
-                    self.phi *= self.power / self.compute_power()
-                elif "AVERAGE" in self.phi_norm_method:
-                    P_avg = self.average_power_density
-                    self.phi *= self.power / P_avg
-
-            # Compute fission rate and precursors
+        # Normalize phi to initial power conditions
+        if self.phi_norm_method is not None:
             self.compute_fission_rate()
-            self.power = self.compute_power()
-            if self.use_precursors:
-                self.compute_precursors()
+            if "TOTAL" in self.phi_norm_method:
+                self.phi *= self.power / self.compute_power()
+            elif "AVERAGE" in self.phi_norm_method:
+                P_avg = self.average_power_density
+                self.phi *= self.power / P_avg
+
+        # Compute fission rate and precursors
+        self.compute_fission_rate()
+        self.power = self.compute_power()
+        if self.use_precursors and self.initial_conditions is None:
+            self.compute_precursors()
 
         self.step_solutions()
 
