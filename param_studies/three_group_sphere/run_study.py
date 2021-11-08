@@ -38,10 +38,10 @@ study_name += "_ics" if with_ics else "_k"
 # Define parameter space
 parameters = {}
 if with_size:
-    densities = np.linspace(0.048, 0.052, 11)
+    densities = np.linspace(0.0495, 0.0505, 6)
     parameters["density"] = list(np.round(densities, 6))
 
-    sizes = np.linspace(5.9, 6.0, 11)
+    sizes = np.linspace(5.95, 6.05, 6)
     parameters["size"] = list(np.round(sizes, 6))
 else:
     densities = np.linspace(0.047, 0.053, 31)
@@ -77,7 +77,6 @@ ics = [lambda r: 1.0 - r**2 / rf**2,
 solver.initial_conditions = ics if with_ics else None
 solver.normalize_fission = False
 
-
 solver.t_final = 0.1
 solver.dt = 2.0e-3
 solver.stepping_method = "TBDF2"
@@ -106,12 +105,6 @@ solver.execute()
 
 # Run the study
 for n, params in enumerate(values):
-    msg = f"===== Running simulation {n} ====="
-    head = "=" * len(msg)
-    print("\n".join(["", head, msg, head]))
-    for p in range(len(params)):
-        pname = keys[p].capitalize()
-        print(f"{pname:<10}:\t{params[p]:<5}")
 
     # Setup output path
     simulation_path = os.path.join(output_path, str(n).zfill(3))
@@ -130,4 +123,13 @@ for n, params in enumerate(values):
 
     # Run the problem
     solver.initialize()
+
+    msg = f"===== Running simulation {n} ====="
+    head = "=" * len(msg)
+    print("\n".join(["", head, msg, head]))
+    for p in range(len(params)):
+        pname = keys[p].capitalize()
+        print(f"{pname:<10}:\t{params[p]:<5}")
+    print(f"{'k_eff':<10}:\t{solver.k_eff:<8.5f}")
+
     solver.execute()
