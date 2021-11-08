@@ -8,7 +8,7 @@ from typing import List
 
 from pyPDEs.mesh import create_1d_mesh
 from pyPDEs.spatial_discretization import *
-from pyPDEs.material import CrossSections, IsotropicMultiGroupSource
+from pyPDEs.material import *
 from pyPDEs.utilities.boundaries import *
 
 from modules.neutron_diffusion import *
@@ -30,8 +30,6 @@ def step_up(g, x, sigma_a) -> float:
         return sigma_a
 
 
-script_path = os.path.dirname(os.path.abspath(__file__))
-
 # Define current directory
 script_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -44,7 +42,6 @@ parameters["multiplier"] = np.round(multiplier, 6)
 keys = list(parameters.keys())
 values = list(itertools.product(*parameters.values()))
 
-
 # Create mesh and discretization
 zones = [0.0, 40.0, 200.0, 240.0]
 n_cells = [20, 80, 20]
@@ -53,26 +50,30 @@ mesh = create_1d_mesh(zones, n_cells, material_ids, coord_sys="CARTESIAN")
 discretization = FiniteVolume(mesh)
 
 # Create cross sections and sources
-xs0 = CrossSections()
-xs0.read_from_xs_dict(xs_material_0_and_2)
-xs0.sigma_a_function = step_up
+materials = []
+materials.append(Material())
+materials.append(Material())
+materials.append(Material())
 
-xs1 = CrossSections()
-xs1.read_from_xs_dict(xs_material_1)
-
-xs2 = CrossSections()
-xs2.read_from_xs_dict(xs_material_0_and_2)
+xs = [CrossSections() for _ in range(len(materials))]
+data = [xs_material_0_and_2, xs_material_1, xs_material_0_and_2]
+fcts = [step_up, None, None]
+for i in range(len(materials)):
+    xs[i].read_from_xs_dict(data[i])
+    xs[i].sigma_a_function = fcts[i]
+    materials[i].add_properties(xs[i])
 
 # Create boundary conditions
-boundaries = [ZeroFluxBoundary(xs0.n_groups),
-              ZeroFluxBoundary(xs0.n_groups)]
+n_groups = xs[0].n_groups
+boundaries = [ZeroFluxBoundary(n_groups),
+              ZeroFluxBoundary(n_groups)]
 
 # Initialize solver and attach objects
 solver = TransientSolver()
 solver.mesh = mesh
 solver.discretization = discretization
+solver.materials = deepcopy(materials)
 solver.boundaries = boundaries
-solver.material_xs = [xs0, xs1, xs2]
 
 solver.tolerance = tolerance
 solver.max_iterations = max_iterations
@@ -134,7 +135,11 @@ for n, params in enumerate(values):
                 return params[ind] * sigma_a
             else:
                 return sigma_a
-        solver.material_xs[0].sigma_a_function = function
+
+        solver.materials = deepcopy(materials)
+        for material_property in solver.materials[0].properties:
+            if isinstance(material_property, CrossSections):
+                material_property.sigma_a_function = function
 
     # Run the problem
     solver.initialize()
