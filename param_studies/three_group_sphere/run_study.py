@@ -5,7 +5,7 @@ import numpy as np
 
 from pyPDEs.mesh import create_1d_mesh
 from pyPDEs.spatial_discretization import *
-from pyPDEs.material import CrossSections
+from pyPDEs.material import *
 from pyPDEs.utilities.boundaries import *
 
 from modules.neutron_diffusion import *
@@ -55,8 +55,10 @@ values = list(itertools.product(*parameters.values()))
 mesh = create_1d_mesh([0.0, 6.0], [100], coord_sys="SPHERICAL")
 discretization = FiniteVolume(mesh)
 
+material = Material()
 xs = CrossSections()
 xs.read_from_xs_file("xs/three_grp_us.cxs", density=0.05)
+material.add_properties(xs)
 
 boundaries = [ReflectiveBoundary(np.zeros(xs.n_groups)),
               ZeroFluxBoundary(np.zeros(xs.n_groups))]
@@ -65,7 +67,7 @@ solver = TransientSolver()
 solver.mesh = mesh
 solver.discretization = discretization
 solver.boundaries = boundaries
-solver.material_xs = [xs]
+solver.materials = [material]
 solver.use_precursors = False
 
 rf = mesh.vertices[-1].z
@@ -73,6 +75,8 @@ ics = [lambda r: 1.0 - r**2 / rf**2,
        lambda r: 1.0 - r**2 / rf**2,
        lambda r: 0.0]
 solver.initial_conditions = ics if with_ics else None
+solver.normalize_fission = False
+
 
 solver.t_final = 0.1
 solver.dt = 2.0e-3
