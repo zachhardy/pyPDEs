@@ -31,8 +31,7 @@ def read_from_xs_dict(
 
     # Get number of moments
     M = xs.get("n_moments")
-    if not self.n_moments:
-        M = 1
+    M = M if M is not None else 1
     self.scattering_order = M - 1
     self.transfer_matrix = \
         np.zeros((M, self.n_groups, self.n_groups))
@@ -74,7 +73,7 @@ def read_from_xs_dict(
         trnsfr = np.array(xs.get("transfer_matrix"))
         if trnsfr.shape == (self.n_groups,) * 2:
             trnsfr = trnsfr.reshape(1, self.n_groups, self.n_groups)
-        if len(trnsfr) != self.n_moments:
+        if len(trnsfr) != self.scattering_order + 1:
             raise ValueError(f"transfer_matrix {incompat_w_M}.")
         if not trnsfr.shape[1] == trnsfr.shape[2] == self.n_groups:
             raise ValueError(f"transfer_matrix {incompat_w_G}.")

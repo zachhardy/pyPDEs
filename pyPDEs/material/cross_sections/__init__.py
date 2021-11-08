@@ -20,8 +20,8 @@ class CrossSections(MaterialProperty):
         self.type = "XS"
 
         self.n_groups: int = 0
-        self.scattering_order: int = 0
         self.n_precursors: int = 0
+        self.scattering_order: int = 0
         self.is_fissile: bool = False
 
         self.sigma_t: ndarray = []
