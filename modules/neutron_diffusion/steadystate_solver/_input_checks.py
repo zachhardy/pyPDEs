@@ -1,6 +1,6 @@
 import numpy as np
 
-from pyPDEs.material import CrossSections, MultiGroupIsotropicSource
+from pyPDEs.material import CrossSections, IsotropicMultiGroupSource
 from pyPDEs.utilities.boundaries import *
 
 from typing import TYPE_CHECKING

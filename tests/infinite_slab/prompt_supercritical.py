@@ -7,7 +7,7 @@ from typing import List
 
 from pyPDEs.mesh import create_1d_mesh
 from pyPDEs.spatial_discretization import *
-from pyPDEs.material import CrossSections, MultiGroupIsotropicSource
+from pyPDEs.material import CrossSections, IsotropicMultiGroupSource
 from pyPDEs.utilities.boundaries import *
 
 from modules.neutron_diffusion import *
