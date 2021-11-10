@@ -32,5 +32,20 @@ else:
 sim = SimulationReader(path)
 sim.read_simulation_data()
 
-sim.plot_flux_moments(0, [0, 1], [0.0, 0.05, 0.1])
+from rom.dmd import DMD
+from numpy.linalg import norm
+
+X = sim.create_simulation_matrix().T
+grid = [node.z for node in sim.nodes]
+times = sim.times
+
+dmd = DMD(svd_rank=5, sorted_eigs='real')
+dmd.fit(X)
+
+dmd.plot_modes_1D(x=grid, imaginary=True)
+dmd.plot_dynamics(t=times, logscale=True)
+dmd.plot_timestep_errors()
+dmd.plot_error_decay()
+dmd.plot_eigs()
+
 plt.show()
