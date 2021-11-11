@@ -43,7 +43,7 @@ dmd = DMD(svd_rank=5, sorted_eigs='real')
 dmd.fit(X)
 
 dmd.plot_modes_1D(x=grid, imaginary=True)
-dmd.plot_dynamics(t=times, logscale=True)
+dmd.plot_dynamics(t=times, logscale=False)
 dmd.plot_timestep_errors()
 dmd.plot_error_decay()
 dmd.plot_eigs()
