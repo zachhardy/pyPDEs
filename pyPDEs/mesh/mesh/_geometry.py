@@ -11,8 +11,9 @@ from ..face import Face
 from ...utilities import Vector
 
 
-def compute_volume(self: "Mesh", cell: Cell) -> float:
-    """Compute the volume of a cell.
+def compute_volume(self: 'Mesh', cell: Cell) -> float:
+    """
+    Compute the volume of a cell.
 
     Parameters
     ----------
@@ -40,8 +41,9 @@ def compute_volume(self: "Mesh", cell: Cell) -> float:
         dr = vtr - vbl
         return dr.x * dr.y
 
-def compute_area(self: "Mesh", face: Face) -> float:
-    """Compute the area of a cell face.
+def compute_area(self: 'Mesh', face: Face) -> float:
+    """
+    Compute the area of a cell face.
 
     Parameters
     ----------
@@ -61,15 +63,16 @@ def compute_area(self: "Mesh", face: Face) -> float:
         elif self.coord_sys == "SPHERICAL":
             return 4.0 * np.pi * v ** 2
 
-    # ======================================== 1D faces
+    # 1D faces
     elif self.dim == 2:
         # Get the 2 face vertices
         v0 = self.vertices[face.vertex_ids[0]]
         v1 = self.vertices[face.vertex_ids[1]]
         return (v1 - v0).norm()
 
-def compute_centroid(self: "Mesh", obj: Union[Cell, Face]) -> Vector:
-    """Compute the centroid of a cell, or a face.
+def compute_centroid(self: 'Mesh', obj: Union[Cell, Face]) -> Vector:
+    """
+    Compute the centroid of a cell, or a face.
 
     Parameters
     ----------

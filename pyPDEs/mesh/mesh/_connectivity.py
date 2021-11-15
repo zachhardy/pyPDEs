@@ -3,8 +3,9 @@ if TYPE_CHECKING:
     from . import  Mesh
 
 
-def establish_connectivity(self: "Mesh") -> None:
-    """Establish the cell/face connectivity.
+def establish_connectivity(self: 'Mesh') -> None:
+    """
+    Establish the cell/face connectivity.
 
     Notes
     -----
@@ -12,36 +13,36 @@ def establish_connectivity(self: "Mesh") -> None:
     there are no predefined rules to determine mesh connectivity.
     Primarily, this will be used with unstructured meshes.
     """
-    # ======================================== Vertex-cell mapping
+    # Vertex-cell mapping
     vc_map = [set()] * len(self.vertices)
     for cell in self.cells:
         for vid in cell.vertex_ids:
             vc_map[vid].add(cell.id)
 
-    # ======================================== Loop over cells
+    # Loop over cells
     cells_to_search = set()
     for cell in self.cells:
 
-        # ==================== Get neighbor cells
+        # Get neighbor cells
         cells_to_search.clear()
         for vid in cell.vertex_ids:
             for cid in vc_map[vid]:
                 if cid != cell.id:
                     cells_to_search.add(cid)
 
-        # =================================== Loop over faces
+        # Loop over faces
         for face in cell.faces:
             if face.has_neighbor:
                 continue
 
             this_vids = set(face.vertex_ids)
 
-            # ============================== Loop over neighbors
+            # Loop over neighbors
             nbr_found = False
             for nbr_cell_id in cells_to_search:
                 nbr_cell: Cell = self.cells[nbr_cell_id]
 
-                # ========================= Loop over neighbor faces
+                # Loop over neighbor faces
                 for nbr_face in nbr_cell.faces:
                     nbr_vids = set(nbr_face.vertex_ids)
 

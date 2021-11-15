@@ -9,7 +9,7 @@ from typing import List
 from .mesh import Mesh, Cell, Face
 from ..utilities import Vector
 
-__all__ = ["create_1d_mesh", "create_2d_mesh"]
+__all__ = ['create_1d_mesh', 'create_2d_mesh']
 
 
 def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
@@ -33,7 +33,7 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
     -------
     Mesh object
     """
-    # ======================================== Input checks
+    # Input checks
     if not material_ids:
         material_ids = [0]
     if coord_sys not in ["CARTESIAN", "CYLINDRICAL", "SPHERICAL"]:
@@ -47,7 +47,7 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
     mesh.type = "LINE"
     mesh.coord_sys = coord_sys
 
-    # ======================================== Define vertices
+    # Define vertices
     verts = []
     for i in range(len(zone_subdivs)):
         le, re = zone_edges[i], zone_edges[i + 1]
@@ -56,39 +56,39 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
         verts.extend(v if not verts else v[1::])
     mesh.vertices = np.array(verts, dtype=Vector)
 
-    # ======================================== Define cells
+    # Define cells
     count = 0
     n_cells = sum(zone_subdivs)
     for i in range(len(zone_subdivs)):
         for c in range(zone_subdivs[i]):
 
-            # ============================== Create cell
+            # Create cell
             cell = Cell()
             cell.id = count
             cell.cell_type = "SLAB"
             cell.coord_sys = coord_sys
             cell.material_id = material_ids[i]
 
-            # ========== Vertices numbered left-to-right
+            # Vertices numbered left-to-right
             cell.vertex_ids = [count, count + 1]
 
-            # ========== Cell geometric quantities
+            # Cell geometric quantities
             cell.volume = mesh.compute_volume(cell)
             cell.centroid = mesh.compute_centroid(cell)
             cell.width = verts[count + 1] - verts[count]
 
-            # ============================== Create faces
+            # Create faces
             for f in range(2):
                 face = Face()
 
-                # ========== Left face
+                # Left face
                 if f == 0:
                     face.vertex_ids = [count]
                     face.normal = Vector(z=-1.0)
                     face.has_neighbor = True if count > 0 else False
                     face.neighbor_id = count - 1 if count > 0 else -1
 
-                # ========== Right face
+                # Right face
                 else:
                     face.vertex_ids = [count + 1]
                     face.normal = Vector(z=1.0)
@@ -97,35 +97,36 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
                     face.neighbor_id = \
                         count + 1 if count < n_cells - 1 else -2
 
-                # ========== Face geometric quantities
+                # Face geometric quantities
                 face.area = mesh.compute_area(face)
                 face.centroid = mesh.compute_centroid(face)
 
-                # ========================= Add face to cell
+                # Add face to cell
                 cell.faces.append(face)
 
-            # ============================== Cell on boundary?
+            # Cell on boundary?
             if count == 0 or count == n_cells - 1:
                 mesh.boundary_cell_ids.append(count)
 
-            # ============================== Add cell to mesh
+            # Add cell to mesh
             mesh.cells.append(cell)
             count += 1
 
-        # ======================================== Verbose printout
+        # Verbose printout
         t_elapsed = time.time() - t_start
         if verbose:
-            print("\n***** Summary of the 1D mesh:\n")
-            print(f"Number of Cells:\t{mesh.n_cells}")
-            print(f"Number of Faces:\t{mesh.n_faces}")
-            print(f"Number of Vertices:\t{mesh.n_vertices}")
-            print(f"Mesh Creation Time:\t{t_elapsed:.4g} sec")
+            print('\n***** Summary of the 1D mesh:\n')
+            print(f'Number of Cells:\t{mesh.n_cells}')
+            print(f'Number of Faces:\t{mesh.n_faces}')
+            print(f'Number of Vertices:\t{mesh.n_vertices}')
+            print(f'Mesh Creation Time:\t{t_elapsed:.4g} sec')
     return mesh
 
 
 def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
                    verbose: bool = False) -> Mesh:
-    """Create a 2D mesh from x and y vertex locations.
+    """
+    Create a 2D mesh from x and y vertex locations.
 
     Parameters
     ----------
@@ -230,9 +231,9 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
     # ======================================== Verbose printout
     t_elapsed = time.time() - t_start
     if verbose:
-        print("\n***** Summary of the 2D mesh *****")
-        print(f"Number of Cells:\t{mesh.n_cells}")
-        print(f"Number of Faces:\t{mesh.n_faces}")
-        print(f"Number of Vertices:\t{mesh.n_vertices}")
-        print(f"Mesh Creation Time:\t{t_elapsed:.4g} sec")
+        print('\n***** Summary of the 2D mesh *****')
+        print(f'Number of Cells:\t{mesh.n_cells}')
+        print(f'Number of Faces:\t{mesh.n_faces}')
+        print(f'Number of Vertices:\t{mesh.n_vertices}')
+        print(f'Mesh Creation Time:\t{t_elapsed:.4g} sec')
     return mesh
