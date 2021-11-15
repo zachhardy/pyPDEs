@@ -10,7 +10,7 @@ from numpy import ndarray
 from simulation_reader import SimulationReader
 
 script_path = os.path.dirname(os.path.abspath(__file__))
-path = os.path.join(script_path, "outputs")
+path = os.path.join(script_path, 'outputs')
 
 sim = SimulationReader(path)
 sim.read_simulation_data()
@@ -20,7 +20,7 @@ sim.read_simulation_data()
 
 from pydmd.dmd import DMD
 from pydmd.mrdmd import MrDMD
-X = sim.create_simulation_matrix(variables="power_density")
+X = sim.create_simulation_matrix(variables='power_density')
 # X = X[:137].T
 #
 # dmd = MrDMD(DMD(svd_rank=10), max_level=5, max_cycles=1)
@@ -37,7 +37,7 @@ pod.plot_singular_values()
 
 # for i in range(pod.n_modes):
 #     plt.figure()
-#     plt.title(f"Mode {i}")
+#     plt.title(f'Mode {i}')
 #     plt.plot(sim.times, pod.amplitudes[:, i], '-*')
 #     plt.grid()
 plt.show()

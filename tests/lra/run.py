@@ -110,8 +110,7 @@ solver.coarsen_level = 0.01
 
 # Output informations
 solver.write_outputs = True
-solver.output_directory = \
-    os.path.join(abs_path, 'outputs')
+solver.output_directory = os.path.join(abs_path, 'outputs')
 
 # Run the problem
 solver.initialize(verbose=1)
