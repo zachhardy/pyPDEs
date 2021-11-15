@@ -7,20 +7,20 @@ from simulation_reader import SimulationReader
 
 
 script_path = os.path.dirname(os.path.abspath(__file__))
-base = os.path.join(script_path, "outputs/density_ics")
+base = os.path.join(script_path, 'outputs/density_ics')
 
 try:
     if len(sys.argv) != 2:
         raise AssertionError(
-            "There must be a command line argument to point to "
-            "the test case.\n")
+            'There must be a command line argument to point to '
+            'the test case.\n')
 
     if int(sys.argv[1]) > len(os.listdir(base)):
-        raise ValueError("The provided index must match a test case.")
+        raise ValueError('The provided index must match a test case.')
 
     path = os.path.join(base, sys.argv[1].zfill(3))
     if not os.path.isdir(path):
-        raise NotADirectoryError("Invalid path to test case.")
+        raise NotADirectoryError('Invalid path to test case.')
 
 except BaseException as err:
     print(); print(err.args[0]); print()
