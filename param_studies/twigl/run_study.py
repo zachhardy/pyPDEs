@@ -20,7 +20,7 @@ def setup_directory(path: str):
     if not os.path.isdir(path):
         os.makedirs(path)
     elif len(os.listdir(path)) > 0:
-        os.system(f"rm -r {path}/*")
+        os.system(f'rm -r {path}/*')
 
 
 def step(g, x, sigma_a) -> float:
@@ -36,7 +36,7 @@ script_path = os.path.dirname(os.path.abspath(__file__))
 multiplier = np.linspace(0.96, 0.99, 31)
 
 parameters = {}
-parameters["multiplier"] = np.round(multiplier, 6)
+parameters['multiplier'] = np.round(multiplier, 6)
 
 keys = list(parameters.keys())
 values = list(itertools.product(*parameters.values()))
@@ -108,36 +108,36 @@ solver.method = 'tbdf2'
 solver.write_outputs = True
 
 # Define output path
-output_path = os.path.join(script_path, "outputs")
+output_path = os.path.join(script_path, 'outputs')
 setup_directory(output_path)
 
 # Save parameters
-param_filepath = os.path.join(output_path, "params.txt")
-np.savetxt(param_filepath, np.array(values), fmt="%.8e")
+param_filepath = os.path.join(output_path, 'params.txt')
+np.savetxt(param_filepath, np.array(values), fmt='%.8e')
 
 # Run the reference problem
-msg = "===== Running reference ====="
-head = "=" * len(msg)
+msg = '===== Running reference ====='
+head = '=' * len(msg)
 print()
-print("\n".join([head, msg, head]))
+print('\n'.join([head, msg, head]))
 
-simulation_path = os.path.join(output_path, "reference")
+simulation_path = os.path.join(output_path, 'reference')
 setup_directory(simulation_path)
 solver.output_directory = simulation_path
 
 solver.initialize()
-print(f"Initial Power:\t{solver.power:.3e} W")
+print(f'Initial Power:\t{solver.power:.3e} W')
 solver.execute()
-print(f"Final Power:\t{solver.power:.3e} W")
+print(f'Final Power:\t{solver.power:.3e} W')
 
 # Run the study
 for n, params in enumerate(values):
-    msg = f"===== Running simulation {n} ====="
-    head = "=" * len(msg)
-    print("\n".join(["", head, msg, head]))
+    msg = f'===== Running simulation {n} ====='
+    head = '=' * len(msg)
+    print('\n'.join(['', head, msg, head]))
     for p in range(len(params)):
         pname = keys[p].capitalize()
-        print(f"{pname:<10}:\t{params[p]:<5}")
+        print(f'{pname:<10}:\t{params[p]:<5}')
 
     # Setup output path
     simulation_path = os.path.join(output_path, str(n).zfill(3))
@@ -145,8 +145,8 @@ for n, params in enumerate(values):
     solver.output_directory = simulation_path
 
     # Modify system parameters
-    if "multiplier" in keys:
-        ind = keys.index("multiplier")
+    if 'multiplier' in keys:
+        ind = keys.index('multiplier')
         def function(g, x, sigma_a) -> float:
             if g == 1 and x[0] > 0.0:
                 return params[ind] * sigma_a
@@ -160,6 +160,6 @@ for n, params in enumerate(values):
 
     # Run the problem
     solver.initialize()
-    print(f"Initial Power:\t{solver.power:.3e} W")
+    print(f'Initial Power:\t{solver.power:.3e} W')
     solver.execute()
-    print(f"Final Power:\t{solver.power:.3e} W")
+    print(f'Final Power:\t{solver.power:.3e} W')

@@ -17,7 +17,7 @@ from rom.dmd import DMD
 script_path = os.path.dirname(os.path.abspath(__file__))
 
 # Parse the database
-dataset = DatasetReader(f"{script_path}/outputs")
+dataset = DatasetReader(f'{script_path}/outputs')
 dataset.read_dataset()
 
 # Get the domain information
@@ -69,7 +69,7 @@ pod.fit(X_train, Y_train, verbose=True)
 offline_time = time.time() - tstart
 
 tstart = time.time()
-X_pred = pod.predict(Y_test, "cubic")
+X_pred = pod.predict(Y_test, 'cubic')
 predict_time = time.time() - tstart
 
 # Format POD predictions for DMD
@@ -90,18 +90,18 @@ for t in range(len(x_test)):
     timestep_errors.append(error)
 
 # Print aggregated DMD results
-msg = f"===== Summary of {len(errors)} POD Models ====="
-header = "=" * len(msg)
-print("\n".join(["", header, msg, header]))
-print(f"Average POD Reconstruction Error:\t{np.mean(errors):.3e}")
-print(f"Maximum POD Reconstruction Error:\t{np.max(errors):.3e}")
-print(f"Minimum POD Reconstruction Error:\t{np.min(errors):.3e}")
+msg = f'===== Summary of {len(errors)} POD Models ====='
+header = '=' * len(msg)
+print('\n'.join(['', header, msg, header]))
+print(f'Average POD Reconstruction Error:\t{np.mean(errors):.3e}')
+print(f'Maximum POD Reconstruction Error:\t{np.max(errors):.3e}')
+print(f'Minimum POD Reconstruction Error:\t{np.min(errors):.3e}')
 print()
 
 plt.figure()
-plt.xlabel(r"Time [$\mu$s]", fontsize=12)
-plt.ylabel("Relative Error [arb. units]", fontsize=12)
-plt.semilogy(times, timestep_errors, "-*b")
+plt.xlabel(r'Time [$\mu$s]', fontsize=12)
+plt.ylabel('Relative Error [arb. units]', fontsize=12)
+plt.semilogy(times, timestep_errors, '-*b')
 plt.grid(True)
 plt.show()
 
@@ -119,21 +119,21 @@ plt.show()
 # query_time = predict_time + dmd_time
 #
 # # Print aggregated DMD results
-# msg = f"===== Summary of {errors.size} DMD Models ====="
-# header = "=" * len(msg)
-# print("\n".join(["", header, msg, header]))
-# print(f"Average DMD Reconstruction Error:\t{np.mean(errors):.3e}")
-# print(f"Maximum DMD Reconstruction Error:\t{np.max(errors):.3e}")
-# print(f"Minimum DMD Reconstruction Error:\t{np.min(errors):.3e}")
+# msg = f'===== Summary of {errors.size} DMD Models ====='
+# header = '=' * len(msg)
+# print('\n'.join(['', header, msg, header]))
+# print(f'Average DMD Reconstruction Error:\t{np.mean(errors):.3e}')
+# print(f'Maximum DMD Reconstruction Error:\t{np.max(errors):.3e}')
+# print(f'Minimum DMD Reconstruction Error:\t{np.min(errors):.3e}')
 # print()
 #
-# msg = f"===== Summary of POD-DMD Model Cost ====="
-# header = "=" * len(msg)
-# print("\n".join([header, msg, header]))
-# print(f"Construction:\t\t\t{offline_time:.3e} s")
-# print(f"Prediction:\t\t\t{predict_time:.3e} s")
-# print(f"Decomposition:\t\t\t{dmd_time:.3e} s")
-# print(f"Total query cost:\t\t{query_time:.3e} s")
+# msg = f'===== Summary of POD-DMD Model Cost ====='
+# header = '=' * len(msg)
+# print('\n'.join([header, msg, header]))
+# print(f'Construction:\t\t\t{offline_time:.3e} s')
+# print(f'Prediction:\t\t\t{predict_time:.3e} s')
+# print(f'Decomposition:\t\t\t{dmd_time:.3e} s')
+# print(f'Total query cost:\t\t{query_time:.3e} s')
 # print()
 
 plt.show()

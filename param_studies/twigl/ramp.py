@@ -73,12 +73,12 @@ solver.lag_precursors = False
 # Set time stepping options
 solver.t_final = 0.5
 solver.dt = 1.0e-2
-solver.method = "tbdf"
+solver.method = 'tbdf2'
 
 # Output informations
 solver.write_outputs = True
 solver.output_directory = \
-    os.path.join(abs_path, "outputs/ramp")
+    os.path.join(abs_path, 'outputs/ramp')
 
 # Run the problem
 solver.initialize(verbose=1)
