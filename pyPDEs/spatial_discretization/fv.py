@@ -8,22 +8,25 @@ from pyPDEs.utilities import UnknownManager, Vector
 
 
 class FiniteVolume(SpatialDiscretization):
-    """Finite volume spatial discreatization.
+    """
+    Finite volume spatial discreatization.
+
+    Parameters
+    ----------
+    mesh : Mesh
     """
 
     def __init__(self, mesh: Mesh) -> None:
-        """Finite volume constructor.
-
-        Parameters
-        ----------
-        mesh : Mesh
+        """
+        Finite volume constructor.
         """
         super().__init__(mesh)
-        self.type = "FV"
+        self.type = 'fv'
 
     @property
     def n_nodes(self) -> int:
-        """Get the number of nodes in the discretization.
+        """
+        Get the number of nodes in the discretization.
 
         For finite volume discretizations, the number of nodes
         is equal to the number of cells.
@@ -36,7 +39,8 @@ class FiniteVolume(SpatialDiscretization):
 
     @property
     def grid(self) -> List[Vector]:
-        """Get the list of nodes that define the discretization.
+        """
+        Get the list of nodes that define the discretization.
 
         For finite volume discretizations, the nodes are located
         at the centroid of the cells.
@@ -50,7 +54,8 @@ class FiniteVolume(SpatialDiscretization):
     def map_dof(self, cell: Cell, node: int = 0,
                 unknown_manager: UnknownManager = None,
                 unknown_id: int = 0, component: int = 0) -> int:
-        """Map a node on a cell to a global DoF index.
+        """
+        Map a node on a cell to a global DoF index.
 
         Parameters
         ----------
@@ -78,7 +83,7 @@ class FiniteVolume(SpatialDiscretization):
             return cell.id
         num_unknowns = unknown_manager.total_components
         block_id = unknown_manager.map_unknown(unknown_id, component)
-        if unknown_manager.storage_method == "NODAL":
+        if unknown_manager.storage_method == 'nodal':
             return cell.id * num_unknowns + block_id
-        elif unknown_manager.storage_method == "BLOCK":
+        elif unknown_manager.storage_method == 'block':
             return int(self.n_nodes * block_id + cell.id)

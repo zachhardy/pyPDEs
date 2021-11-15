@@ -3,20 +3,19 @@ from .. import Vector
 
 
 class QuadrilateralQuadrature(Quadrature):
-    """Quadrature used for integrating over a quadrilateral.
+    """
+    Quadrature used for integrating over a quadrilateral.
+
+    Parameters
+    ----------
+    order : int, default 2
+        The maximum monomial order the quadrature set
+        can integrate exactly. For GaussLegendre, the
+        number of points this will yield is
+        n_qpoints = ceil(0.5 * (order + 1).
     """
 
     def __init__(self, order: int = 2) -> None:
-        """QuadrilateralQuadrature constructor.
-
-        Parameters
-        ----------
-        order : int, default 2
-            The maximum monomial order the quadrature set
-            can integrate exactly. For GaussLegendre, the
-            number of points this will yield is
-            n_qpoints = ceil(0.5 * (order + 1).
-        """
         gl_quad = GaussLegendre(order)
         n = gl_quad.n_qpoints
 

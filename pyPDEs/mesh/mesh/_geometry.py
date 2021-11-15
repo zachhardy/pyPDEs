@@ -27,15 +27,15 @@ def compute_volume(self: 'Mesh', cell: Cell) -> float:
     if self.dim == 1:
         vl = self.vertices[cell.vertex_ids[0]].z
         vr = self.vertices[cell.vertex_ids[1]].z
-        if self.coord_sys == "CARTESIAN":
+        if self.coord_sys == 'cartesian':
             return vr - vl
-        elif self.coord_sys == "CYLINDRICAL":
+        elif self.coord_sys == 'cylindrical':
             return 2.0 * np.pi * (vr ** 2 - vl ** 2)
-        elif self.coord_sys == "SPHERICAL":
+        elif self.coord_sys == 'spherical':
             return 4.0 / 3.0 * np.pi * (vr ** 3 - vl ** 3)
 
     # ======================================== Quad volumes
-    elif self.dim == 2 and cell.cell_type == "QUAD":
+    elif self.dim == 2 and cell.cell_type == 'quad':
         vbl = self.vertices[cell.vertex_ids[0]]
         vtr = self.vertices[cell.vertex_ids[2]]
         dr = vtr - vbl
@@ -56,11 +56,11 @@ def compute_area(self: 'Mesh', face: Face) -> float:
     # ======================================== 0D faces
     if self.dim == 1:
         v = self.vertices[face.vertex_ids[0]].z
-        if self.coord_sys == "CARTESIAN":
+        if self.coord_sys == 'cartesian':
             return 1.0
-        elif self.coord_sys == "CYLINDRICAL":
+        elif self.coord_sys == 'cylindrical':
             return 2.0 * np.pi * v
-        elif self.coord_sys == "SPHERICAL":
+        elif self.coord_sys == 'spherical':
             return 4.0 * np.pi * v ** 2
 
     # 1D faces

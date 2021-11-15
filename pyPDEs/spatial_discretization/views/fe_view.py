@@ -16,7 +16,8 @@ MatVec3 = List[VecVec3]
 
 
 class CellFEView:
-    """Base class for a finite element cell view.
+    """
+    Base class for a finite element cell view.
     """
 
 
@@ -61,7 +62,8 @@ class CellFEView:
 
     @property
     def n_nodes(self) -> int:
-        """Get the number of nodes the cell.
+        """
+        Get the number of nodes the cell.
 
         Returns
         -------
@@ -71,7 +73,8 @@ class CellFEView:
 
     @property
     def n_qpoints(self) -> int:
-        """Get the number of volumetric quadrature points
+        """
+        Get the number of volumetric quadrature points
 
         Returns
         -------
@@ -81,7 +84,8 @@ class CellFEView:
 
     @property
     def n_face_qpoints(self) -> int:
-        """Get the number of face quadrature points.
+        """
+        Get the number of face quadrature points.
 
         Returns
         -------
@@ -105,7 +109,7 @@ class CellFEView:
         ndarray (n_qpoints,)
         """
         if len(u) != self.n_nodes:
-            raise ValueError("u must have exactly n_nodes entries.")
+            raise ValueError('u must have exactly n_nodes entries.')
 
         vals = np.zeros(self.n_qpoints)
         for qp in range(self.n_qpoints):
@@ -129,7 +133,7 @@ class CellFEView:
         ndarray (n_qpoints,), type Vector
         """
         if len(u) != self.n_nodes:
-            raise ValueError("u must have exactly n_nodes entries.")
+            raise ValueError('u must have exactly n_nodes entries.')
 
         vals = np.zeros(self.n_qpoints)
         for qp in range(self.n_qpoints):
@@ -139,7 +143,8 @@ class CellFEView:
         return vals
 
     def map_reference_to_global(self, point: Vector) -> Vector:
-        """Map a point from the reference cell to the real cell.
+        """
+        Map a point from the reference cell to the real cell.
 
         This is an abstract method and must be implemented
         in derived classes.
@@ -156,11 +161,12 @@ class CellFEView:
         """
         cls_name = self.__class__.__name__
         raise NotImplementedError(
-            f"Subclasses must implement {cls_name}."
-            f"map_reference_to_global.")
+            f'Subclasses must implement {cls_name}.'
+            f'map_reference_to_global.')
 
     def compute_quadrature_data(self, cell: Cell) -> None:
-        """Compute the quadrature point related data.
+        """
+        Compute the quadrature point related data.
 
         This includes quantities such as the quadrature weights
         multiplied by the coordinate transformation Jacobian and
@@ -176,11 +182,12 @@ class CellFEView:
         """
         cls_name = self.__class__.__name__
         raise NotImplementedError(
-            f"Subclasses must implement {cls_name}."
-            f"compute_quadrature_data.")
+            f'Subclasses must implement {cls_name}.'
+            f'compute_quadrature_data.')
 
     def compute_integral_data(self, cell: Cell) -> None:
-        """Compute finite element integral data.
+        """
+        Compute finite element integral data.
 
         This is an abstract method and must be implemented in derived
         classes.
@@ -192,5 +199,5 @@ class CellFEView:
         """
         cls_name = self.__class__.__name__
         raise NotImplementedError(
-            f"Subclasses must implement {cls_name}."
-            f"compute_integral_data.")
+            f'Subclasses must implement {cls_name}.'
+            f'compute_integral_data.')

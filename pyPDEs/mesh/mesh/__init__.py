@@ -28,7 +28,7 @@ class Mesh:
     def __init__(self) -> None:
         self.dim: int = 0
         self.type: str = None
-        self.coord_sys: str = "CARTESIAN"
+        self.coord_sys: str = 'cartesian'
 
         self.vertices: List[Vector] = []
 

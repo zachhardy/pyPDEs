@@ -7,18 +7,17 @@ from .. import Vector
 
 
 class Quadrature:
-    """Base class for quadratures.
+    """
+    Base class for quadratures.
+
+    Parameters
+    ----------
+    order : int, default 2
+        The maximum monomial order the quadrature set
+        can integrate exactly.
     """
 
     def __init__(self, order: int = 2) -> None:
-        """Quadrature constructor.
-
-        Parameters
-        ----------
-        order : int, default 2
-            The maximum monomial order the quadrature set
-            can integrate exactly.
-        """
         self.order: int = order
         self.qpoints: List[Vector] = None
         self.weights: List[float] = None
@@ -26,7 +25,8 @@ class Quadrature:
 
     @property
     def n_qpoints(self) -> int:
-        """Get the number of quadrature points.
+        """
+        Get the number of quadrature points.
 
         Returns
         -------
@@ -44,8 +44,8 @@ class Quadrature:
         h_new = new_domain[1] - new_domain[0]
         h_old = old_domain[1] - old_domain[0]
 
-        assert h_new > 0.0, "Invalid quadrature range."
-        assert self.n_qpoints > 0, "Quadrature not initialized."
+        assert h_new > 0.0, 'Invalid quadrature range.'
+        assert self.n_qpoints > 0, 'Quadrature not initialized.'
 
         for i in range(self.n_qpoints):
             f = h_new/h_old

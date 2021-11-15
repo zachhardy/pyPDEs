@@ -1,5 +1,4 @@
 from typing import List
-
 from ..utilities import Vector
 
 __all__ = ['Cell']
@@ -56,5 +55,5 @@ class Cell:
         """
         return any([not f.has_neighbor for f in self.faces])
 
-    def __eq__(self, other: "Cell") -> bool:
+    def __eq__(self, other: 'Cell') -> bool:
         return self.id == other.id

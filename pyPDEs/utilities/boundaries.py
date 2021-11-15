@@ -1,11 +1,12 @@
-__all__ = ["Boundary", "DirichletBoundary", "NeumannBoundary",
-           "RobinBoundary"]
-
 from typing import List
+
+__all__ = ['Boundary', 'DirichletBoundary',
+           'NeumannBoundary', 'RobinBoundary']
 
 
 class Boundary:
-    """Generic boundary.
+    """
+    Generic boundary.
     """
 
     def __init__(self) -> None:
@@ -13,24 +14,23 @@ class Boundary:
 
 
 class DirichletBoundary(Boundary):
-    """Dirichlet boundary.
+    """
+    Dirichlet boundary.
 
     This imposes that the solution take a
     fixed value at the boundary.
 
     ..math:: u(x_b) = f^d.
+
+    Parameters
+    ----------
+    values : List[float]
+        The boundary value, or values.
     """
 
     def __init__(self, values: List[float]) -> None:
-        """Constructor.
-
-        Parameters
-        ----------
-        values : List[float]
-            The boundary value, or values.
-        """
         super().__init__()
-        self.type = "DIRICHLET"
+        self.type = 'dirichlet'
 
         if isinstance(values, float):
             values = [values]
@@ -38,22 +38,21 @@ class DirichletBoundary(Boundary):
 
 
 class NeumannBoundary(Boundary):
-    """Neumann boundary.
+    """
+    Neumann boundary.
 
     This imposes that the solution gradient takes
     a fixed value at the boundary.
 
     ..math:: \grad u(x_b) = f^n
+
+    Parameters
+    ----------
+    values : List[float]
     """
 
     def __init__(self, values: List[float]) -> None:
-        """Constructor.
-
-        Parameters
-        ----------
-        values : List[float]
-        """
-        self.type = "NEUMANN"
+        self.type = 'neumann'
 
         if isinstance(values, float):
             values = [values]
@@ -61,7 +60,8 @@ class NeumannBoundary(Boundary):
 
 
 class RobinBoundary(Boundary):
-    """Robin boundary.
+    """
+    Robin boundary.
 
     This is a mixed Dirichlet and Neumann condition
     that imposes that the solution times a constant
@@ -69,20 +69,18 @@ class RobinBoundary(Boundary):
     fixed value at the boundary.
 
     ..math:: a u(x_b) + b \grad u(x_b) = f^r
+
+    Parameters
+    ----------
+    a : List[float]
+    b : List[float]
+    f : List[float]
     """
 
     def __init__(self, a: List[float], b: List[float],
                  f: List[float]) -> None:
-        """Constructor.
-
-        Parameters
-        ----------
-        a : List[float]
-        b : List[float]
-        f : List[float]
-        """
         super().__init__()
-        self.type = "ROBIN"
+        self.type = 'robin'
 
         if isinstance(a, float):
             a = [a]

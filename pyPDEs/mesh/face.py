@@ -1,5 +1,4 @@
 from typing import List
-
 from ..utilities import Vector
 
 __all__ = ['Face']
@@ -30,5 +29,5 @@ class Face:
         """
         return len(self.vertex_ids)
 
-    def __eq__(self, other: "Face") -> bool:
+    def __eq__(self, other: 'Face') -> bool:
         return set(self.vertex_ids) == set(other.vertex_ids)

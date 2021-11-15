@@ -1,5 +1,3 @@
-"""Generators for orthogonal line and quad meshes."""
-
 import time
 import numpy as np
 
@@ -14,9 +12,10 @@ __all__ = ['create_1d_mesh', 'create_2d_mesh']
 
 def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
                    material_ids: List[int] = None,
-                   coord_sys: str = "CARTESIAN",
+                   coord_sys: str = 'cartesian',
                    verbose: bool = False) -> Mesh:
-    """Create a 1D non-uniform mesh.
+    """
+    Create a 1D non-uniform mesh.
 
     Parameters
     ----------
@@ -36,15 +35,15 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
     # Input checks
     if not material_ids:
         material_ids = [0]
-    if coord_sys not in ["CARTESIAN", "CYLINDRICAL", "SPHERICAL"]:
-        raise ValueError("Invalid coordinate system type.")
+    if coord_sys not in ['cartesian', 'cylindrical', 'spherical']:
+        raise ValueError('Invalid coordinate system type.')
     elif len(zone_subdivs) != len(zone_edges) - 1:
-        raise ValueError("Ambiguous combination of zone_bndrys "
-                         "and zone_subdivs.")
+        raise ValueError('Ambiguous combination of zone_bndrys '
+                         'and zone_subdivs.')
     t_start = time.time()
     mesh = Mesh()
     mesh.dim = 1
-    mesh.type = "LINE"
+    mesh.type = 'line'
     mesh.coord_sys = coord_sys
 
     # Define vertices
@@ -65,7 +64,7 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
             # Create cell
             cell = Cell()
             cell.id = count
-            cell.cell_type = "SLAB"
+            cell.cell_type = 'slab'
             cell.coord_sys = coord_sys
             cell.material_id = material_ids[i]
 
@@ -140,8 +139,8 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
     t_start = time.time()
     mesh = Mesh()
     mesh.dim = 2
-    mesh.type = "ORTHO_QUAD"
-    mesh.coord_sys = "CARTESIAN"
+    mesh.type = 'orhto_quad'
+    mesh.coord_sys = 'cartesian'
 
     # ======================================== Create vertices
     verts = []
@@ -157,7 +156,7 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
     for i in range(ny - 1):
         for j in range(nx - 1):
             cell = Cell()
-            cell.cell_type = "QUAD"
+            cell.cell_type = 'quad'
             cell.id = i * (nx - 1) + j
 
             # ========== Vertices start at the bottom left and

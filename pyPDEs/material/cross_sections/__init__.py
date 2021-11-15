@@ -9,7 +9,8 @@ XSFunc = Callable[[int, float], float]
 
 
 class CrossSections(MaterialProperty):
-    """Neutronics cross sections.
+    """
+    Neutronics cross sections.
     """
 
     from ._read_from_dict import read_from_xs_dict
@@ -17,7 +18,7 @@ class CrossSections(MaterialProperty):
 
     def __init__(self):
         super().__init__()
-        self.type = "XS"
+        self.type = 'xs'
 
         self.n_groups: int = 0
         self.n_precursors: int = 0
@@ -50,7 +51,8 @@ class CrossSections(MaterialProperty):
 
     @property
     def nu_sigma_f(self) -> ndarray:
-        """Get total nu times the fission cross sections.
+        """
+        Get total nu times the fission cross sections.
 
         Returns
         -------
@@ -60,7 +62,8 @@ class CrossSections(MaterialProperty):
 
     @property
     def nu_prompt_sigma_f(self) -> ndarray:
-        """Get prompt nu times the fission cross sections.
+        """
+        Get prompt nu times the fission cross sections.
 
         Returns
         -------
@@ -70,7 +73,8 @@ class CrossSections(MaterialProperty):
 
     @property
     def nu_delayed_sigma_f(self) -> ndarray:
-        """Get delayed nu times the fission cross sections.
+        """
+        Get delayed nu times the fission cross sections.
 
         Returns
         -------
@@ -79,15 +83,16 @@ class CrossSections(MaterialProperty):
         return self.nu_delayed * self.sigma_f
 
     def _validate_xs(self) -> []:
-        """Validate the parsed cross sections.
+        """
+        Validate the parsed cross sections.
         """
         # Ensure sigma_t or sigma_a was provided
         has_sig_t = np.sum(self.sigma_t) > 0.0
         has_sig_a = np.sum(self.sigma_a) > 0.0
         if not has_sig_t and not has_sig_a:
             raise AssertionError(
-                "Either the total or absorption cross sections "
-                "must be provided.")
+                'Either the total or absorption cross sections '
+                'must be provided.')
 
         # Compute sigma_s from transfer matrix
         self.sigma_s = np.sum(self.transfer_matrix[0], axis=1)
@@ -141,8 +146,8 @@ class CrossSections(MaterialProperty):
 
             if self.n_precursors > 0 and not has_prompt:
                 raise AssertionError(
-                    "Prompt quantities must be provided when precursors "
-                    "are present in the cross section set.")
+                    'Prompt quantities must be provided when precursors '
+                    'are present in the cross section set.')
 
             has_nu_delayed = sum(self.nu_delayed) > 0.0
             has_chi_delayed = len(self.chi_delayed) > 0
@@ -156,8 +161,8 @@ class CrossSections(MaterialProperty):
 
             if self.n_precursors > 0 and not has_delayed:
                 raise AssertionError(
-                    "Delayed quantities must be provided when precursors "
-                    "are present in the cross section set.")
+                    'Delayed quantities must be provided when precursors '
+                    'are present in the cross section set.')
 
             # Check precursor properties
             if self.n_precursors > 0:
@@ -169,12 +174,12 @@ class CrossSections(MaterialProperty):
 
                 if not has_lambda:
                     raise AssertionError(
-                        "All precursor decay constants must be strictly "
-                        "greater than zero.")
+                        'All precursor decay constants must be strictly '
+                        'greater than zero.')
                 if not has_gamma:
                     raise AssertionError(
-                        "The precursor yields must be sum to a positive "
-                        "non-zero quantity.")
+                        'The precursor yields must be sum to a positive '
+                        'non-zero quantity.')
 
             # Compute total from prompt and delayed
             if has_prompt and has_delayed:
@@ -187,7 +192,8 @@ class CrossSections(MaterialProperty):
                                 self.chi_delayed[:, j]
 
     def initialize_groupwise_data(self) -> None:
-        """Initialize the group-wise only data.
+        """
+        Initialize the group-wise only data.
         """
         # General cross sections
         self.sigma_t = np.zeros(self.n_groups)
@@ -211,7 +217,8 @@ class CrossSections(MaterialProperty):
         self.velocity = np.zeros(self.n_groups)
 
     def initialize_precursor_data(self) -> None:
-        """Initialize the delayed neutron data.
+        """
+        Initialize the delayed neutron data.
         """
         G, J = self.n_groups, self.n_precursors
         self.precursor_lambda = np.zeros(J)

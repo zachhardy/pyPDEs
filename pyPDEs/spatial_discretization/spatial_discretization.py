@@ -6,16 +6,15 @@ from ..utilities import UnknownManager, Vector
 
 
 class SpatialDiscretization:
-    """Base class for spatial discretizations.
+    """
+    Base class for spatial discretizations.
+
+    Parameters
+    ----------
+    mesh : Mesh
     """
 
     def __init__(self, mesh: 'Mesh') -> None:
-        """SpatialDiscretization constructor.
-
-        Parameters
-        ----------
-        mesh : Mesh
-        """
         self.type: str = None
         self.mesh: Mesh = mesh
         self.dim: int = mesh.dim
@@ -23,7 +22,8 @@ class SpatialDiscretization:
 
     @property
     def n_nodes(self) -> int:
-        """Get the number of nodes in the discretization.
+        """
+        Get the number of nodes in the discretization.
 
         This is an abstract property and must be implemented
         in derived classes.
@@ -34,11 +34,12 @@ class SpatialDiscretization:
         """
         cls_name = self.__class__.__name__
         raise NotImplementedError(
-            f"Subclasses must implement to {cls_name}.n_nodes property.")
+            f'Subclasses must implement to {cls_name}.n_nodes property.')
 
     @property
     def grid(self) -> List[Vector]:
-        """Get the list of nodes that define the discretization.
+        """
+        Get the list of nodes that define the discretization.
 
         This is an abstract property and must be implemented
         in derived classes.
@@ -52,7 +53,8 @@ class SpatialDiscretization:
             f"Subclasses must implement to {cls_name}.grid property.")
 
     def n_dofs(self, unknown_manager: UnknownManager = None) -> int:
-        """Get the total number of dofs in the problem.
+        """
+        Get the total number of dofs in the problem.
 
         Parameters
         ----------
@@ -74,7 +76,8 @@ class SpatialDiscretization:
     def map_dof(self, cell: Cell, node: int,
                 unknown_manager: UnknownManager = None,
                 unknown_id: int = 0, component: int = 0) -> int:
-        """Map a node on a cell to a global DoF index.
+        """
+        Map a node on a cell to a global DoF index.
 
         This is an abstract method that must be implemented
         in derived classes.
@@ -101,4 +104,4 @@ class SpatialDiscretization:
         """
         cls_name = self.__class__.__name__
         raise NotImplementedError(
-            f"Subclasses must implement to {cls_name}.map_dof method.")
+            f'Subclasses must implement to {cls_name}.map_dof method.')

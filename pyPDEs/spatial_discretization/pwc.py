@@ -11,12 +11,14 @@ from pyPDEs.spatial_discretization.views.fe_slab_view import SlabFEView
 
 
 class PiecewiseContinuous(SpatialDiscretization):
-    """Piecwise continuous finite element discretization.
+    """
+    Piecwise continuous finite element discretization.
     """
 
     def __init__(self, mesh: Mesh, degree: int = 1,
                  order: int = None) -> None:
-        """Piecwise continuous discretization constructor.
+        """
+        Piecwise continuous discretization constructor.
 
         Parameters
         ----------
@@ -30,7 +32,7 @@ class PiecewiseContinuous(SpatialDiscretization):
             varphi_i * varphi_j exactly.
         """
         super().__init__(mesh)
-        self.type = "PWC"
+        self.type = 'pwc'
         self.degree: int = degree
         self.order: int = order
         if self.order is None:
@@ -46,7 +48,8 @@ class PiecewiseContinuous(SpatialDiscretization):
 
     @property
     def n_nodes(self) -> int:
-        """Get the number of nodes in the discretization.
+        """
+        Get the number of nodes in the discretization.
 
         The number of nodes is obtained by summing
         object_{d} * (degree - 1)^d for d = 0, ..., dim.
@@ -64,22 +67,23 @@ class PiecewiseContinuous(SpatialDiscretization):
         n = self.mesh.n_vertices
 
         # ======================================== Slab meshes
-        if self.mesh.type == "LINE":
+        if self.mesh.type == 'line':
             return n + self.mesh.n_cells * (self.degree - 1)
 
         # ======================================== Othogonal Quad meshes
-        elif self.mesh.type == "ORTHO_QUAD":
+        elif self.mesh.type == 'ortho_quad':
             n += self.mesh.n_faces * (self.degree - 1)
             n += self.mesh.n_cells * (self.degree - 1) ** 2
             return n
 
         else:
             raise NotImplementedError(
-                "Only line and quad meshes are implemented.")
+                'Only line and quad meshes are implemented.')
 
     @property
     def grid(self) -> List[float]:
-        """Get the list of nodes that define the discretization.
+        """
+        Get the list of nodes that define the discretization.
 
         Returns
         -------
@@ -88,7 +92,8 @@ class PiecewiseContinuous(SpatialDiscretization):
         return self.nodes
 
     def create_nodes(self) -> None:
-        """Define the nodes for the discretization.
+        """
+        Define the nodes for the discretization.
 
         For line, quad, and hex meshes, the nodes are defined
         at the vertices and degree - 1 evenly spaced points between
@@ -98,7 +103,7 @@ class PiecewiseContinuous(SpatialDiscretization):
         nodes = []
 
         # ======================================== Line meshes
-        if self.mesh.type == "LINE":
+        if self.mesh.type == 'line':
             for cell in self.mesh.cells:
                 # ========== Get left and right vertices
                 v0 = self.mesh.vertices[cell.vertex_ids[0]]
@@ -111,7 +116,7 @@ class PiecewiseContinuous(SpatialDiscretization):
             self.nodes = [Vector(z=node) for node in nodes]
 
         # ======================================== Orthogonal Quad meshes
-        elif self.mesh.type == "ORTHO_QUAD":
+        elif self.mesh.type == 'ortho_quad':
             for cell in self.mesh.cells:
                 # ========== Get bottom-left and top-right vertices
                 vbl = self.mesh.vertices[cell.vertex_ids[0]]
@@ -129,25 +134,28 @@ class PiecewiseContinuous(SpatialDiscretization):
 
         else:
             raise NotImplementedError(
-                "Only line and quad meshes are available.")
+                'Only line and quad meshes are available.')
 
 
     def create_cell_views(self) -> None:
-        """Create the finite element cell views."""
+        """
+        Create the finite element cell views.
+        """
         self.fe_views = []
         for cell in self.mesh.cells:
-            if cell.cell_type == "SLAB":
+            if cell.cell_type == 'slab':
                 view: CellFEView = SlabFEView(
                     self, self.line_quadrature, cell)
                 self.fe_views.append(view)
             else:
                 raise NotImplementedError(
-                    f"Only slabs have been implemented.")
+                    'Only slabs have been implemented.')
 
     def map_dof(self, cell: Cell, node: int,
                 unknown_manager: UnknownManager = None,
                 unknown_id: int = 0, component: int = 0) -> int:
-        """Map a node on a cell to a global DoF index.
+        """
+        Map a node on a cell to a global DoF index.
 
         Parameters
         ----------
@@ -177,7 +185,7 @@ class PiecewiseContinuous(SpatialDiscretization):
             uk_man = unknown_manager
             n_unknowns = uk_man.total_components
             block_id = uk_man.map_unknown(unknown_id, component)
-            if unknown_manager.storage_method == "NODAL":
+            if unknown_manager.storage_method == 'nodal':
                 return node_id * n_unknowns + block_id
             else:
                 return self.n_nodes * block_id + node_id
@@ -185,7 +193,8 @@ class PiecewiseContinuous(SpatialDiscretization):
     def map_face_dof(self, cell: Cell, face_id: int, node: int = 0,
                      unknown_manager: UnknownManager = None,
                      unknown_id: int = 0, component: int = 0) -> int:
-        """Map a node on a face of a cell to a global DoF index.
+        """
+        Map a node on a face of a cell to a global DoF index.
 
         Parameters
         ----------
@@ -221,7 +230,8 @@ class PiecewiseContinuous(SpatialDiscretization):
     @staticmethod
     def zero_dirichlet_row(row: int, rows: List[int],
                            data: List[float]) -> None:
-        """Remove non-zero entries from Dirichlet boundary condition rows.
+        """
+        Remove non-zero entries from Dirichlet boundary condition rows.
 
         Parameters
         ----------
