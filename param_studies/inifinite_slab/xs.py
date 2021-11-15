@@ -1,6 +1,10 @@
 from numpy import ndarray
 from typing import List
 
+__all__ = ['sigma_a_ramp_up', 'sigma_a_ramp_down', 'sigma_a_fast_ramp_up',
+           'xs_material_0_and_2', 'xs_material_1', 'tolerance',
+           'max_iterations']
+
 
 def sigma_a_ramp_up(g: int, x: List[float], sigma_a: float) -> float:
     t = x[0]
@@ -52,28 +56,24 @@ chi_delayed = [[1.0] * 6, [0.0] * 6]
 velocity = [1.0e7, 3.0e5]
 
 xs_material_0_and_2 = \
-    {"n_groups": 2, "n_precursors": 6,
-     "D": [1.5, 0.5], "sigma_t": [0.026, 0.18],
-     "sigma_f": [0.01, 0.2],
-     "transfer_matrix": [[0.0, 0.015], [0.0, 0.0]],
-     "nu_prompt": nu_prompt, "nu_delayed": nu_delayed,
-     "chi_prompt": chi_prompt, "chi_delayed": chi_delayed,
-     "precursor_lambda": decay, "precursor_yield": gamma_i,
-     "velocity": velocity}
+    {'n_groups': 2, 'n_precursors': 6,
+     'D': [1.5, 0.5], 'sigma_t': [0.026, 0.18],
+     'sigma_f': [0.01, 0.2],
+     'transfer_matrix': [[0.0, 0.015], [0.0, 0.0]],
+     'nu_prompt': nu_prompt, 'nu_delayed': nu_delayed,
+     'chi_prompt': chi_prompt, 'chi_delayed': chi_delayed,
+     'precursor_lambda': decay, 'precursor_yield': gamma_i,
+     'velocity': velocity}
 
 xs_material_1 = \
-    {"n_groups": 2, "n_precursors": 6,
-     "D": [1.0, 0.5], "sigma_t": [0.02, 0.08],
-     "sigma_f": [0.005, 0.099],
-     "transfer_matrix": [[0.0, 0.01], [0.0, 0.0]],
-     "nu_prompt": nu_prompt, "nu_delayed": nu_delayed,
-     "chi_prompt": chi_prompt, "chi_delayed": chi_delayed,
-     "precursor_lambda": decay, "precursor_yield": gamma_i,
-     "velocity": velocity}
+    {'n_groups': 2, 'n_precursors': 6,
+     'D': [1.0, 0.5], 'sigma_t': [0.02, 0.08],
+     'sigma_f': [0.005, 0.099],
+     'transfer_matrix': [[0.0, 0.01], [0.0, 0.0]],
+     'nu_prompt': nu_prompt, 'nu_delayed': nu_delayed,
+     'chi_prompt': chi_prompt, 'chi_delayed': chi_delayed,
+     'precursor_lambda': decay, 'precursor_yield': gamma_i,
+     'velocity': velocity}
 
 tolerance = 1.0e-12
 max_iterations = int(1.0e4)
-
-__all__ = ["sigma_a_ramp_up", "sigma_a_ramp_down", "sigma_a_fast_ramp_up",
-           "xs_material_0_and_2", "xs_material_1", "tolerance",
-           "max_iterations"]
