@@ -18,7 +18,8 @@ from .. import KEigenvalueSolver
 
 
 class TransientSolver(KEigenvalueSolver):
-    """Transinet multigroup diffusion.
+    """
+    Transinet multigroup diffusion.
     """
 
     from ._fv import (_fv_mass_matrix,
@@ -36,20 +37,18 @@ class TransientSolver(KEigenvalueSolver):
     from ._write_outputs import write_snapshot
 
     def __init__(self) -> None:
-        """Class constructor.
-        """
         super().__init__()
         self.initial_conditions: list = None
         self.normalize_fission: bool = True
         self.exact_keff_for_ic: float = None
-        self.phi_norm_method: str = "TOTAL"
+        self.phi_norm_method: str = 'total'
 
         # Time stepping parameters
         self.time: float = 0.0
         self.t_start: float = 0.0
         self.t_final: float = 0.1
         self.dt: float = 2.0e-3
-        self.method: str = "TBDF2"
+        self.method: str = 'TBDF2'
 
         # Nonlinear parameters
         self.is_nonlinear: bool = False
@@ -107,7 +106,8 @@ class TransientSolver(KEigenvalueSolver):
         return self.energy_per_fission * self.fission_rate
 
     def initialize(self, verbose: int = 0) -> None:
-        """Initialize the solver.
+        """
+        Initialize the solver.
         """
         KEigenvalueSolver.initialize(self)
         KEigenvalueSolver.execute(self, verbose=verbose)
@@ -144,14 +144,14 @@ class TransientSolver(KEigenvalueSolver):
             if not os.path.isdir(self.output_directory):
                 os.makedirs(self.output_directory)
             elif len(os.listdir(self.output_directory)) > 0:
-                os.system(f"rm -r {self.output_directory}/*")
+                os.system(f'rm -r {self.output_directory}/*')
 
         # Evaluate initial conditions
         self.compute_initial_values()
         self.write_snapshot(0)
 
         # Initialize auxilary vectors
-        if self.method == "TBDF2":
+        if self.method == 'TBDF2':
             self.phi_aux = [np.copy(self.phi)]
             self.precursors_aux = [np.copy(self.precursors)]
             self.temperature_aux = [np.copy(self.temperature)]
@@ -160,7 +160,8 @@ class TransientSolver(KEigenvalueSolver):
         self.M = self.mass_matrix()
 
     def execute(self, verbose: int = 0) -> None:
-        """Execute the transient multigroup diffusion solver.
+        """
+        Execute the transient multigroup diffusion solver.
 
         Parameters
         ----------
@@ -184,7 +185,7 @@ class TransientSolver(KEigenvalueSolver):
 
             # Solve time step
             self.solve_time_step(m=0)
-            if self.method == "TBDF2":
+            if self.method == 'TBDF2':
                 self.solve_time_step(m=1)
             self.power = self.compute_power()
 
@@ -216,19 +217,20 @@ class TransientSolver(KEigenvalueSolver):
             # Print time step summary
             if verbose > 0:
                 print()
-                print(f"***** Time Step: {n_steps} *****")
-                print(f"Simulation Time:\t{self.time:.3e} sec")
-                print(f"Time Step Size:\t\t{self.dt:.3e} sec")
-                print(f"Total Power:\t\t{self.power:.3e} W")
+                print(f'***** Time Step: {n_steps} *****')
+                print(f'Simulation Time:\t{self.time:.3e} sec')
+                print(f'Time Step Size:\t\t{self.dt:.3e} sec')
+                print(f'Total Power:\t\t{self.power:.3e} W')
                 P_avg = self.average_power_density
-                print(f"Average Power Density:\t{P_avg:.3e} W/cm^3")
+                print(f'Average Power Density:\t{P_avg:.3e} W/cm^3')
                 T_avg = self.average_temperature
-                print(f"Average Temperature:\t{T_avg:.3g} K")
+                print(f'Average Temperature:\t{T_avg:.3g} K')
 
         self.dt = dt_initial
 
     def refine_time_step(self) -> None:
-        """Refine the time step.
+        """
+        Refine the time step.
         """
         dP = abs(self.power - self.power_old) / self.power_old
         while dP > self.refine_level:
@@ -237,7 +239,7 @@ class TransientSolver(KEigenvalueSolver):
 
             # Take the reduced time step
             self.solve_time_step(m=0)
-            if self.method == "TBDF2":
+            if self.method == 'TBDF2':
                 self.solve_time_step(m=1)
             self.power = self.compute_power()
 
@@ -245,7 +247,8 @@ class TransientSolver(KEigenvalueSolver):
             dP = abs(self.power - self.power_old) / self.power_old
 
     def coarsen_time_step(self):
-        """Coarsen the time step.
+        """
+        Coarsen the time step.
         """
         dP = abs(self.power - self.power_old) / self.power_old
         if dP < self.coarsen_level:
@@ -254,7 +257,8 @@ class TransientSolver(KEigenvalueSolver):
                 self.dt = self.output_frequency
 
     def solve_time_step(self, m: int = 0) -> None:
-        """Solve the `m`'th step of a multi-step method.
+        """
+        Solve the `m`'th step of a multi-step method.
         """
         if not self.is_nonlinear:
             self.update_phi(m)
@@ -266,7 +270,7 @@ class TransientSolver(KEigenvalueSolver):
             for nit in range(self.nonlinear_max_iterations):
                 self.update_phi(m)
                 self.update_temperature(m)
-                if m == 0 and self.method == "TBDF2":
+                if m == 0 and self.method == 'TBDF2':
                     converged = True
                     break
 
@@ -280,25 +284,26 @@ class TransientSolver(KEigenvalueSolver):
                     break
 
             if not converged:
-                print("\n!!! WARNING: Nonlinear iterations "
-                      "did not converge !!!\n")
+                print('\n!!! WARNING: Nonlinear iterations '
+                      'did not converge !!!\n')
 
         if self.use_precursors:
             self.update_precursors(m)
 
-        if m == 0 and self.method in ["CN", "TBDF2"]:
+        if m == 0 and self.method in ['CN', 'TBDF2']:
             self.phi = 2.0 * self.phi - self.phi_old
             self.temperature = 2.0 * self.temperature - self.temperature_old
             self.compute_fission_rate()
 
-            if self.method == "TBDF2":
+            if self.method == 'TBDF2':
                 self.phi_aux[0][:] = self.phi
                 self.temperature_aux[0][:] = self.temperature
                 if self.use_precursors:
                     self.precursors_aux[0][:] = self.precursors
 
     def update_phi(self, m: int = 0) -> None:
-        """Update the scalar flux for the `m`'th step.
+        """
+        Update the scalar flux for the `m`'th step.
 
         Parameters
         ----------
@@ -311,7 +316,8 @@ class TransientSolver(KEigenvalueSolver):
         self.compute_fission_rate()
 
     def update_precursors(self, m: int = 0) -> None:
-        """Update the precursors for the `m`'th step.
+        """
+        Update the precursors for the `m`'th step.
 
         Parameters
         ----------
@@ -323,12 +329,13 @@ class TransientSolver(KEigenvalueSolver):
         elif isinstance(self.discretization, PiecewiseContinuous):
             self._pwc_update_precursors(m)
 
-        if m == 0 and self.method in ["CN", "TBDF2"]:
+        if m == 0 and self.method in ['CN', 'TBDF2']:
             self.precursors = \
                 2.0 * self.precursors - self.precursors_old
 
     def update_temperature(self, m: int = 0) -> None:
-        """Update the temperature for the `m`'th step.
+        """
+        Update the temperature for the `m`'th step.
 
         Parameters
         ----------
@@ -351,7 +358,8 @@ class TransientSolver(KEigenvalueSolver):
                 T_old[cell.id] + eff_dt * alpha * Sf
 
     def update_cross_sections(self, t: float) -> None:
-        """Update the cell-wise cross sections.
+        """
+        Update the cell-wise cross sections.
 
         Parameters
         ----------
@@ -364,7 +372,8 @@ class TransientSolver(KEigenvalueSolver):
             self.cellwise_xs[cell.id].update(x)
 
     def step_solutions(self) -> None:
-        """Copy the current solutions to the old.
+        """
+        Copy the current solutions to the old.
         """
         self.power_old = self.power
         self.phi_old[:] = self.phi
@@ -373,7 +382,8 @@ class TransientSolver(KEigenvalueSolver):
             self.precursors_old[:] = self.precursors
 
     def assemble_transient_matrix(self, m: int = 0) -> List[csr_matrix]:
-        """Assemble the multigroup evolution matrix for step `m`.
+        """
+        Assemble the multigroup evolution matrix for step `m`.
 
         Parameters
         ----------
@@ -390,16 +400,16 @@ class TransientSolver(KEigenvalueSolver):
             self.update_cross_sections(self.time + eff_dt)
             self.L = self.diffusion_matrix()
 
-        if self.method == "BE":
+        if self.method == 'BE':
             A = self.L + self.M / self.dt
-        elif self.method == "CN":
+        elif self.method == 'CN':
             A = self.L + 2.0 * self.M / self.dt
-        elif self.method == "TBDF2" and m == 0:
+        elif self.method == 'TBDF2' and m == 0:
             A = self.L + 4.0 * self.M / self.dt
-        elif self.method == "TBDF2" and m == 1:
+        elif self.method == 'TBDF2' and m == 1:
             A = self.L + 3.0 * self.M / self.dt
         else:
-            raise NotImplementedError(f"{self.method} is not implemented.")
+            raise NotImplementedError(f'{self.method} is not implemented.')
 
         A -= self.S + self.Fp
         if self.use_precursors and not self.lag_precursors:
@@ -411,7 +421,8 @@ class TransientSolver(KEigenvalueSolver):
         return self.apply_vector_bcs(b)
 
     def mass_matrix(self) -> csr_matrix:
-        """Assemble the multigroup mass matrix.
+        """
+        Assemble the multigroup mass matrix.
 
         Returns
         -------
@@ -423,7 +434,8 @@ class TransientSolver(KEigenvalueSolver):
             return self._pwc_mass_matrix()
 
     def precursor_substitution_matrix(self, m: int = 0) -> csr_matrix:
-        """Assemble the transient precursor substitution matrix for step `m`.
+        """
+        Assemble the transient precursor substitution matrix for step `m`.
 
         Parameters
         ----------
@@ -440,7 +452,8 @@ class TransientSolver(KEigenvalueSolver):
             return self._pwc_precursor_substitution_matrix(m)
 
     def set_old_source(self, m: int = 0) -> ndarray:
-        """Assemble the right-hand side with terms from last time step.
+        """
+        Assemble the right-hand side with terms from last time step.
 
         Parameters
         ----------
@@ -451,13 +464,13 @@ class TransientSolver(KEigenvalueSolver):
         -------
         ndarray (n_cells * n_groups)
         """
-        if self.method == "BE":
+        if self.method == 'BE':
             b = self.M / self.dt @ self.phi_old
-        elif self.method == "CN":
+        elif self.method == 'CN':
             b = 2.0 * self.M / self.dt @ self.phi_old
-        elif self.method == "TBDF2" and m == 0:
+        elif self.method == 'TBDF2' and m == 0:
             b = 4.0 * self.M / self.dt @ self.phi_old
-        elif self.method == "TBDF2" and m == 1:
+        elif self.method == 'TBDF2' and m == 1:
             phi = self.phi_aux[0]
             b = self.M / self.dt @ (4.0 * phi - self.phi_old)
 
@@ -467,7 +480,8 @@ class TransientSolver(KEigenvalueSolver):
         return b
 
     def old_precursor_source(self, m: int = 0) -> ndarray:
-        """Assemble the delayed terms from the last time step for step `m`.
+        """
+        Assemble the delayed terms from the last time step for step `m`.
 
         Parameters
         ----------
@@ -484,7 +498,8 @@ class TransientSolver(KEigenvalueSolver):
             return self._pwc_old_precursor_source(m)
 
     def compute_fission_rate(self) -> None:
-        """Compute the fission power averaged over a cell.
+        """
+        Compute the fission power averaged over a cell.
         """
         if isinstance(self.discretization, FiniteVolume):
             self._fv_compute_fission_rate()
@@ -492,7 +507,8 @@ class TransientSolver(KEigenvalueSolver):
             self._pwc_compute_fission_rate()
 
     def compute_power(self) -> float:
-        """Compute the fission power in the system.
+        """
+        Compute the fission power in the system.
 
         Returns
         -------
@@ -509,7 +525,8 @@ class TransientSolver(KEigenvalueSolver):
 
     @property
     def average_power_density(self) -> float:
-        """Compute the average power density.
+        """
+        Compute the average power density.
 
         Parameters
         ----------
@@ -526,7 +543,8 @@ class TransientSolver(KEigenvalueSolver):
 
     @property
     def average_temperature(self) -> float:
-        """Compute the average fuel temperature.
+        """
+        Compute the average fuel temperature.
 
         Returns
         -------
@@ -543,7 +561,8 @@ class TransientSolver(KEigenvalueSolver):
 
     @property
     def peak_power_density(self) -> float:
-        """Get the peak power density.
+        """
+        Get the peak power density.
 
         Returns
         -------
@@ -553,7 +572,8 @@ class TransientSolver(KEigenvalueSolver):
 
     @property
     def peak_temperature(self) -> float:
-        """Get the peak temperature in the system.
+        """
+        Get the peak temperature in the system.
 
         Returns
         -------
@@ -562,7 +582,8 @@ class TransientSolver(KEigenvalueSolver):
         return max(self.temperature)
 
     def effective_time_step(self, m: int = 0) -> float:
-        """Compute the effective time step for step `m`.
+        """
+        Compute the effective time step for step `m`.
 
         Parameters
         ----------
@@ -573,19 +594,20 @@ class TransientSolver(KEigenvalueSolver):
         -------
         float
         """
-        if self.method == "BE":
+        if self.method == 'BE':
             return self.dt
-        elif self.method == "CN":
+        elif self.method == 'CN':
             return self.dt / 2.0
-        elif self.method == "TBDF2" and m == 0:
+        elif self.method == 'TBDF2' and m == 0:
             return self.dt / 4.0
-        elif self.method == "TBDF2" and m == 1:
+        elif self.method == 'TBDF2' and m == 1:
             return self.dt / 3.0
         else:
-            raise NotImplementedError(f"{self.method} is not implemented.")
+            raise NotImplementedError(f'{self.method} is not implemented.')
 
     def compute_initial_values(self) -> None:
-        """Evaluate the initial conditions.
+        """
+        Evaluate the initial conditions.
         """
         # Evaluate initial condition functions
         if self.initial_conditions is not None:
@@ -625,9 +647,9 @@ class TransientSolver(KEigenvalueSolver):
         # Normalize phi to initial power conditions
         if self.phi_norm_method is not None:
             self.compute_fission_rate()
-            if "TOTAL" in self.phi_norm_method:
+            if 'total' in self.phi_norm_method:
                 self.phi *= self.power / self.compute_power()
-            elif "AVERAGE" in self.phi_norm_method:
+            elif 'average' in self.phi_norm_method:
                 P_avg = self.average_power_density
                 self.phi *= self.power / P_avg
 
@@ -650,8 +672,8 @@ class TransientSolver(KEigenvalueSolver):
         # Check number of ics
         if len(self.initial_conditions) != self.n_groups:
             raise AssertionError(
-                "Invalid number of initial conditions. There must be "
-                "as many initial conditions as groups.")
+                'Invalid number of initial conditions. There must be '
+                'as many initial conditions as groups.')
 
         # Convert to lambdas, if sympy functions
         if isinstance(self.initial_conditions, MutableDenseMatrix):
@@ -671,7 +693,7 @@ class TransientSolver(KEigenvalueSolver):
                 if not callable(ic) and isinstance(ic, array_like):
                     if len(ic) != n_phi_dofs:
                         raise AssertionError(
-                            "Vector initial conditions must agree with "
-                            "the number of DoFs associated with the "
-                            "attached discretization and phi unknown "
-                            "manager.")
+                            'Vector initial conditions must agree with '
+                            'the number of DoFs associated with the '
+                            'attached discretization and phi unknown '
+                            'manager.')
