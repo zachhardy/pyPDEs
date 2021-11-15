@@ -18,9 +18,12 @@ from .modes import AlphaEigenfunction
 
 Eigenproblem = Tuple[ndarray, ndarray, ndarray]
 
+__all__ = ['AnalyticSolution', 'load']
+
 
 class AnalyticSolution:
-    """Analytic solution for multi-group neutron diffusion.
+    """
+    Analytic solution for multi-group neutron diffusion.
 
     The analytic solution is an alpha-eigenfunction expansion.
     The alpha eigenfunction is doubly indexed for spatial and
@@ -29,8 +32,6 @@ class AnalyticSolution:
     def __init__(self, xs: CrossSections, ics: Matrix, rf: float,
                  coord_sys: str, tolerance: float = 1.0e-8,
                  max_n_modes: int = int(5.0e3)) -> None:
-        """Constructor.
-        """
         self.xs: CrossSections = xs
         self.initial_conditions: Matrix = ics
 
@@ -51,8 +52,8 @@ class AnalyticSolution:
 
     @property
     def varphi_n(self) -> Expr:
-        r, n = symbols("r, n")
-        if self.coord_sys == "CARTESIAN":
+        r, n = symbols('r, n')
+        if self.coord_sys == 'cartesian':
             coeff = 0.5 * (2*n - 1) * pi / self.rf
             return cos(coeff * r)
         else:
@@ -60,25 +61,26 @@ class AnalyticSolution:
             return sin(coeff * r) / (coeff * r)
 
     def execute(self) -> None:
-        """Fit an alpha-eigenfuction expansion to the initial conditions.
+        """
+        Fit an alpha-eigenfuction expansion to the initial conditions.
         """
         self._check_inputs()
 
         # Print header
-        msg = "===== Computing alpha-eigenfunction expansion ====="
-        msg = "\n".join(["", "="*len(msg), msg, "="*len(msg)])
+        msg = '===== Computing alpha-eigenfunction expansion ====='
+        msg = '\n'.join(['', '='*len(msg), msg, '='*len(msg)])
         print(msg)
 
         # Precompute spatial integrals. Results are function of n
         import time
-        print(f"Starting integrations...")
+        print(f'Starting integrations...')
         t_start = time.time()
         self._rhs = self._integrate_volume(self.varphi_n**2)
         self._lhs = []
         for g in range(self.n_groups):
             ic = self.initial_conditions[g]
             self._lhs += [self._integrate_volume(self.varphi_n * ic)]
-        print(f"Integrations took {time.time() - t_start:.3g} sec\n")
+        print(f'Integrations took {time.time() - t_start:.3g} sec\n')
 
         # Defne the reference grid
         n_pts = int(1.0e4)
@@ -106,11 +108,12 @@ class AnalyticSolution:
                 fit += mode.evaluate_eigenfunction(r)
                 diff = np.linalg.norm(fit - ic)
 
-        print(f"# of Modes:\t{len(self.modes)}")
-        print(f"IC Fit Error:\t{diff:.4e}\n")
+        print(f'# of Modes:\t{len(self.modes)}')
+        print(f'IC Fit Error:\t{diff:.4e}\n')
 
     def evaluate_expansion(self, r: ndarray, t: ndarray) -> ndarray:
-        """Evaluate the alpha-eigenfunction expansion.
+        """
+        Evaluate the alpha-eigenfunction expansion.
 
         Parameters
         ----------
@@ -135,7 +138,8 @@ class AnalyticSolution:
         return phi.real if len(t) > 1 else phi.real.ravel()
 
     def get_eigenfunction(self, n: int, m: int) -> AlphaEigenfunction:
-        """Return the specified alpha-eigenfunction object.
+        """
+        Return the specified alpha-eigenfunction object.
 
         Parameters
         ----------
@@ -153,7 +157,8 @@ class AnalyticSolution:
                 return mode
 
     def plot_eigenfunction(self, n: int, m: int, r: ndarray) -> None:
-        """Plot the specified alpha-eigenfunction.
+        """
+        Plot the specified alpha-eigenfunction.
 
         Parameters
         ----------
@@ -167,7 +172,8 @@ class AnalyticSolution:
         self.get_eigenfunction(n, m).plot_eigenfunction(r)
 
     def solve_alpha_eigenproblem(self, mode_num: int) -> Eigenproblem:
-        """Solve the 0D alpha-eigenproblem for a given mode.
+        """
+        Solve the 0D alpha-eigenproblem for a given mode.
 
         Parameters
         ----------
@@ -183,7 +189,7 @@ class AnalyticSolution:
         ndarray (n_groups,) * 2
             The energy-weight eigenvectors.
         """
-        if self.coord_sys == "CARTESIAN":
+        if self.coord_sys == 'cartesian':
             Bn = 0.5 * mode_num * np.pi / self.rf
         else:
             Bn = mode_num * np.pi / self.rf
@@ -200,7 +206,8 @@ class AnalyticSolution:
 
     def compute_amplitudes(self, mode_num: int, f: ndarray,
                            f_adjoint: ndarray) -> ndarray:
-        """Compute the mode amplitudes.
+        """
+        Compute the mode amplitudes.
 
         This routine projects the adjoint modes onto the
         initial condition definition to compute the modes.
@@ -221,7 +228,7 @@ class AnalyticSolution:
         ndarray (n_groups,)
             The n_groups mode amplitudes for mode `mode_num`.
         """
-        n = symbols("n")
+        n = symbols('n')
         rhs = self._rhs.subs(n, mode_num).evalf()
         lhs = [lhs_g.subs(n, mode_num).evalf() for lhs_g in self._lhs]
 
@@ -232,7 +239,8 @@ class AnalyticSolution:
         return b
 
     def compute_initial_values(self, points: ndarray) -> ndarray:
-        """Compute the initial values at `points`.
+        """
+        Compute the initial values at `points`.
 
         Parameters
         ----------
@@ -243,7 +251,7 @@ class AnalyticSolution:
         -------
         ndarray (len(points) * n_groups)
         """
-        r = symbols("r")
+        r = symbols('r')
         vec = np.zeros(len(points) * self.n_groups)
         for g in range(self.n_groups):
             ic = lambdify(r, self.initial_conditions[g])
@@ -251,7 +259,8 @@ class AnalyticSolution:
         return vec
 
     def _integrate_volume(self, f: Expr) -> Expr:
-        """Perform a definite integral over a volume.
+        """
+        Perform a definite integral over a volume.
 
         Parameters
         ----------
@@ -262,8 +271,8 @@ class AnalyticSolution:
         --------
         Expr
         """
-        r = symbols("r")
-        if self.coord_sys == "CARTESIAN":
+        r = symbols('r')
+        if self.coord_sys == 'cartesian':
             return integrate(f, (r, 0.0, self.rf))
         else:
             jac = 4.0*pi*r**2
@@ -271,28 +280,29 @@ class AnalyticSolution:
 
     def _check_inputs(self) -> None:
         if self.rf is None:
-            raise ValueError("No system width was provided.")
+            raise ValueError('No system width was provided.')
         if self.rf <= 0.0:
-            raise ValueError("The system width must be greater than zero.")
+            raise ValueError('The system width must be greater than zero.')
 
-        cs = ["CARTESIAN", "SPHERICAL"]
+        cs = ['cartesian', 'spherical']
         if self.coord_sys not in cs:
             raise ValueError(
-                f"Only {cs[0].lower()} and {cs[1].lower()} "
-                f"coodinate systems are allowed.")
+                f'Only {cs[0].lower()} and {cs[1].lower()} '
+                f'coodinate systems are allowed.')
 
         if self.xs is None:
-            raise ValueError("No cross sections were provided.")
+            raise ValueError('No cross sections were provided.')
 
         if self.initial_conditions is None:
-            raise ValueError("No initial conditions were provided.")
+            raise ValueError('No initial conditions were provided.')
         if not isinstance(self.initial_conditions, Matrix):
-            raise TypeError("ICs must be of type `sympy.Matrix`.")
+            raise TypeError('ICs must be of type `sympy.Matrix`.')
         if len(self.initial_conditions) != self.n_groups:
-            raise ValueError("There must be n_groups ICs.")
+            raise ValueError('There must be n_groups ICs.')
 
     def save(self, path: str) -> None:
-        """Save the analytic solution object via pickle.
+        """
+        Save the analytic solution object via pickle.
 
         Parameters
         ----------
@@ -304,24 +314,21 @@ class AnalyticSolution:
         if not os.path.isdir(dir_path):
             os.makedirs(dir_path)
 
-        if "." in path:
-            if len(path.split(".")) != 2:
+        if '.' in path:
+            if len(path.split('.')) != 2:
                 raise ValueError(
-                    "Invalid filepath with multiple extensions.")
-            path = ".".join([path.split(".")[0], "obj"])
+                    'Invalid filepath with multiple extensions.')
+            path = '.'.join([path.split('.')[0], 'obj'])
         else:
-            path = ".".join([path, "obj"])
+            path = '.'.join([path, 'obj'])
 
-        with open(path, mode="wb") as f:
+        with open(path, mode='wb') as f:
             pickle.dump(self, f)
 
 
 def load(path: str) -> AnalyticSolution:
     import pickle
-    if ".obj" not in path:
-        raise ValueError("Only .obj files can be loaded.")
-    with open(path, mode="rb") as f:
+    if '.obj' not in path:
+        raise ValueError('Only .obj files can be loaded.')
+    with open(path, mode='rb') as f:
         return pickle.load(f)
-
-
-__all__ = ["AnalyticSolution", "load"]

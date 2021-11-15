@@ -16,10 +16,11 @@ Function = Callable[[ndarray], ndarray]
 
 
 class AlphaEigenfunction:
-    """An alpha eigenfunction for a given spatio-energy mode.
+    """
+    Alpha-eigenfunction for a given spatio-energy mode.
     """
 
-    def __init__(self, expansion: "AnalyticSolution",
+    def __init__(self, expansion: 'AnalyticSolution',
                  mode_num: int, group_num: int,
                  alpha: complex, b: complex,
                  f: ndarray, f_adjoint: ndarray) -> None:
@@ -37,7 +38,8 @@ class AlphaEigenfunction:
 
     def evaluate_eigenfunction(self, r: ndarray, t: ndarray = None,
                                with_amplitudes: bool = True) -> ndarray:
-        """Evaluate the eigenfunction on a spatiotemporal grid.
+        """
+        Evaluate the eigenfunction on a spatiotemporal grid.
 
         Parameters
         ----------
@@ -72,7 +74,8 @@ class AlphaEigenfunction:
         return phi.real if len(t) > 1 else phi.real.ravel()
 
     def varphi(self, r: ndarray) -> ndarray:
-        """Evaluate the stored function for varphi.
+        """
+        Evaluate the stored function for varphi.
 
         Parameters
         ----------
@@ -84,7 +87,7 @@ class AlphaEigenfunction:
         ndarray (len(r),)
         """
         r = np.array(r)
-        if self._coord_sys == "CARTESIAN":
+        if self._coord_sys == 'cartesian':
             coeff = 0.5 * (2 * self.n - 1) * np.pi / self._r_f
             return np.cos(coeff * r)
         else:
@@ -92,7 +95,8 @@ class AlphaEigenfunction:
             return np.sin(coeff * r) / (coeff * r)
 
     def plot_eigenfunction(self, r: ndarray) -> None:
-        """Plot the eigenfunction profile.
+        """
+        Plot the eigenfunction profile.
 
         Parameters
         ----------
@@ -107,14 +111,14 @@ class AlphaEigenfunction:
         # Initialize the figure
         fig: Figure = plt.figure()
         ax: Axes = fig.add_subplot(1, 1, 1)
-        ax.set_xlabel("r")
-        ax.set_ylabel(r"$f_{nm,g}$ $\varphi_{n}(r)")
-        title = f"Alpha Mode n={self.n-1}, m={self.m}\n" \
-                f"$\\alpha$ = {self.alpha.real:.3e}{self.alpha.imag:+.5g}j"
+        ax.set_xlabel('r')
+        ax.set_ylabel(r'$f_{nm,g}$ $\varphi_{n}(r)')
+        title = f'Alpha Mode n={self.n-1}, m={self.m}\n' \
+                f'$\\alpha$ = {self.alpha.real:.3e}{self.alpha.imag:+.5g}j'
         fig.suptitle(title)
 
         # Plot the profiles
         for g in range(self._n_groups):
-            ax.plot(phi[g::self._n_groups], label=f"Group {g}")
+            ax.plot(phi[g::self._n_groups], label=f'Group {g}')
         ax.legend()
         ax.grid(True)
