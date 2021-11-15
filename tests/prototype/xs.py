@@ -1,6 +1,10 @@
 from numpy import ndarray
 from typing import List
 
+__all__ = ['sigma_a_material_1', 'sigma_a_material_2',
+           'sigma_a_material_3', 'xs_vals', 'tolerance',
+           'max_iterations']
+
 
 def sigma_a_material_1(g: int, x: List[float], sigma_a: float) -> float:
     t = x[0]
@@ -49,7 +53,3 @@ xs_vals = {'n_groups': 1, 'n_precursors': 1,
 
 tolerance = 1.0e-12
 max_iterations = int(5.0e4)
-
-__all__ = ['sigma_a_material_1', 'sigma_a_material_2',
-           'sigma_a_material_3', 'xs_vals', 'tolerance',
-           'max_iterations']
