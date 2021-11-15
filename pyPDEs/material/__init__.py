@@ -7,8 +7,9 @@ from .material_property import ScalarProperty, IsotropicMultiGroupSource
 from .cross_sections import CrossSections
 from .lightweight_xs import LightWeightCrossSections
 
-__all__ = ['MaterialProperty', 'ScalarProperty', 'IsotropicMultiGroupSource',
-           'CrossSections', 'LightWeightCrossSections']
+__all__ = ['Material', 'MaterialProperty', 'ScalarProperty',
+           'IsotropicMultiGroupSource', 'CrossSections',
+           'LightWeightCrossSections']
 
 
 Properties = List[MaterialProperty]

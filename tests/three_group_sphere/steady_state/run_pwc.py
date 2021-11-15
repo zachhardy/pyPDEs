@@ -3,19 +3,21 @@ import matplotlib.pyplot as plt
 
 from pyPDEs.mesh import create_1d_mesh
 from pyPDEs.spatial_discretization import *
-from pyPDEs.material import CrossSections, IsotropicMultiGroupSource
-from pyPDEs.utilities.boundaries import *
+from pyPDEs.material import *
 
+from modules.neutron_diffusion.boundaries import *
 from modules.neutron_diffusion import *
 
 # Create mesh and discretization
-mesh = create_1d_mesh([0.0, 6.0], [100], coord_sys="SPHERICAL")
+mesh = create_1d_mesh([0.0, 6.0], [100], coord_sys='spherical')
 discretization = PiecewiseContinuous(mesh, degree=2)
 
 # Create cross sections and sources
+material = Material()
 xs = CrossSections()
 xs.read_from_xs_file('xs/three_grp_us.cxs', density=0.05)
 src = IsotropicMultiGroupSource(np.ones(xs.n_groups))
+material.add_properties([xs, src])
 
 # Create boundary conditions
 boundaries = [ReflectiveBoundary(xs.n_groups),
@@ -26,8 +28,7 @@ solver = SteadyStateSolver()
 solver.mesh = mesh
 solver.discretization = discretization
 solver.boundaries = boundaries
-solver.material_xs = [xs]
-solver.material_src = [src]
+solver.materials = [material]
 
 # Set options
 solver.use_precursors = False
@@ -35,5 +36,5 @@ solver.use_precursors = False
 # Run the problem
 solver.initialize()
 solver.execute()
-solver.plot_solution(title="Final Solution")
+solver.plot_solution(title='Final Solution')
 plt.show()
