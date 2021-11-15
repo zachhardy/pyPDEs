@@ -20,26 +20,13 @@ sim.read_simulation_data()
 
 from pydmd.dmd import DMD
 from pydmd.mrdmd import MrDMD
-X = sim.create_simulation_matrix(variables='power_density')
-# X = X[:137].T
-#
-# dmd = MrDMD(DMD(svd_rank=10), max_level=5, max_cycles=1)
-# dmd.fit(np.array(X, dtype=complex))
-#
-# X_dmd = dmd.reconstructed_data
-#
-# print(np.linalg.norm(X - X_dmd) / np.linalg.norm(X))
-
 from rom.pod import POD
-pod = POD(svd_rank=-1)
-pod.fit(X, sim.times, verbose=True)
-pod.plot_singular_values()
+X = sim.create_simulation_matrix(variables='power_density').T
 
-# for i in range(pod.n_modes):
-#     plt.figure()
-#     plt.title(f'Mode {i}')
-#     plt.plot(sim.times, pod.amplitudes[:, i], '-*')
-#     plt.grid()
+pod = POD(svd_rank=1.0-1.0e-12)
+pod.fit(X, sim.times, verbose=True)
+pod.plot_rankwise_errors()
+
 plt.show()
 
 # dmd = DMD(svd_rank=10, opt=True)
