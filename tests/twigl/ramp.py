@@ -41,9 +41,9 @@ discretization = FiniteVolume(mesh)
 
 # Create materials
 materials = []
-materials.append(Material("Fuel 0"))
-materials.append(Material("Fuel 1"))
-materials.append(Material("Fuel 2"))
+materials.append(Material('Fuel 0'))
+materials.append(Material('Fuel 1'))
+materials.append(Material('Fuel 2'))
 
 xs = [CrossSections() for _ in range(len(materials))]
 data = [xs_material_0, xs_material_0, xs_material_1]
@@ -77,12 +77,12 @@ solver.lag_precursors = False
 # Set time stepping options
 solver.t_final = 0.5
 solver.dt = 1.0e-2
-solver.method = "TBDF2"
+solver.method = 'TBDF2'
 
 # Output informations
 solver.write_outputs = True
 solver.output_directory = \
-    os.path.join(abs_path, "outputs/ramp")
+    os.path.join(abs_path, 'outputs/ramp')
 
 # Run the problem
 solver.initialize(verbose=1)
