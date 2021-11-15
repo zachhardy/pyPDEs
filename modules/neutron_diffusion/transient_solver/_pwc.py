@@ -15,8 +15,9 @@ if TYPE_CHECKING:
     from . import TransientSolver
 
 
-def _pwc_feedback_matrix(self: "TransientSolver") -> csr_matrix:
-    """Assemble the feedback matrix.
+def _pwc_feedback_matrix(self: 'TransientSolver') -> csr_matrix:
+    """
+    Assemble the feedback matrix.
 
     Returns
     -------
@@ -52,9 +53,10 @@ def _pwc_feedback_matrix(self: "TransientSolver") -> csr_matrix:
     return A.tocsr()
 
 
-def _pwc_mass_matrix(self: "TransientSolver",
+def _pwc_mass_matrix(self: 'TransientSolver',
                      lumped: bool = True) -> csr_matrix:
-    """Assemble the multigroup mass matrix.
+    """
+    Assemble the multigroup mass matrix.
 
     Parameters
     ----------
@@ -94,9 +96,10 @@ def _pwc_mass_matrix(self: "TransientSolver",
     return A.tocsr()
 
 
-def _pwc_precursor_substitution_matrix(self: "TransientSolver",
+def _pwc_precursor_substitution_matrix(self: 'TransientSolver',
                                        m: int = 0) -> csr_matrix:
-    """Assemble the transient precursor substitution matrix for step `m`.
+    """
+    Assemble the transient precursor substitution matrix for step `m`.
 
     Parameters
     ----------
@@ -145,8 +148,9 @@ def _pwc_precursor_substitution_matrix(self: "TransientSolver",
     return A.tocsr()
 
 
-def _pwc_old_precursor_source(self: "TransientSolver", m: int = 0) -> ndarray:
-    """Assemble the delayed terms from the last time step for step `m`.
+def _pwc_old_precursor_source(self: 'TransientSolver', m: int = 0) -> ndarray:
+    """
+    Assemble the delayed terms from the last time step for step `m`.
 
     Parameters
     ----------
@@ -197,8 +201,9 @@ def _pwc_old_precursor_source(self: "TransientSolver", m: int = 0) -> ndarray:
     return b
 
 
-def _pwc_update_precursors(self: "TransientSolver", m: int = 0) -> None:
-    """Update the precursors after a time step.
+def _pwc_update_precursors(self: 'TransientSolver', m: int = 0) -> None:
+    """
+    Update the precursors after a time step.
 
     Parameters
     ----------
@@ -242,8 +247,9 @@ def _pwc_update_precursors(self: "TransientSolver", m: int = 0) -> None:
             self.precursors[ip] = coeff * (c_old + eff_dt*yield_p * f_d)
 
 
-def _pwc_compute_fission_rate(self: "TransientSolver") -> None:
-    """Compute the point-wise fission rate.
+def _pwc_compute_fission_rate(self: 'TransientSolver') -> None:
+    """
+    Compute the point-wise fission rate.
     """
     pwc: PiecewiseContinuous = self.discretization
     uk_man = self.phi_uk_man

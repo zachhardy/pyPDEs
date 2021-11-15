@@ -11,8 +11,9 @@ if TYPE_CHECKING:
     from . import SteadyStateSolver
 
 
-def _pwc_diffusion_matrix(self: "SteadyStateSolver") -> csr_matrix:
-    """Assemble the multigroup diffusion matrix.
+def _pwc_diffusion_matrix(self: 'SteadyStateSolver') -> csr_matrix:
+    """
+    Assemble the multigroup diffusion matrix.
 
     This routine assembles the diffusion plus interaction matrix
     for all groups according to the DoF ordering of `phi_uk_man`.
@@ -49,8 +50,9 @@ def _pwc_diffusion_matrix(self: "SteadyStateSolver") -> csr_matrix:
     return A.tocsr()
 
 
-def _pwc_scattering_matrix(self: "SteadyStateSolver") -> csr_matrix:
-    """Assemble the multigroup scattering matrix.
+def _pwc_scattering_matrix(self: 'SteadyStateSolver') -> csr_matrix:
+    """
+    Assemble the multigroup scattering matrix.
 
     Returns
     -------
@@ -83,8 +85,9 @@ def _pwc_scattering_matrix(self: "SteadyStateSolver") -> csr_matrix:
     return A.tocsr()
 
 
-def _pwc_prompt_fission_matrix(self: "SteadyStateSolver") -> csr_matrix:
-    """Assemble the prompt multigroup fission matrix.
+def _pwc_prompt_fission_matrix(self: 'SteadyStateSolver') -> csr_matrix:
+    """
+    Assemble the prompt multigroup fission matrix.
 
     Returns
     -------
@@ -126,8 +129,9 @@ def _pwc_prompt_fission_matrix(self: "SteadyStateSolver") -> csr_matrix:
     return A.tocsr()
 
 
-def _pwc_delayed_fission_matrix(self: "SteadyStateSolver") -> csr_matrix:
-    """Assemble the multigroup fission matrix.
+def _pwc_delayed_fission_matrix(self: 'SteadyStateSolver') -> csr_matrix:
+    """
+    Assemble the multigroup fission matrix.
 
     Returns
     -------
@@ -169,8 +173,9 @@ def _pwc_delayed_fission_matrix(self: "SteadyStateSolver") -> csr_matrix:
     return A.tocsr()
 
 
-def _pwc_set_source(self: "SteadyStateSolver") -> ndarray:
-    """Assemble the right-hand side.
+def _pwc_set_source(self: 'SteadyStateSolver') -> ndarray:
+    """
+    Assemble the right-hand side.
 
     Returns
     -------
@@ -201,8 +206,9 @@ def _pwc_set_source(self: "SteadyStateSolver") -> ndarray:
     return b
 
 
-def _pwc_compute_precursors(self: "SteadyStateSolver") -> None:
-    """Compute the delayed neutron precursor concentrations.
+def _pwc_compute_precursors(self: 'SteadyStateSolver') -> None:
+    """
+    Compute the delayed neutron precursor concentrations.
     """
     pwc: PiecewiseContinuous = self.discretization
     uk_man = self.phi_uk_man
@@ -236,9 +242,10 @@ def _pwc_compute_precursors(self: "SteadyStateSolver") -> None:
                         view.intV_shapeI[i] / volume
 
 
-def _pwc_apply_matrix_bcs(self: "SteadyStateSolver",
+def _pwc_apply_matrix_bcs(self: 'SteadyStateSolver',
                           A: csr_matrix) -> csr_matrix:
-    """Apply the boundary conditions to a matrix.
+    """
+    Apply the boundary conditions to a matrix.
 
     Parameters
     ----------
@@ -299,8 +306,9 @@ def _pwc_apply_matrix_bcs(self: "SteadyStateSolver",
     return A.tocsr()
 
 
-def _pwc_apply_vector_bcs(self: "SteadyStateSolver", b: ndarray) -> ndarray:
-    """Apply the boundary conditions to the right-hand side.
+def _pwc_apply_vector_bcs(self: 'SteadyStateSolver', b: ndarray) -> ndarray:
+    """
+    Apply the boundary conditions to the right-hand side.
 
     Parameters
     ----------

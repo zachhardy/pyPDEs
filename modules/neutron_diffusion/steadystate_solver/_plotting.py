@@ -11,8 +11,9 @@ if TYPE_CHECKING:
     from . import SteadyStateSolver
 
 
-def plot_solution(self: "SteadyStateSolver", title: str = None) -> None:
-    """Plot the solution, including the precursors, if used.
+def plot_solution(self: 'SteadyStateSolver', title: str = None) -> None:
+    """
+    Plot the solution, including the precursors, if used.
 
     Parameters
     ----------
@@ -35,9 +36,10 @@ def plot_solution(self: "SteadyStateSolver", title: str = None) -> None:
     plt.tight_layout()
 
 
-def plot_flux(self: "SteadyStateSolver",
+def plot_flux(self: 'SteadyStateSolver',
               ax: Axes = None, title: str = None) -> None:
-    """Plot the scalar flux on an Axes.
+    """
+    Plot the scalar flux on an Axes.
 
     Parameters
     ----------
@@ -56,10 +58,10 @@ def plot_flux(self: "SteadyStateSolver",
 
     if self.mesh.dim == 1:
         grid = [p.z for p in grid]
-        ax.set_xlabel("Location")
-        ax.set_ylabel(r"$\phi(r)$")
+        ax.set_xlabel('Location')
+        ax.set_ylabel(r'$\phi(r)$')
         for g in range(self.n_groups):
-            label = f"Group {g}"
+            label = f'Group {g}'
             phi = self.phi[g::self.n_groups]
             ax.plot(grid, phi, label=label)
         ax.legend()
@@ -70,13 +72,13 @@ def plot_flux(self: "SteadyStateSolver",
         xx, yy = np.meshgrid(x, y)
         phi: ndarray = self.phi[0::self.n_groups]
         phi = phi.reshape(xx.shape)
-        im = ax.pcolor(xx, yy, phi, cmap="jet", shading="auto",
+        im = ax.pcolor(xx, yy, phi, cmap='jet', shading='auto',
                        vmin=0.0, vmax=phi.max())
         plt.colorbar(im)
     plt.tight_layout()
 
 
-def plot_precursors(self: "SteadyStateSolver",
+def plot_precursors(self: 'SteadyStateSolver',
                     ax: Axes = None, title: str = None) -> None:
     """Plot the delayed neutron precursors on an Axes.
 
@@ -95,15 +97,15 @@ def plot_precursors(self: "SteadyStateSolver",
 
     if self.mesh.dim == 1:
         grid = [cell.centroid.z for cell in self.mesh.cells]
-        ax.set_xlabel("Location")
-        ax.set_ylabel("Precursor Family")
+        ax.set_xlabel('Location')
+        ax.set_ylabel('Precursor Family')
         for j in range(self.n_precursors):
-            label = f"Family {j}"
+            label = f'Family {j}'
             c = self.precursors[j::self.n_precursors]
             ax.plot(grid, c, label=label)
         ax.legend()
         ax.grid(True)
     else:
         raise AssertionError(
-            f"Only 1D precursor plotting is implemented.")
+            f'Only 1D precursor plotting is implemented.')
     plt.tight_layout()

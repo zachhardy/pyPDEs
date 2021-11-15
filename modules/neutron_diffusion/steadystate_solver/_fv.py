@@ -15,8 +15,9 @@ if TYPE_CHECKING:
     from . import SteadyStateSolver
 
 
-def _fv_diffusion_matrix(self: "SteadyStateSolver") -> csr_matrix:
-    """Assemble the multigroup diffusion matrix.
+def _fv_diffusion_matrix(self: 'SteadyStateSolver') -> csr_matrix:
+    """
+    Assemble the multigroup diffusion matrix.
 
     This routine assembles the diffusion plus interaction matrix
     for all groups according to the DoF ordering of `phi_uk_man`.
@@ -64,8 +65,9 @@ def _fv_diffusion_matrix(self: "SteadyStateSolver") -> csr_matrix:
     return A.tocsr()
 
 
-def _fv_scattering_matrix(self: "SteadyStateSolver") -> csr_matrix:
-    """Assemble the multigroup scattering matrix.
+def _fv_scattering_matrix(self: 'SteadyStateSolver') -> csr_matrix:
+    """
+    Assemble the multigroup scattering matrix.
 
     Returns
     -------
@@ -91,8 +93,9 @@ def _fv_scattering_matrix(self: "SteadyStateSolver") -> csr_matrix:
     return A.tocsr()
 
 
-def _fv_prompt_fission_matrix(self: "SteadyStateSolver") -> csr_matrix:
-    """Assemble the prompt multigroup fission matrix.
+def _fv_prompt_fission_matrix(self: 'SteadyStateSolver') -> csr_matrix:
+    """
+    Assemble the prompt multigroup fission matrix.
 
     Returns
     -------
@@ -129,8 +132,9 @@ def _fv_prompt_fission_matrix(self: "SteadyStateSolver") -> csr_matrix:
     return A.tocsr()
 
 
-def _fv_delayed_fission_matrix(self: "SteadyStateSolver") -> csr_matrix:
-    """Assemble the multigroup fission matrix.
+def _fv_delayed_fission_matrix(self: 'SteadyStateSolver') -> csr_matrix:
+    """
+    Assemble the multigroup fission matrix.
 
     Returns
     -------
@@ -164,8 +168,9 @@ def _fv_delayed_fission_matrix(self: "SteadyStateSolver") -> csr_matrix:
     return A.tocsr()
 
 
-def _fv_set_source(self: "SteadyStateSolver") -> ndarray:
-    """Assemble the right-hand side.
+def _fv_set_source(self: 'SteadyStateSolver') -> ndarray:
+    """
+    Assemble the right-hand side.
 
     Returns
     -------
@@ -192,8 +197,9 @@ def _fv_set_source(self: "SteadyStateSolver") -> ndarray:
     return b
 
 
-def _fv_compute_precursors(self: "SteadyStateSolver") -> None:
-    """Compute the delayed neutron precursor concentrations.
+def _fv_compute_precursors(self: 'SteadyStateSolver') -> None:
+    """
+    Compute the delayed neutron precursor concentrations.
     """
     fv: FiniteVolume = self.discretization
     uk_man = self.phi_uk_man
@@ -220,9 +226,10 @@ def _fv_compute_precursors(self: "SteadyStateSolver") -> None:
                     yield_p / lambda_p * nu_d_sig_f * self.phi[ig]
 
 
-def _fv_apply_matrix_bcs(self: "SteadyStateSolver",
+def _fv_apply_matrix_bcs(self: 'SteadyStateSolver',
                          A: csr_matrix) -> csr_matrix:
-    """Apply the boundary conditions to a matrix.
+    """
+    Apply the boundary conditions to a matrix.
 
     Parameters
     ----------
@@ -267,8 +274,9 @@ def _fv_apply_matrix_bcs(self: "SteadyStateSolver",
     return A.tocsr()
 
 
-def _fv_apply_vector_bcs(self: "SteadyStateSolver", b: ndarray) -> ndarray:
-    """Apply the boundary conditions to the right-hand side.
+def _fv_apply_vector_bcs(self: 'SteadyStateSolver', b: ndarray) -> ndarray:
+    """
+    Apply the boundary conditions to the right-hand side.
 
     Parameters
     ----------

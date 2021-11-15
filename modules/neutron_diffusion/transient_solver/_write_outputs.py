@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from . import TransientSolver
 
 
-def write_snapshot(self: "TransientSolver",
+def write_snapshot(self: 'TransientSolver',
                    output_num: int) -> None:
     """
     Write the system state to a binary file.

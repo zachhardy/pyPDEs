@@ -15,7 +15,8 @@ from pyPDEs.utilities.boundaries import Boundary
 
 
 class SteadyStateSolver:
-    """Steady-state multigroup diffusion
+    """
+    Steady-state multigroup diffusion
     """
 
     from ._fv import (_fv_diffusion_matrix,
@@ -46,8 +47,6 @@ class SteadyStateSolver:
                                 _check_materials)
 
     def __init__(self) -> None:
-        """Class constructor.
-        """
         self.n_groups: int = 0
         self.n_precursors: int = 0
         self.max_precursors: int = 0
@@ -82,7 +81,8 @@ class SteadyStateSolver:
         self.precursors: ndarray = None
 
     def initialize(self) -> None:
-        """Initialize the solver.
+        """
+        Initialize the solver.
         """
         self._check_inputs()
         sd = self.discretization
@@ -111,7 +111,8 @@ class SteadyStateSolver:
             self.Fd = self.delayed_fission_matrix()
 
     def execute(self) -> None:
-        """Execute the steady-state multigroup diffusion solver.
+        """
+        Execute the steady-state multigroup diffusion solver.
         """
         A = self.assemble_matrix()
         b = self.assemble_rhs()
@@ -130,7 +131,8 @@ class SteadyStateSolver:
         return self.apply_vector_bcs(b)
 
     def diffusion_matrix(self) -> csr_matrix:
-        """Assemble the multigroup diffusion matrix.
+        """
+        Assemble the multigroup diffusion matrix.
 
         This routine assembles the diffusion plus interaction matrix
         for all groups according to the DoF ordering of `phi_uk_man`.
@@ -145,7 +147,8 @@ class SteadyStateSolver:
             return self._pwc_diffusion_matrix()
 
     def scattering_matrix(self) -> csr_matrix:
-        """Assemble the multigroup scattering matrix.
+        """
+        Assemble the multigroup scattering matrix.
 
         Returns
         -------
@@ -157,7 +160,8 @@ class SteadyStateSolver:
             return self._pwc_scattering_matrix()
 
     def prompt_fission_matrix(self) -> csr_matrix:
-        """Assemble the prompt multigroup fission matrix.
+        """
+        Assemble the prompt multigroup fission matrix.
 
         Returns
         -------
@@ -169,7 +173,8 @@ class SteadyStateSolver:
             return self._pwc_prompt_fission_matrix()
 
     def delayed_fission_matrix(self) -> csr_matrix:
-        """Assemble the multigroup fission matrix.
+        """
+        Assemble the multigroup fission matrix.
 
         Returns
         -------
@@ -181,7 +186,8 @@ class SteadyStateSolver:
             return self._pwc_delayed_fission_matrix()
 
     def set_source(self) -> ndarray:
-        """Assemble the right-hand side.
+        """
+        Assemble the right-hand side.
 
         Returns
         -------
@@ -193,7 +199,8 @@ class SteadyStateSolver:
             return self._pwc_set_source()
 
     def apply_matrix_bcs(self, A: csr_matrix) -> csr_matrix:
-        """Apply the boundary conditions to a matrix.
+        """
+        Apply the boundary conditions to a matrix.
 
         Parameters
         ----------
@@ -210,7 +217,8 @@ class SteadyStateSolver:
             return self._pwc_apply_matrix_bcs(A)
 
     def apply_vector_bcs(self, b: ndarray) -> ndarray:
-        """Apply the boundary conditions to the right-hand side.
+        """
+        Apply the boundary conditions to the right-hand side.
 
         Parameters
         ----------
@@ -228,7 +236,8 @@ class SteadyStateSolver:
             return self._pwc_apply_vector_bcs(b)
 
     def compute_precursors(self) -> None:
-        """Compute the delayed neutron precursor concentrations.
+        """
+        Compute the delayed neutron precursor concentrations.
         """
         if isinstance(self.discretization, FiniteVolume):
             self._fv_compute_precursors()

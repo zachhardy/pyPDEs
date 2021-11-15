@@ -14,8 +14,9 @@ if TYPE_CHECKING:
     from . import TransientSolver
 
 
-def _fv_feedback_matrix(self: "TransientSolver") -> csr_matrix:
-    """Assemble the feedback matrix.
+def _fv_feedback_matrix(self: 'TransientSolver') -> csr_matrix:
+    """
+    Assemble the feedback matrix.
 
     Returns
     -------
@@ -44,8 +45,9 @@ def _fv_feedback_matrix(self: "TransientSolver") -> csr_matrix:
     return A.tocsr()
 
 
-def _fv_mass_matrix(self: "TransientSolver") -> csr_matrix:
-    """Assemble the multigroup mass matrix.
+def _fv_mass_matrix(self: 'TransientSolver') -> csr_matrix:
+    """
+    Assemble the multigroup mass matrix.
 
     Returns
     -------
@@ -67,9 +69,10 @@ def _fv_mass_matrix(self: "TransientSolver") -> csr_matrix:
     return A.tocsr()
 
 
-def _fv_precursor_substitution_matrix(self: "TransientSolver",
+def _fv_precursor_substitution_matrix(self: 'TransientSolver',
                                       m: int = 0) -> csr_matrix:
-    """Assemble the transient precursor substitution matrix for step `m`.
+    """
+    Assemble the transient precursor substitution matrix for step `m`.
 
     Parameters
     ----------
@@ -114,8 +117,9 @@ def _fv_precursor_substitution_matrix(self: "TransientSolver",
     return A.tocsr()
 
 
-def _fv_old_precursor_source(self: "TransientSolver", m: int = 0) -> ndarray:
-    """Assemble the delayed terms from the last time step for step `m`.
+def _fv_old_precursor_source(self: 'TransientSolver', m: int = 0) -> ndarray:
+    """
+    Assemble the delayed terms from the last time step for step `m`.
 
     Parameters
     ----------
@@ -164,8 +168,9 @@ def _fv_old_precursor_source(self: "TransientSolver", m: int = 0) -> ndarray:
     return b
 
 
-def _fv_update_precursors(self: "TransientSolver", m: int = 0) -> None:
-    """Update the precursors after a time step.
+def _fv_update_precursors(self: 'TransientSolver', m: int = 0) -> None:
+    """
+    Update the precursors after a time step.
 
     Parameters
     ----------
@@ -205,8 +210,9 @@ def _fv_update_precursors(self: "TransientSolver", m: int = 0) -> None:
             self.precursors[ip] = coeff * (c_old + eff_dt*yield_p * f_d)
 
 
-def _fv_compute_fission_rate(self: "TransientSolver") -> None:
-    """Compute the point-wise fission rate.
+def _fv_compute_fission_rate(self: 'TransientSolver') -> None:
+    """
+    Compute the point-wise fission rate.
     """
     fv: FiniteVolume = self.discretization
     uk_man = self.phi_uk_man

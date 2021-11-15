@@ -11,12 +11,11 @@ from .. import SteadyStateSolver
 
 
 class KEigenvalueSolver(SteadyStateSolver):
-    """k-eigenvalue multigroup diffusion.
+    """
+    k-eigenvalue multigroup diffusion.
     """
 
     def __init__(self) -> None:
-        """Class constructor.
-        """
         super().__init__()
         self.k_eff: float = 1.0
 
@@ -35,7 +34,8 @@ class KEigenvalueSolver(SteadyStateSolver):
         self.k_eff = 1.0
 
     def execute(self, verbose: int = 0) -> None:
-        """Execute the k-eigenvalue multigroup diffusion solver.
+        """
+        Execute the k-eigenvalue multigroup diffusion solver.
 
         Parameters
         ----------
@@ -78,7 +78,7 @@ class KEigenvalueSolver(SteadyStateSolver):
 
             # Print iteration summary
             if verbose > 1:
-                print(f"\n===== Iteration {nit} =====\n"
+                print(f'\n===== Iteration {nit} =====\n'
                       f"{'k_eff':<15} = {self.k_eff:.6g}\n"
                       f"{'k_eff Change':<15} = {k_eff_change:.3e}\n"
                       f"{'Phi Change':<15} = {phi_change:.3e}")
@@ -95,17 +95,17 @@ class KEigenvalueSolver(SteadyStateSolver):
 
         # Print summary
         if converged:
-            msg = "***** k-Eigenvalue Solver Converged! *****"
+            msg = '***** k-Eigenvalue Solver Converged! *****'
         else:
-            msg = "***** WARNING: k-Eigenvalue Solver NOT Converged *****"
-        header = "*" * len(msg)
+            msg = '***** WARNING: k-Eigenvalue Solver NOT Converged *****'
+        header = '*' * len(msg)
 
         if verbose > 0 or not converged:
-            print("\n".join(["", header, msg, header]))
-            print(f"Final k Effective:\t\t{self.k_eff:.6g}")
-            print(f"Final k Effective Change:\t{k_eff_change:3e}")
-            print(f"Final Phi Change:\t\t{phi_change:.3e}")
-            print(f"# of Iterations:\t\t{nit}")
+            print('\n'.join(['', header, msg, header]))
+            print(f'Final k Effective:\t\t{self.k_eff:.6g}')
+            print(f'Final k Effective Change:\t{k_eff_change:3e}')
+            print(f'Final Phi Change:\t\t{phi_change:.3e}')
+            print(f'# of Iterations:\t\t{nit}')
 
     def assemble_matrix(self) -> csr_matrix:
         A = self.L - self.S
@@ -118,7 +118,8 @@ class KEigenvalueSolver(SteadyStateSolver):
         return self.apply_vector_bcs(b)
 
     def compute_fission_production(self) -> float:
-        """Compute the fission production.
+        """
+        Compute the fission production.
 
         Returns
         -------
