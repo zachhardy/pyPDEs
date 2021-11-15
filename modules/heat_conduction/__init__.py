@@ -19,7 +19,8 @@ from pyPDEs.utilities.boundaries import (Boundary, DirichletBoundary,
 SolverOutput = Tuple[bool, int, float]
 
 class HeatConductionSolver:
-    """Class for solving heat conduction problems.
+    """
+    Class for solving heat conduction problems.
     """
 
     from ._pwc import (assemble_matrix,
@@ -39,24 +40,26 @@ class HeatConductionSolver:
 
         self.u: ndarray = None
 
-        self.nonlinear_method: str = "PICARD"
+        self.nonlinear_method: str = 'picard'
         self.nonlinear_tolerance: float = 1.0e-8
         self.nonlinear_max_iterations: int = 1000
 
         self.linear_tolerance: float = 1.0e-8
 
     def initialize(self) -> None:
-        """Initialize the heat conduction solver.
+        """
+        Initialize the heat conduction solver.
         """
         self._check_inputs()
         sd = self.discretization
         self.u = np.zeros(sd.n_nodes)
 
     def execute(self, verbose=False) -> None:
-        """Execute the heat conduction solver.
         """
-        print("\n***** Executing the steady-state "
-              "heat conduction solver. *****\n")
+        Execute the heat conduction solver.
+        """
+        print('\n***** Executing the steady-state '
+              'heat conduction solver. *****\n')
 
         # Solve linear problem
         if all([not callable(k) for k in self.k]):
@@ -69,28 +72,29 @@ class HeatConductionSolver:
             converged, nit, u_change = None, None, None
 
             # Picard iterations
-            if self.nonlinear_method == "PICARD":
+            if self.nonlinear_method == 'picard':
                 out = self.solve_picard_iterations(verbose)
                 converged, nit, u_change = out
 
             # Newton iterations
-            elif "NEWTON" in self.nonlinear_method:
+            elif 'newton' in self.nonlinear_method:
                 out = self.solve_newton_iterations(verbose)
                 converged, nit, u_change = out
 
             # Print summary
             if converged:
-                msg = "***** Solver Converged *****"
+                msg = '***** Solver Converged *****'
             else:
-                msg = "***** WARNING: Solver NOT Converged *****"
-            header = "*" * len(msg)
-            print("\n".join(["", header, msg, header]))
-            print(f"Nonlinear Method:\t{self.nonlinear_method}")
-            print(f"Final Change:\t\t{u_change:.3e}")
-            print(f"# of Iterations:\t{nit}")
+                msg = '***** WARNING: Solver NOT Converged *****'
+            header = '*' * len(msg)
+            print('\n'.join(['', header, msg, header]))
+            print(f'Nonlinear Method:\t{self.nonlinear_method}')
+            print(f'Final Change:\t\t{u_change:.3e}')
+            print(f'# of Iterations:\t{nit}')
 
     def solve_picard_iterations(self, verbose: bool) -> SolverOutput:
-        """Solve the problem with Picard iterations
+        """
+        Solve the problem with Picard iterations
 
         Parameters
         ----------
@@ -123,8 +127,8 @@ class HeatConductionSolver:
 
             # Iteration summary
             if verbose:
-                msg = f"Iteration {nit} --- "
-                msg += f"Difference: {u_change:1.4e}"
+                msg = f'Iteration {nit} --- '
+                msg += f'Difference: {u_change:1.4e}'
                 print(msg)
 
             # Break, if converged
@@ -134,7 +138,8 @@ class HeatConductionSolver:
         return converged, nit, u_change
 
     def solve_newton_iterations(self, verbose: bool) -> SolverOutput:
-        """Solve the problem with Newton iterations
+        """
+        Solve the problem with Newton iterations
 
         Parameters
         ----------
@@ -164,7 +169,7 @@ class HeatConductionSolver:
             r = self.residual(self.u)  # compute the residual
 
             # Direct solve
-            if "DIRECT" in self.nonlinear_method:
+            if 'direct' in self.nonlinear_method:
                 J = self.jacobian(self.u, r)  # define Jacobian
                 du = np.linalg.solve(J, -r)
 
@@ -172,7 +177,7 @@ class HeatConductionSolver:
             else:
                 # Determine whether JFNK, or not
                 method = self.nonlinear_method
-                jfnk = False if "GMRES" in method else True
+                jfnk = False if 'gmres' in method else True
 
                 # Construct the Jacocian, or its action
                 J = self.jacobian(self.u, r, jfnk=jfnk)
@@ -190,10 +195,10 @@ class HeatConductionSolver:
 
             # Print iteration summary
             if verbose:
-                msg = f"Iteration {nit:>3} --- "
-                msg += f"Difference: {u_change:^.4e}"
-                if "DIRECT" not in self.nonlinear_method:
-                    msg += f" --- Linear Iterations: {counter.nit}"
+                msg = f'Iteration {nit:>3} --- '
+                msg += f'Difference: {u_change:^.4e}'
+                if 'direct' not in self.nonlinear_method:
+                    msg += f' --- Linear Iterations: {counter.nit}'
                 print(msg)
 
             # Break, if converged
@@ -203,7 +208,8 @@ class HeatConductionSolver:
         return converged, nit, u_change
 
     def residual(self, u: ndarray) -> ndarray:
-        """Compute the residual associated with a given state.
+        """
+        Compute the residual associated with a given state.
 
         Parameters
         ----------
@@ -220,7 +226,8 @@ class HeatConductionSolver:
 
     def jacobian(self, u: ndarray, r: ndarray,
                  jfnk=False) -> Union[ndarray, LinearOperator]:
-        """Compute the Jacobian matrix associated with a given state.
+        """
+        Compute the Jacobian matrix associated with a given state.
 
         This can be computed as an actual matrix by perturbing
         the vector `u` element-wise or by defining the action
@@ -270,7 +277,8 @@ class HeatConductionSolver:
         return J
 
     def _check_inputs(self) -> None:
-        """Check the inputs of the solver.
+        """
+        Check the inputs of the solver.
         """
         self._check_mesh()
         self._check_discretization()
@@ -279,36 +287,36 @@ class HeatConductionSolver:
 
     def _check_mesh(self) -> None:
         if not self.mesh:
-            raise AssertionError("No mesh is attached to the solver.")
+            raise AssertionError('No mesh is attached to the solver.')
         elif self.mesh.dim != 1:
             raise NotImplementedError(
-                "Only 1D problems have been implemented.")
+                'Only 1D problems have been implemented.')
 
     def _check_discretization(self) -> None:
         if not self.discretization:
             raise AssertionError(
-                "No discretization is attached to the solver.")
-        elif self.discretization.type not in ["PWC"]:
+                'No discretization is attached to the solver.')
+        elif self.discretization.type not in ['pwc']:
             raise NotImplementedError(
-                "Only finite volume has been implemented.")
+                'Only piecewise continuous has been implemented.')
 
     def _check_boundaries(self) -> None:
         if not self.boundaries:
             raise AssertionError(
-                "No boundary conditions are attached to the solver.")
+                'No boundary conditions are attached to the solver.')
         elif len(self.boundaries) != 2:
             raise NotImplementedError(
-                "There can only be 2 boundary conditions for 1D problems.")
+                'There can only be 2 boundary conditions for 1D problems.')
 
     def _check_materials(self) -> None:
         mat_ids = [c.material_id for c in self.mesh.cells]
         n_mats = len(np.unique(mat_ids))
         if len(self.k) != n_mats:
             raise AssertionError(
-                f"Only {len(self.k)} conductivities provided when there "
-                f"are {n_mats} material IDs.")
+                f'Only {len(self.k)} conductivities provided when there '
+                f'are {n_mats} material IDs.')
         if len(self.q) != n_mats:
             raise AssertionError(
-                f"Only {len(self.q)} sources provided when there "
-                f"are {n_mats} material IDs.")
+                f'Only {len(self.q)} sources provided when there '
+                f'are {n_mats} material IDs.')
 

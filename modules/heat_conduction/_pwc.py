@@ -11,8 +11,9 @@ if TYPE_CHECKING:
     from . import HeatConductionSolver
 
 
-def assemble_matrix(self: "HeatConductionSolver") -> csr_matrix:
-    """Assemble the heat conduction matrix.
+def assemble_matrix(self: 'HeatConductionSolver') -> csr_matrix:
+    """
+    Assemble the heat conduction matrix.
 
     Returns
     -------
@@ -51,8 +52,9 @@ def assemble_matrix(self: "HeatConductionSolver") -> csr_matrix:
     return self.apply_matrix_bcs(A).tocsr()
 
 
-def assemble_rhs(self: "HeatConductionSolver") -> ndarray:
-    """Assemble the right-hand side.
+def assemble_rhs(self: 'HeatConductionSolver') -> ndarray:
+    """
+    Assemble the right-hand side.
 
     Returns
     -------
@@ -76,9 +78,10 @@ def assemble_rhs(self: "HeatConductionSolver") -> ndarray:
     return self.apply_vector_bcs(b)
 
 
-def apply_matrix_bcs(self: "HeatConductionSolver",
+def apply_matrix_bcs(self: 'HeatConductionSolver',
                      A: csr_matrix) -> csr_matrix:
-    """Apply the boundary conditions to a matrix.
+    """
+    Apply the boundary conditions to a matrix.
 
     Parameters
     ----------
@@ -134,9 +137,10 @@ def apply_matrix_bcs(self: "HeatConductionSolver",
     return A.tocsr()
 
 
-def apply_vector_bcs(self: "HeatConductionSolver",
+def apply_vector_bcs(self: 'HeatConductionSolver',
                      b: ndarray) -> ndarray:
-    """Apply the boundary conditions to the right-hand side.
+    """
+    Apply the boundary conditions to the right-hand side.
 
     Parameters
     ----------

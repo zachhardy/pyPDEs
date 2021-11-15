@@ -10,8 +10,9 @@ if TYPE_CHECKING:
     from . import HeatConductionSolver
 
 
-def plot_solution(self: "HeatConductionSolver", title: str = None) -> None:
-    """Plot the currently stored solution.
+def plot_solution(self: 'HeatConductionSolver', title: str = None) -> None:
+    """
+    Plot the currently stored solution.
 
     Parameters
     ----------
@@ -21,8 +22,8 @@ def plot_solution(self: "HeatConductionSolver", title: str = None) -> None:
     grid = self.discretization.grid
     if title:
         plt.title(title)
-    plt.xlabel("Location")
-    plt.ylabel(r"T(r)")
+    plt.xlabel('Location')
+    plt.ylabel(r'T(r)')
     plt.plot(grid, self.u, '-ob', label='Temperature')
     plt.legend()
     plt.grid(True)
