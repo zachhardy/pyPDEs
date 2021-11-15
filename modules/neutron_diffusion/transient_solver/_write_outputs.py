@@ -11,7 +11,8 @@ if TYPE_CHECKING:
 
 def write_snapshot(self: "TransientSolver",
                    output_num: int) -> None:
-    """Write the system state to a binary file.
+    """
+    Write the system state to a binary file.
 
     Parameters
     ----------
@@ -21,7 +22,7 @@ def write_snapshot(self: "TransientSolver",
     """
     file_base = str(output_num).zfill(4)
     file_path = \
-        os.path.join(self.output_directory, file_base + ".data")
+        os.path.join(self.output_directory, file_base + '.data')
 
     header_info = \
         b"pyPDEs neutron_diffusion TransientSolver: Snapshot file\n" \
@@ -83,68 +84,68 @@ def write_snapshot(self: "TransientSolver",
     header_size = len(header_info)
     header_info += b"-" * (1649 - header_size)
 
-    with open(file_path, "wb") as f:
+    with open(file_path, 'wb') as f:
         f.write(bytearray(header_info))
-        f.write(struct.pack("Q", output_num))
-        f.write(struct.pack("Q", self.mesh.n_cells))
-        f.write(struct.pack("Q", self.discretization.n_nodes))
-        f.write(struct.pack("Q", 1))
-        f.write(struct.pack("Q", self.n_groups))
-        f.write(struct.pack("Q", self.n_precursors))
-        f.write(struct.pack("Q", self.max_precursors))
-        f.write(struct.pack("I", 4))
+        f.write(struct.pack('Q', output_num))
+        f.write(struct.pack('Q', self.mesh.n_cells))
+        f.write(struct.pack('Q', self.discretization.n_nodes))
+        f.write(struct.pack('Q', 1))
+        f.write(struct.pack('Q', self.n_groups))
+        f.write(struct.pack('Q', self.n_precursors))
+        f.write(struct.pack('Q', self.max_precursors))
+        f.write(struct.pack('I', 4))
 
-        f.write(struct.pack("d", self.time))
-        f.write(struct.pack("d", self.power))
-        f.write(struct.pack("d", self.peak_power_density))
-        f.write(struct.pack("d", self.average_power_density))
-        f.write(struct.pack("d", self.peak_temperature))
-        f.write(struct.pack("d", self.average_temperature))
+        f.write(struct.pack('d', self.time))
+        f.write(struct.pack('d', self.power))
+        f.write(struct.pack('d', self.peak_power_density))
+        f.write(struct.pack('d', self.average_power_density))
+        f.write(struct.pack('d', self.peak_temperature))
+        f.write(struct.pack('d', self.average_temperature))
 
         # Write grid information
         for cell in self.mesh.cells:
-            f.write(struct.pack("Q", cell.id))
-            f.write(struct.pack("Q", cell.material_id))
+            f.write(struct.pack('Q', cell.id))
+            f.write(struct.pack('Q', cell.material_id))
 
             # Write FV grid information
-            if self.discretization.type == "FV":
-                f.write(struct.pack("Q", 1))
+            if self.discretization.type == 'fv':
+                f.write(struct.pack('Q', 1))
 
                 # Write the centroid
-                f.write(struct.pack("d", cell.centroid.x))
-                f.write(struct.pack("d", cell.centroid.y))
-                f.write(struct.pack("d", cell.centroid.z))
+                f.write(struct.pack('d', cell.centroid.x))
+                f.write(struct.pack('d', cell.centroid.y))
+                f.write(struct.pack('d', cell.centroid.z))
 
                 # Write the node (which is the centroid)
-                f.write(struct.pack("d", cell.centroid.x))
-                f.write(struct.pack("d", cell.centroid.y))
-                f.write(struct.pack("d", cell.centroid.z))
+                f.write(struct.pack('d', cell.centroid.x))
+                f.write(struct.pack('d', cell.centroid.y))
+                f.write(struct.pack('d', cell.centroid.z))
 
             # Write PWC grid information
-            elif self.discretization.type == "PWC":
+            elif self.discretization.type == 'pwc':
                 pwc: PiecewiseContinuous = self.discretization
                 view = pwc.fe_views[cell.id]
-                f.write(struct.pack("Q", view.n_nodes))
+                f.write(struct.pack('Q', view.n_nodes))
                 for n in range(view.n_nodes):
-                    f.write(struct.pack("d", view.nodes[n].x))
-                    f.write(struct.pack("d", view.nodes[n].y))
-                    f.write(struct.pack("d", view.nodes[n].z))
+                    f.write(struct.pack('d', view.nodes[n].x))
+                    f.write(struct.pack('d', view.nodes[n].y))
+                    f.write(struct.pack('d', view.nodes[n].z))
 
             else:
                 raise NotImplementedError(
-                    "Only FV and PWC num_nodes can be written.")
+                    'Only fv and pwc num_nodes can be written.')
 
         # Write scalar flux data
-        f.write(struct.pack("I", 0))
+        f.write(struct.pack('I', 0))
 
         n_dofs = self.discretization.n_dofs(self.phi_uk_man)
-        f.write(struct.pack("Q", n_dofs))
+        f.write(struct.pack('Q', n_dofs))
 
         for cell in self.mesh.cells:
             cell_id = cell.id
 
             # Write FV scalar flux information
-            if self.discretization.type == "FV":
+            if self.discretization.type == 'fv':
                 fv: FiniteVolume = self.discretization
 
                 # Loop over groups
@@ -154,14 +155,14 @@ def write_snapshot(self: "TransientSolver",
                     assert dof_map < len(self.phi)
                     value = self.phi[dof_map]
 
-                    f.write(struct.pack("Q", cell_id))
-                    f.write(struct.pack("I", 0))
-                    f.write(struct.pack("I", 0))
-                    f.write(struct.pack("I", g))
-                    f.write(struct.pack("d", value))
+                    f.write(struct.pack('Q', cell_id))
+                    f.write(struct.pack('I', 0))
+                    f.write(struct.pack('I', 0))
+                    f.write(struct.pack('I', g))
+                    f.write(struct.pack('d', value))
 
             # Write PWC scalar flux information
-            elif self.discretization.type == "PWC":
+            elif self.discretization.type == 'pwc':
                 pwc: PiecewiseContinuous = self.discretization
                 view = pwc.fe_views[cell_id]
 
@@ -174,17 +175,17 @@ def write_snapshot(self: "TransientSolver",
                         assert dof_map < len(self.phi)
                         value = self.phi[dof_map]
 
-                        f.write(struct.pack("Q", cell_id))
-                        f.write(struct.pack("I", n))
-                        f.write(struct.pack("I", 0))
-                        f.write(struct.pack("I", g))
-                        f.write(struct.pack("d", value))
+                        f.write(struct.pack('Q', cell_id))
+                        f.write(struct.pack('I', n))
+                        f.write(struct.pack('I', 0))
+                        f.write(struct.pack('I', g))
+                        f.write(struct.pack('d', value))
 
         # Write precursor data
-        f.write(struct.pack("I", 1))
+        f.write(struct.pack('I', 1))
 
         n_dofs = self.mesh.n_cells * self.max_precursors
-        f.write(struct.pack("Q", n_dofs))
+        f.write(struct.pack('Q', n_dofs))
 
         for cell in self.mesh.cells:
             cell_id = cell.id
@@ -196,24 +197,24 @@ def write_snapshot(self: "TransientSolver",
                 assert dof_map < len(self.precursors)
                 value = self.precursors[dof_map]
 
-                f.write(struct.pack("Q", cell_id))
-                f.write(struct.pack("Q", mat_id))
-                f.write(struct.pack("I", j))
-                f.write(struct.pack("d", value))
+                f.write(struct.pack('Q', cell_id))
+                f.write(struct.pack('Q', mat_id))
+                f.write(struct.pack('I', j))
+                f.write(struct.pack('d', value))
 
         # Write temperature data
-        f.write(struct.pack("I", 2))
-        f.write(struct.pack("Q", self.mesh.n_cells))
+        f.write(struct.pack('I', 2))
+        f.write(struct.pack('Q', self.mesh.n_cells))
 
         for cell in self.mesh.cells:
-            f.write(struct.pack("Q", cell.id))
-            f.write(struct.pack("d", self.temperature[cell.id]))
+            f.write(struct.pack('Q', cell.id))
+            f.write(struct.pack('d', self.temperature[cell.id]))
 
         # Write power density data
-        f.write(struct.pack("I", 3))
-        f.write(struct.pack("Q", self.mesh.n_cells))
+        f.write(struct.pack('I', 3))
+        f.write(struct.pack('Q', self.mesh.n_cells))
 
         power_density = self.energy_per_fission * self.fission_rate
         for cell in self.mesh.cells:
-            f.write(struct.pack("Q", cell.id))
-            f.write(struct.pack("d", power_density[cell.id]))
+            f.write(struct.pack('Q', cell.id))
+            f.write(struct.pack('d', power_density[cell.id]))
