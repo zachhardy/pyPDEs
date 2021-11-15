@@ -38,14 +38,16 @@ from numpy.linalg import norm
 X = sim.create_simulation_matrix().T
 grid = [node.z for node in sim.nodes]
 times = sim.times
+t0, tf, dt = times[0], times[-1], times[1]-times[0]
 
-dmd = DMD(svd_rank=5, sorted_eigs='real')
+dmd = DMD(svd_rank=5, sort_method='amps')
+dmd.snapshot_time = {'t0': t0, 'tf': tf, 'dt': dt}
 dmd.fit(X)
 
 dmd.plot_modes_1D(x=grid, imaginary=True)
 dmd.plot_dynamics(t=times, logscale=False)
 dmd.plot_timestep_errors()
-dmd.plot_error_decay()
+dmd.plot_rankwise_errors()
 dmd.plot_eigs()
 
 plt.show()
