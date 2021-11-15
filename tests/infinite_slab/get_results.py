@@ -8,31 +8,31 @@ from simulation_reader import SimulationReader
 try:
     if len(sys.argv) != 2:
         raise AssertionError(
-            "There must be a command line argument to point to "
-            "the test case.\n"
-            "Options are:\n "
-            "\t0 = Subcritical\n"
-            "\t1 = Delayed Supercritical\n"
-            "\t2 = Prompt Supercritical")
+            'There must be a command line argument to point to '
+            'the test case.\n'
+            'Options are:\n '
+            '\t0 = Subcritical\n'
+            '\t1 = Delayed Supercritical\n'
+            '\t2 = Prompt Supercritical')
 
     arg = int(sys.argv[1])
     if arg > 2:
-        raise ValueError("Unrecognized result index.")
+        raise ValueError('Unrecognized result index.')
 except BaseException as err:
     print(); print(err.args[0]); print()
     sys.exit()
 
 
 script_path = os.path.dirname(os.path.abspath(__file__))
-base = os.path.join(script_path, "outputs")
+base = os.path.join(script_path, 'outputs')
 if arg == 0:
-    path = os.path.join(base, "subcritical")
+    path = os.path.join(base, 'subcritical')
     times = [0.0, 1.0, 2.0]
 elif arg == 1:
-    path = os.path.join(base, "delayed_supercritical")
+    path = os.path.join(base, 'delayed_supercritical')
     times = [0.0, 1.0, 4.0]
 else:
-    path = os.path.join(base, "prompt_supercritical")
+    path = os.path.join(base, 'prompt_supercritical')
     times = [0.0, 0.01, 0.02]
 
 sim = SimulationReader(path)
@@ -55,8 +55,8 @@ if arg == 2:
         line.set_ydata(line.get_ydata() / max_val)
 
     # Modify labels
-    lines[0].set_label(lines[0].get_label() + r" (x $10^{2}$)")
-    lines[-1].set_label(lines[-1].get_label() + r" (x $10^{-3}$)")
+    lines[0].set_label(lines[0].get_label() + r' (x $10^{2}$)')
+    lines[-1].set_label(lines[-1].get_label() + r' (x $10^{-3}$)')
     ax.legend()
 plt.show()
 

@@ -20,14 +20,14 @@ abs_path = os.path.dirname(os.path.abspath(__file__))
 zones = [0.0, 40.0, 200.0, 240.0]
 n_cells = [20, 80, 20]
 material_ids = [0, 1, 2]
-mesh = create_1d_mesh(zones, n_cells, material_ids, coord_sys="CARTESIAN")
+mesh = create_1d_mesh(zones, n_cells, material_ids, coord_sys='cartesian')
 discretization = FiniteVolume(mesh)
 
 # Create materials
 materials = []
-materials.append(Material("Material 0"))
-materials.append(Material("Material 1"))
-materials.append(Material("Material 2"))
+materials.append(Material('Material 0'))
+materials.append(Material('Material 1'))
+materials.append(Material('Material 2'))
 
 xs = [CrossSections() for _ in range(len(materials))]
 data = [xs_material_0_and_2, xs_material_1, xs_material_0_and_2]
@@ -59,7 +59,7 @@ solver.lag_precursors = False
 # Set time stepping options
 solver.t_final = 2.0
 solver.dt = 0.01
-solver.method = "TBDF2"
+solver.method = 'TBDF2'
 
 solver.max_iterations = 50000
 solver.tolerance = 1.0e-8
@@ -67,7 +67,7 @@ solver.tolerance = 1.0e-8
 # Output informations
 solver.write_outputs = True
 solver.output_directory = \
-    os.path.join(abs_path, "outputs/subcritical")
+    os.path.join(abs_path, 'outputs/subcritical')
 
 # Run the problem
 solver.initialize(verbose=1)
