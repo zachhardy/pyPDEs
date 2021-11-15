@@ -20,15 +20,15 @@ abs_path = os.path.dirname(os.path.abspath(__file__))
 zones = [0.0, 80.0, 100.0, 120.0, 280.0, 320.0, 400.0]
 n_cells = [80, 20, 20, 160, 40, 80]
 material_ids = [0, 1, 2, 0, 3, 0]
-mesh = create_1d_mesh(zones, n_cells, material_ids, coord_sys="CARTESIAN")
+mesh = create_1d_mesh(zones, n_cells, material_ids, coord_sys='cartesian')
 discretization = FiniteVolume(mesh)
 
 # Create materials
 materials = []
-materials.append(Material("Material 0"))
-materials.append(Material("Material 1"))
-materials.append(Material("Material 2"))
-materials.append(Material("Material 4"))
+materials.append(Material('Material 0'))
+materials.append(Material('Material 1'))
+materials.append(Material('Material 2'))
+materials.append(Material('Material 4'))
 
 xs = [CrossSections() for _ in range(len(materials))]
 fct = [None, sigma_a_material_1,
@@ -61,12 +61,12 @@ solver.lag_precursors = False
 # Set time stepping options
 solver.t_final = 2.0
 solver.dt = 0.02
-solver.method = "TBDF2"
+solver.method = 'TBDF2'
 
 # Output informations
 solver.write_outputs = True
 solver.output_directory = \
-    os.path.join(abs_path, "outputs/prototype")
+    os.path.join(abs_path, 'outputs/prototype')
 
 # Run the problem
 solver.initialize(verbose=1)
