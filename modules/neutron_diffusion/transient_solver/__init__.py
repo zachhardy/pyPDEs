@@ -48,7 +48,7 @@ class TransientSolver(KEigenvalueSolver):
         self.t_start: float = 0.0
         self.t_final: float = 0.1
         self.dt: float = 2.0e-3
-        self.method: str = 'TBDF2'
+        self.method: str = 'tbdf2'
 
         # Nonlinear parameters
         self.is_nonlinear: bool = False
@@ -151,7 +151,7 @@ class TransientSolver(KEigenvalueSolver):
         self.write_snapshot(0)
 
         # Initialize auxilary vectors
-        if self.method == 'TBDF2':
+        if self.method == 'tbdf2':
             self.phi_aux = [np.copy(self.phi)]
             self.precursors_aux = [np.copy(self.precursors)]
             self.temperature_aux = [np.copy(self.temperature)]
@@ -185,7 +185,7 @@ class TransientSolver(KEigenvalueSolver):
 
             # Solve time step
             self.solve_time_step(m=0)
-            if self.method == 'TBDF2':
+            if self.method == 'tbdf2':
                 self.solve_time_step(m=1)
             self.power = self.compute_power()
 
@@ -239,7 +239,7 @@ class TransientSolver(KEigenvalueSolver):
 
             # Take the reduced time step
             self.solve_time_step(m=0)
-            if self.method == 'TBDF2':
+            if self.method == 'tbdf2':
                 self.solve_time_step(m=1)
             self.power = self.compute_power()
 
@@ -270,7 +270,7 @@ class TransientSolver(KEigenvalueSolver):
             for nit in range(self.nonlinear_max_iterations):
                 self.update_phi(m)
                 self.update_temperature(m)
-                if m == 0 and self.method == 'TBDF2':
+                if m == 0 and self.method == 'tbdf2':
                     converged = True
                     break
 
@@ -290,12 +290,12 @@ class TransientSolver(KEigenvalueSolver):
         if self.use_precursors:
             self.update_precursors(m)
 
-        if m == 0 and self.method in ['CN', 'TBDF2']:
+        if m == 0 and self.method in ['cn', 'tbdf2']:
             self.phi = 2.0 * self.phi - self.phi_old
             self.temperature = 2.0 * self.temperature - self.temperature_old
             self.compute_fission_rate()
 
-            if self.method == 'TBDF2':
+            if self.method == 'tbdf2':
                 self.phi_aux[0][:] = self.phi
                 self.temperature_aux[0][:] = self.temperature
                 if self.use_precursors:
@@ -329,7 +329,7 @@ class TransientSolver(KEigenvalueSolver):
         elif isinstance(self.discretization, PiecewiseContinuous):
             self._pwc_update_precursors(m)
 
-        if m == 0 and self.method in ['CN', 'TBDF2']:
+        if m == 0 and self.method in ['cn', 'tbdf2']:
             self.precursors = \
                 2.0 * self.precursors - self.precursors_old
 
@@ -400,13 +400,13 @@ class TransientSolver(KEigenvalueSolver):
             self.update_cross_sections(self.time + eff_dt)
             self.L = self.diffusion_matrix()
 
-        if self.method == 'BE':
+        if self.method == 'be':
             A = self.L + self.M / self.dt
-        elif self.method == 'CN':
+        elif self.method == 'cn':
             A = self.L + 2.0 * self.M / self.dt
-        elif self.method == 'TBDF2' and m == 0:
+        elif self.method == 'tbdf2' and m == 0:
             A = self.L + 4.0 * self.M / self.dt
-        elif self.method == 'TBDF2' and m == 1:
+        elif self.method == 'tbdf2' and m == 1:
             A = self.L + 3.0 * self.M / self.dt
         else:
             raise NotImplementedError(f'{self.method} is not implemented.')
@@ -464,13 +464,13 @@ class TransientSolver(KEigenvalueSolver):
         -------
         ndarray (n_cells * n_groups)
         """
-        if self.method == 'BE':
+        if self.method == 'be':
             b = self.M / self.dt @ self.phi_old
-        elif self.method == 'CN':
+        elif self.method == 'cn':
             b = 2.0 * self.M / self.dt @ self.phi_old
-        elif self.method == 'TBDF2' and m == 0:
+        elif self.method == 'tbdf2' and m == 0:
             b = 4.0 * self.M / self.dt @ self.phi_old
-        elif self.method == 'TBDF2' and m == 1:
+        elif self.method == 'tbdf2' and m == 1:
             phi = self.phi_aux[0]
             b = self.M / self.dt @ (4.0 * phi - self.phi_old)
 
@@ -594,13 +594,13 @@ class TransientSolver(KEigenvalueSolver):
         -------
         float
         """
-        if self.method == 'BE':
+        if self.method == 'be':
             return self.dt
-        elif self.method == 'CN':
+        elif self.method == 'cn':
             return self.dt / 2.0
-        elif self.method == 'TBDF2' and m == 0:
+        elif self.method == 'tbdf2' and m == 0:
             return self.dt / 4.0
-        elif self.method == 'TBDF2' and m == 1:
+        elif self.method == 'tbdf2' and m == 1:
             return self.dt / 3.0
         else:
             raise NotImplementedError(f'{self.method} is not implemented.')

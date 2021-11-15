@@ -85,7 +85,7 @@ solver.lag_precursors = False
 # Set time stepping options
 solver.t_final = 2.0
 solver.dt = 0.04
-solver.method = "TBDF2"
+solver.method = 'tbdf2'
 
 solver.max_iterations = max_iterations
 solver.tolerance = tolerance

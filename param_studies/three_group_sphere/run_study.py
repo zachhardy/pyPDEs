@@ -79,7 +79,7 @@ solver.normalize_fission = False
 
 solver.t_final = 0.1
 solver.dt = 2.0e-3
-solver.stepping_method = "TBDF2"
+solver.stepping_method = "tbdf"
 
 solver.write_outputs = True
 

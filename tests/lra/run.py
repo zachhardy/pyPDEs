@@ -46,12 +46,12 @@ discretization = FiniteVolume(mesh)
 
 # Create materials
 materials = []
-materials.append(Material("Fuel 1 with Rod"))
-materials.append(Material("Fuel 1 without Rod"))
-materials.append(Material("Fuel 2 with Rod"))
-materials.append(Material("Rod Ejection Region"))
-materials.append(Material("Fuel 2 without Rod"))
-materials.append(Material("Reflector"))
+materials.append(Material('Fuel 1 with Rod'))
+materials.append(Material('Fuel 1 without Rod'))
+materials.append(Material('Fuel 2 with Rod'))
+materials.append(Material('Rod Ejection Region'))
+materials.append(Material('Fuel 2 without Rod'))
+materials.append(Material('Reflector'))
 
 xs = [CrossSections() for _ in range(len(materials))]
 data = [fuel_1_with_rod, fuel_1_without_rod,
@@ -97,12 +97,12 @@ solver.conversion_factor= 3.83e-11
 
 # Initial power
 solver.initial_power = 1.0e-6
-solver.phi_norm_method = "AVERAGE"
+solver.phi_norm_method = 'average'
 
 # Set time stepping options
 solver.t_final = 3.0
 solver.dt = 0.01
-solver.method = "TBDF2"
+solver.method = 'tbdf2'
 
 solver.adaptivity = True
 solver.refine_level = 0.1
@@ -111,7 +111,7 @@ solver.coarsen_level = 0.01
 # Output informations
 solver.write_outputs = True
 solver.output_directory = \
-    os.path.join(abs_path, "outputs")
+    os.path.join(abs_path, 'outputs')
 
 # Run the problem
 solver.initialize(verbose=1)
