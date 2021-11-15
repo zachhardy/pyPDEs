@@ -7,7 +7,7 @@ from pyPDEs.utilities.boundaries import *
 
 from modules.heat_conduction import HeatConductionSolver
 
-mesh = create_1d_mesh([0.0, 0.45], [50], coord_sys="CARTESIAN")
+mesh = create_1d_mesh([0.0, 0.45], [50], coord_sys='cartesian')
 discretization = PiecewiseContinuous(mesh, degree=1)
 boundaries = [NeumannBoundary(0.0), DirichletBoundary(0.0)]
 
@@ -21,15 +21,15 @@ solver.boundaries = boundaries
 solver.k = k
 solver.q = q
 
-methods = ["PICARD", "NEWTON_DIRECT",
-           "NEWTON_GMRES", "NEWTON_JFNK"]
+methods = ['picard', 'newton_direct',
+           'newton_gmres', 'newton_jfnk']
 u = []
 
 for method in methods:
-    msg = "=========="
-    msg += f" Starting {method} Execution "
-    msg += "=========="
-    print("\n".join(["=" * len(msg), msg, "=" * len(msg)]))
+    msg = '=========='
+    msg += f' Starting {method} Execution '
+    msg += '=========='
+    print('\n'.join(['=' * len(msg), msg, '=' * len(msg)]))
 
     solver.initialize()
     solver.nonlinear_method = method
@@ -37,16 +37,16 @@ for method in methods:
     u.append(solver.u)
 
 
-labels = ["Picard", "Newton Direct",
-          "Newton GMRES", "Newton JFNK"]
-lines = ["-ob", "--.r", "-.g", "^y"]
+labels = ['Picard', 'Newton Direct',
+          'Newton GMRES', 'Newton JFNK']
+lines = ['-ob', '--.r', '-.g', '^y']
 x = [p.z for p in discretization.grid]
 for i in range(len(u)):
     plt.plot(x, u[i], lines[i], label=labels[i])
 
-plt.title("Solutions")
-plt.xlabel("Location")
-plt.ylabel(r"T(r)")
+plt.title('Solutions')
+plt.xlabel('Location')
+plt.ylabel(r'T(r)')
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
