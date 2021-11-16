@@ -38,13 +38,13 @@ study_name += '_ics' if with_ics else '_k'
 # Define parameter space
 parameters = {}
 if with_size:
-    densities = np.linspace(0.0495, 0.0505, 6)
+    densities = np.linspace(0.049, 0.051, 11)
     parameters['density'] = list(np.round(densities, 6))
 
-    sizes = np.linspace(5.95, 6.05, 6)
+    sizes = np.linspace(5.9, 6.0, 11)
     parameters['size'] = list(np.round(sizes, 6))
 else:
-    densities = np.linspace(0.047, 0.053, 31)
+    densities = np.linspace(0.048, 0.052, 41)
     parameters['density'] = list(np.round(densities, 6))
 
 keys = list(parameters.keys())
