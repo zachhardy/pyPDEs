@@ -22,6 +22,8 @@ class SteadyStateSolver:
     from ._angular_operators import (discrete_to_moment_matrix,
                                      moment_to_discrete_matrix)
 
+    from ._setsource import set_source
+
     def __init__(self) -> None:
         self.n_groups: int = 0
         self.n_precursors: int = 0
@@ -31,6 +33,10 @@ class SteadyStateSolver:
 
         self.scattering_order: int = 0
         self.use_precursors: bool = False
+
+        # Iteration parameters
+        self.tolerance: float = 1.0e-8
+        self.max_iterations: int = 100
 
         # Domain objects
         self.mesh: Mesh = None
@@ -66,9 +72,13 @@ class SteadyStateSolver:
         self.M: ndarray = None
         self.D: ndarray = None
 
-    def initialize(self) -> None:
+    def initialize(self, verbose: bool = True) -> None:
         """
         Initialize the solver.
+
+        Parameters
+        ----------
+        verbose : bool, default True
         """
         self._check_inputs()
 
@@ -85,6 +95,16 @@ class SteadyStateSolver:
         # Initialize angular operators
         self.D = self.discrete_to_moment_matrix()
         self.M = self.moment_to_discrete_matrix()
+
+    def execute(self,verbose: bool = True) -> None:
+        """
+        Execute the solver.
+
+        Parameters
+        ----------
+        verbose : bool, default True
+        """
+        pass
 
     def _check_inputs(self) -> None:
         """
