@@ -52,20 +52,20 @@ class SteadyStateSolver:
         self.matid_to_src_map: List[int] = []
         self.cellwise_xs: List[LightWeightCrossSections] = []
 
-        # Quadrature information
+        # Quadrature object
         self.quadrature: ProductQuadrature = None
         self.harmonic_index_map: List[HarmonicIndex] = []
 
-        # Flux moment information
+        # Flux moment unknowns
         self.phi: ndarray = None
         self.phi_prev: ndarray = None
         self.phi_uk_man: UnknownManager = None
 
-        # Angular flux information
+        # Angular flux unknowns
         self.psi: ndarray = None
         self.psi_uk_man: UnknownManager = None
 
-        # Precursor information
+        # Precursor unknowns
         self.precursors: ndarray = None
 
         # Angular operators
@@ -242,23 +242,27 @@ class SteadyStateSolver:
         """
         Initialize the unknown storage for the problem.
         """
-        # Flux moments
+        # Initialize unknown managers
         self.phi_uk_man = UnknownManager()
         for m in range(self.n_moments):
             self.phi_uk_man.add_unknown(self.n_groups)
-        self.phi = np.zeros(sd.n_dofs(self.phi_uk_man))
-        self.phi_prev = np.zeros(sd.n_dofs(self.phi_uk_man))
 
-        # Angular flux
         self.psi_uk_man = UnknownManager()
         for n in range(self.n_angles):
             self.psi_uk_man.add_unknown(self.n_groups)
-        self.psi = np.zeros(sd.n_dofs(self.psi_uk_man))
 
-        # Precursors
+        # Initialize vectors
+        n_nodes = self.discretization.n_dofs()
+        n_phi_dofs = n_nodes * self.n_groups * self.n_moments
+        n_psi_dofs = n_nodes * self.n_groups * self.n_angles
+
+        self.phi = np.zeros(n_phi_dofs)
+        self.phi_prev = np.zeros(n_phi_dofs)
+        self.psi = np.zeros(n_psi_dofs)
+
         if self.use_precursors:
-            n_dofs = self.n_precursors * self.mesh.n_cells
-            self.precursors = np.zeros(n_dofs)
+            n_precursors_dofs = self.n_precursors * self.mesh.n_cells
+            self.precursors = np.zeros(n_precursors_dofs)
 
     def initialize_bondaries(self) -> None:
         """
