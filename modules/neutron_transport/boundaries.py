@@ -2,6 +2,8 @@ from typing import List
 
 from pyPDEs.utilities.boundaries import Boundary
 
+__all__ = ['IncidentHomogeneousBoundary', 'VacuumBoundary']
+
 
 class IncidentHomogeneousBoundary(Boundary):
     """
@@ -23,7 +25,11 @@ class IncidentHomogeneousBoundary(Boundary):
 class VacuumBoundary(IncidentHomogeneousBoundary):
     """
     Vacuum transport boundary condition.
+
+    Parameters
+    ----------
+    n_groups : int, default 1
     """
-    def __init__(self, n_groups: int) -> None:
+    def __init__(self, n_groups: int = 1) -> None:
         super().__init__([0.0] * n_groups)
         self.type = 'vacuum'
