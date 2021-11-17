@@ -11,13 +11,13 @@ class Angle:
 
     Parameters
     ----------
-    phi : float
+    varphi : float
         The azimuthal angle.
     theta : float
         The polar angle.
     """
-    def __init__(self, phi: float, theta: float) -> None:
-        self.phi: float = phi
+    def __init__(self, varphi: float, theta: float) -> None:
+        self.varphi: float = varphi
         self.theta: float = theta
 
 
@@ -132,7 +132,7 @@ class ProductQuadrature(AngularQuadrature):
         self.omegas.clear()
         for qpoint in self.abscissae:
             omega = Vector()
-            omega.x = np.sin(qpoint.theta) * np.cos(qpoint.phi)
-            omega.y = np.sin(qpoint.theta) * np.sin(qpoint.phi)
+            omega.x = np.sin(qpoint.theta) * np.cos(qpoint.varphi)
+            omega.y = np.sin(qpoint.theta) * np.sin(qpoint.varphi)
             omega.z = np.cos(qpoint.theta)
             self.omegas.append(omega)
