@@ -1,12 +1,5 @@
 import numpy as np
-from numpy import ndarray
 from math import factorial, sqrt
-
-from pyPDEs.utilities.quadratures import Angle
-
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from . import SteadyStateSolver
 
 
 def legendre(n: int, x: float) -> float:
@@ -102,6 +95,7 @@ class HarmonicIndex:
     """
     Structure for spherical harmonic indices.
     """
+
     def __init__(self, ell: int, m: int) -> None:
         self.ell: int = ell
         self.m: int = m
@@ -127,42 +121,3 @@ def create_harmonic_indices(self: 'SteadyStateSolver') -> None:
         for ell in range(self.scattering_order + 1):
             for m in range(-ell, ell + 1):
                 self.harmonic_index_map(HarmonicIndex(ell, m))
-
-
-def discrete_to_moment_matrix(self: 'SteadyStateSolver') -> None:
-    """
-    Build the moment to discrete operator.
-    """
-    self.D = np.zeros((self.n_moments, self.n_angles))
-
-    # Loop over moments
-    for m in range(self.n_moments):
-        idx = self.harmonic_index_map[m]
-
-        # Loop over angles
-        for n in range(self.n_angles):
-            w = self.quadrature.weights[n]
-            angle = self.quadrature.abscissae[n]
-            Ylm = spherical_harmonics(idx.ell, idx.m,
-                                      angle.varphi, angle.theta)
-
-            self.D[m, n] = Ylm * w
-
-
-def moment_to_discrete_operator(self: 'SteadyStateSolver') -> None:
-    """
-    Build the discrete to moment operator.
-    """
-    self.M = np.zeros((self.n_moments, self.n_angles))
-
-    # Loop over moments
-    weight_sum = sum(self.quadrature.weights)
-    for m in range(self.n_moments):
-        idx = self.harmonic_index_map[m]
-
-        # Loop over angles
-        for n in range(self.n_angles):
-            angle = self.quadrature.abscissae[n]
-            Ylm = spherical_harmonics(idx.ell, idx.m,
-                                      angle.varphi, angle.theta)
-            self.M[m, n] = (2.0*idx.ell + 1.0)/weight_sum * Ylm

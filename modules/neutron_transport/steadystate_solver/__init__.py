@@ -23,6 +23,9 @@ class SteadyStateSolver:
 
     from ._harmonics import create_harmonic_indices
 
+    from ._angular_operators import (discrete_to_moment_matrix,
+                                     moment_to_discrete_matrix)
+
     def __init__(self) -> None:
         self.n_groups: int = 0
         self.n_precursors: int = 0
@@ -99,8 +102,9 @@ class SteadyStateSolver:
             n_dofs = self.n_precursors * self.mesh.n_cells
             self.precursors = np.zeros(n_dofs)
 
-        # Initialize harmonics
-        self.create_harmonic_indices()
+        # Initialize angular operators
+        self.D = self.discrete_to_moment_matrix()
+        self.M = self.moment_to_discrete_matrix()
 
     def _check_inputs(self) -> None:
         """
