@@ -40,6 +40,6 @@ class IsotropicMultiGroupSource(MaterialProperty):
     """
     def __init__(self, values: ndarray) -> None:
         super().__init__()
-        self.type = 'isotropic'
+        self.type = 'isotropic_source'
         self.values: ndarray = np.array(values)
         self.n_groups: int = len(self.values)
