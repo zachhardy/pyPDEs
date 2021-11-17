@@ -1,6 +1,10 @@
 import numpy as np
 from math import factorial, sqrt
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from . import SteadyStateSolver
+
 
 def legendre(n: int, x: float) -> float:
     """
@@ -116,8 +120,8 @@ def create_harmonic_indices(self: 'SteadyStateSolver') -> None:
         for ell in range(self.scattering_order + 1):
             for m in range(-ell, ell + 1, 2):
                 if ell == 0 or m != 0:
-                    self.harmonic_index_map(HarmonicIndex(ell, m))
+                    self.harmonic_index_map.append(HarmonicIndex(ell, m))
     else:
         for ell in range(self.scattering_order + 1):
             for m in range(-ell, ell + 1):
-                self.harmonic_index_map(HarmonicIndex(ell, m))
+                self.harmonic_index_map.append(HarmonicIndex(ell, m))
