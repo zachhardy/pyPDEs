@@ -11,8 +11,14 @@ from pyPDEs.utilities.quadratures import ProductQuadrature
 
 class SteadyStateSolver:
     """
-    Steady state multigroup neutron transport solver.
+    Steady state multigroup neutron transport solver
     """
+
+    from ._input_checks import (_check_mesh,
+                                _check_discretization,
+                                _check_materials,
+                                _check_boundaries)
+
     def __init__(self) -> None:
         self.n_groups: int = 0
         self.n_moments: int = 0
@@ -50,3 +56,18 @@ class SteadyStateSolver:
 
         # Precursor information
         self.precursors: ndarray = None
+
+    def initialize(self) -> None:
+        """
+        Initialize the solver.
+        """
+        self._check_inputs()
+
+    def _check_inputs(self) -> None:
+        """
+        Check the inputs.
+        """
+        self._check_mesh()
+        self._check_discretization()
+        self._check_materials()
+        self._check_boundaries()
