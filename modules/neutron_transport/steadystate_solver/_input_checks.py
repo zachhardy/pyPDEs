@@ -64,7 +64,7 @@ def _check_materials(self: 'SteadyStateSolver') -> None:
             raise ValueError('Invalid material ID encountered.')
 
         # Get the material for this material ID
-        material = self.materials[mat_id]
+        material: Material = self.materials[mat_id]
 
         # Loop over properties
         found_xs = False
@@ -87,14 +87,20 @@ def _check_materials(self: 'SteadyStateSolver') -> None:
         if not found_xs:
             raise ValueError('Each material must have cross sections.')
 
-        # Check sources
+        # Check scattering order
         xs_id = self.matid_to_xs_map[mat_id]
-        src_id = self.matid_to_src_map[mat_id]
+        if self.material_xs[xs_id] > self.scattering_order:
+            import warnings
+            warnings.warn(
+                f'Scattering order in material {material.name} is greater '
+                f'than the specified simulation scattering order. '
+                f'Higher order scattering terms will be ignored.')
 
-        xs = self.material_xs[xs_id]
+        # Check sources
+        src_id = self.matid_to_src_map[mat_id]
         if src_id >= 0:
             src = self.material_src[src_id]
-            if xs.n_groups != len(src.values):
+            if self.material_xs[xs_id].n_groups != len(src.values):
                 raise ValueError(
                     'Number of isotropic multi-group source values '
                     'does not agree with the number of groups in the '
@@ -105,17 +111,10 @@ def _check_materials(self: 'SteadyStateSolver') -> None:
     for xs in self.material_xs:
         if xs.n_groups != n_groups:
             raise ValueError(
-                'All cross sections must have the same number '
-                'of groups.')
+                'All cross sections must have the same number of groups.')
 
     # Set the number of groups
     self.n_groups = self.material_xs[0].n_groups
-
-    # Set the scattering order
-    self.scattering_order = 0
-    for xs in self.material_xs:
-        if xs.scattering_order > self.scattering_order:
-            self.scattering_order = xs.scattering_order
 
     # Set the precursor counts
     if self.use_precursors:
