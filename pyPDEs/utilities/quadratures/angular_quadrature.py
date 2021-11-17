@@ -51,7 +51,7 @@ class ProductQuadrature(AngularQuadrature):
     def __init__(self, n_polar: int, n_azimuthal: int = 1,
                  quadrature_type: str = 'gl') -> None:
         super().__init__()
-        self.direction_mapping: Dict[int, List[int]] = {}
+        self.direction_map: Dict[int, List[int]] = {}
         self.initialize()
 
     def initialize(self, n_polar: int, n_azimuthal: int = 1,
@@ -109,9 +109,9 @@ class ProductQuadrature(AngularQuadrature):
                 'azimuthal angles.')
 
         # Initialize direction mapping
-        self.direction_mapping = {}
+        self.direction_map = {}
         for j in range(Np):
-            self.direction_mapping[j] = []
+            self.direction_map[j] = []
 
         # Create angles and assign direction mapping
         self.abscissae.clear()
@@ -119,7 +119,7 @@ class ProductQuadrature(AngularQuadrature):
         weight_sum = 0.0
         for i in range(Na):
             for j  in range(Np):
-                self.direction_mapping[j].append(i*Np + j)
+                self.direction_map[j].append(i*Np + j)
 
                 abscissa = Angle(azimuthal_angles[i], polar_angles[j])
                 self.abscissae.append(abscissa)
@@ -136,3 +136,19 @@ class ProductQuadrature(AngularQuadrature):
             omega.y = np.sin(qpoint.theta) * np.sin(qpoint.varphi)
             omega.z = np.cos(qpoint.theta)
             self.omegas.append(omega)
+
+    def get_angle_index(self, polar_angle: int,
+                        azimuthal_angle: int) -> Angle:
+        """
+        Get the index of an angle given its polar and azimuthal indices.
+
+        Parameters
+        ----------
+        polar_angle : int
+        azimuthal_angle : int
+
+        Returns
+        -------
+        Angle
+        """
+        return self.direction_map.get(polar_angle)[azimuthal_angle]
