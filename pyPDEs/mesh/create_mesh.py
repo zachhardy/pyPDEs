@@ -103,6 +103,9 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
                 # Add face to cell
                 cell.faces.append(face)
 
+            # Define face vertex mapping
+            cell.face_vertex_mapping = [[0], [1]]
+
             # Cell on boundary?
             if count == 0 or count == n_cells - 1:
                 mesh.boundary_cell_ids.append(count)
@@ -111,19 +114,24 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
             mesh.cells.append(cell)
             count += 1
 
-        # Define associated faces
-        for cell in mesh.cells:
-            for face in cell.faces:
-                face.associated_face = mesh.define_associated_face(face)
+    # Define associated faces and vertices
+    for cell in mesh.cells:
+        for face in cell.faces:
+            if face.has_neighbor:
+                ass_face = mesh.get_associated_face(face)
+                ass_verts = mesh.get_associated_vertices(face)
 
-        # Verbose printout
-        t_elapsed = time.time() - t_start
-        if verbose:
-            print('\n***** Summary of the 1D mesh:\n')
-            print(f'Number of Cells:\t{mesh.n_cells}')
-            print(f'Number of Faces:\t{mesh.n_faces}')
-            print(f'Number of Vertices:\t{mesh.n_vertices}')
-            print(f'Mesh Creation Time:\t{t_elapsed:.4g} sec')
+                face.associated_face = ass_face
+                face.associated_vertices = ass_verts
+
+    # Verbose printout
+    t_elapsed = time.time() - t_start
+    if verbose:
+        print('\n***** Summary of the 1D mesh:\n')
+        print(f'Number of Cells:\t{mesh.n_cells}')
+        print(f'Number of Faces:\t{mesh.n_faces}')
+        print(f'Number of Vertices:\t{mesh.n_vertices}')
+        print(f'Mesh Creation Time:\t{t_elapsed:.4g} sec')
     return mesh
 
 
@@ -225,6 +233,10 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
 
                 cell.faces.append(face)
 
+            # Define face vertex mapping
+            cell.face_vertex_mapping = [[0, 1], [1, 2],
+                                        [2, 3], [3, 0]]
+
             # Cell on boundary?
             if any([face.neighbor_id < 0 for face in cell.faces]):
                 mesh.boundary_cell_ids.append(cell.id)
@@ -232,10 +244,15 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
             # Add cell to mesh
             mesh.cells.append(cell)
 
-    # Define associated faces
+    # Define associated faces and vertices
     for cell in mesh.cells:
         for face in cell.faces:
-            face.associated_face = mesh.define_associated_face(face)
+            if face.has_neighbor:
+                ass_face = mesh.get_associated_face(face)
+                ass_verts = mesh.get_associated_vertices(face)
+
+                face.associated_face = ass_face
+                face.associated_vertices = ass_verts
 
     # Verbose printout
     t_elapsed = time.time() - t_start

@@ -153,7 +153,7 @@ class Mesh:
         """
         return np.max([v.z for v in self.vertices])
 
-    def define_associated_face(self, face: Face) -> None:
+    def get_associated_face(self, face: Face) -> int:
         """
         Get the neighboring cell's face that coincides with the
         specified face.
@@ -161,6 +161,10 @@ class Mesh:
         Parameters
         ----------
         face : Face
+
+        Returns
+        -------
+        int
         """
         if not face.has_neighbor:
             raise AssertionError('The specified face is on a boundary.')
@@ -186,10 +190,9 @@ class Mesh:
             raise AssertionError(
                 'No associated face found on neighbor. Check that '
                 'the mesh was constructed correctly.')
+        return associated_face
 
-        face.associated_face = associated_face
-
-    def define_associated_vertices(self, face: Face) -> None:
+    def get_associated_vertices(self, face: Face) -> List[int]:
         """
         Get the neighboring cell's vertex IDs that coincides with the
         specified face's vertex IDs.
@@ -197,16 +200,23 @@ class Mesh:
         Parameters
         ----------
         face : Face
+
+        Returns
+        -------
+        List[int]
         """
         if not face.has_neighbor:
             raise AssertionError('The specified face is on a boundary.')
 
-        # Clear associated vertices
-        face.associated_vertices.clear()
+        # Create empty list
+        associated_vertices = []
 
-        # Get adjacent cell and face
+        # Get adjacent cell
         adj_cell: Cell = self.cells[face.neighbor_id]
-        adj_face: Face = adj_cell.faces[face.associated_face]
+
+        # Get associated face
+        associated_face = self.get_associated_face(face)
+        adj_face: Face = adj_cell.faces[associated_face]
 
         # Loop over current face vertices
         for cfvid in face.vertex_ids:
@@ -215,7 +225,7 @@ class Mesh:
             found = False
             for n, afvid in enumerate(adj_face.vertex_ids):
                 if cfvid == afvid:
-                    face.associated_vertices.append(n)
+                    associated_vertices.append(n)
                     found = True
                     break
 
@@ -224,6 +234,7 @@ class Mesh:
                 raise AssertionError(
                     'Could not find a matching vertex on the '
                     'associated face.')
+        return associated_vertices
 
 
 
