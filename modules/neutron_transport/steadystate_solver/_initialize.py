@@ -138,3 +138,26 @@ def initialize_bondaries(self: 'SteadyStateSolver') -> None:
                 raise ValueError(
                     f'Incident homogeneous boundary conditions must '
                     f'have as many values as the number of groups.')
+
+
+def compute_n_angles(self: 'SteadyStateSolver') -> int:
+    """
+    Compute the number of angles.
+
+    Returns
+    -------
+    int
+    """
+    return len(self.quadrature.abscissae)
+
+
+def compute_n_moments(self: 'SteadyStateSolver') -> int:
+    """
+    Compute the number of moments.
+
+    Returns
+    -------
+    int
+    """
+    self.create_harmonic_indices()
+    return len(self.harmonic_index_map)

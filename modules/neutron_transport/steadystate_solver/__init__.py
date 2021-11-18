@@ -20,7 +20,9 @@ class SteadyStateSolver:
     from ._check_inputs import check_inputs
     from ._initialize import (initialize_materials,
                               initialize_unknowns,
-                              initialize_bondaries)
+                              initialize_bondaries,
+                              compute_n_moments,
+                              compute_n_angles)
     from ._harmonics import create_harmonic_indices
     from ._angular_operators import (discrete_to_moment_matrix,
                                      moment_to_discrete_matrix)
@@ -80,6 +82,9 @@ class SteadyStateSolver:
         self.M: ndarray = None
         self.D: ndarray = None
 
+        # Angle Sets
+        self.angle_sets: List[List[int]] = None
+
     def initialize(self, verbose: bool = True) -> None:
         """
         Initialize the solver.
@@ -104,6 +109,10 @@ class SteadyStateSolver:
         self.D = self.discrete_to_moment_matrix()
         self.M = self.moment_to_discrete_matrix()
 
+        # Initialize boundaries
+        self.initialize_bondaries()
+
+
     def execute(self,verbose: bool = True) -> None:
         """
         Execute the solver.
@@ -113,24 +122,3 @@ class SteadyStateSolver:
         verbose : bool, default True
         """
         pass
-
-    def compute_n_angles(self) -> int:
-        """
-        Compute the number of angles.
-
-        Returns
-        -------
-        int
-        """
-        return len(self.quadrature.abscissae)
-
-    def compute_n_moments(self) -> int:
-        """
-        Compute the number of moments.
-
-        Returns
-        -------
-        int
-        """
-        self.create_harmonic_indices()
-        return len(self.harmonic_index_map)
