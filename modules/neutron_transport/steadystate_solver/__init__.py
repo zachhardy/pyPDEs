@@ -56,17 +56,23 @@ class SteadyStateSolver:
         self.quadrature: ProductQuadrature = None
         self.harmonic_index_map: List[HarmonicIndex] = []
 
-        # Flux moment unknowns
-        self.phi: ndarray = None
-        self.phi_prev: ndarray = None
+        # Unknown managers
         self.phi_uk_man: UnknownManager = None
-
-        # Angular flux unknowns
-        self.psi: ndarray = None
         self.psi_uk_man: UnknownManager = None
 
-        # Precursor unknowns
+        # Flux moment vectors
+        self.phi: ndarray = None
+        self.phi_prev: ndarray = None
+
+        # Angular flux vector
+        self.psi: ndarray = None
+        self.psi_interface: ndarray = None
+
+        # Precursor vector
         self.precursors: ndarray = None
+
+        # Source moment vector
+        self.q_moments: ndarray = None
 
         # Angular operators
         self.M: ndarray = None
@@ -259,7 +265,6 @@ class SteadyStateSolver:
         self.phi = np.zeros(n_phi_dofs)
         self.phi_prev = np.zeros(n_phi_dofs)
         self.psi = np.zeros(n_psi_dofs)
-
         if self.use_precursors:
             n_precursors_dofs = self.n_precursors * self.mesh.n_cells
             self.precursors = np.zeros(n_precursors_dofs)
