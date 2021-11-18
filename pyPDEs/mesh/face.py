@@ -17,6 +17,7 @@ class Face:
 
         self.has_neighbor: bool = False
         self.neighbor_id = 0
+        self.associated_face: int = -1
 
     @property
     def n_vertices(self) -> int:

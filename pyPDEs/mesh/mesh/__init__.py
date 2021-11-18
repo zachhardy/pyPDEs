@@ -152,3 +152,44 @@ class Mesh:
         float
         """
         return np.max([v.z for v in self.vertices])
+
+    def get_associated_face(self, face: Face) -> int:
+        """
+        Get the neighboring cell's face that coincides with the
+        specified face.
+
+        Parameters
+        ----------
+        face : Face
+
+        Returns
+        -------
+        int
+        """
+        if not face.has_neighbor:
+            raise AssertionError('The specified face is on a boundary.')
+
+        # Current face vertex IDs
+        cfvids = set(face.vertex_ids)
+
+        # Loop over adjacent cell faces
+        associated_face = -1
+        adj_cell: Cell = self.cells[face.neighbor_id]
+        for af, adj_face in enumerate(adj_cell.faces):
+            adj_face: Face = adj_face
+
+            # Adjacent face vertex IDs
+            afvids = set(adj_face.vertex_ids)
+
+            # If this is the associated face
+            if afvids == cfvids:
+                associated_face = af
+                break
+
+        if associated_face < 0:
+            raise AssertionError(
+                'No associated face found on neighbor. Check that '
+                'the mesh was constructed correctly.')
+        return associated_face
+
+

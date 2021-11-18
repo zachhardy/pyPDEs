@@ -111,6 +111,11 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
             mesh.cells.append(cell)
             count += 1
 
+        # Define associated faces
+        for cell in mesh.cells:
+            for face in cell.faces:
+                face.associated_face = mesh.get_associated_face(face)
+
         # Verbose printout
         t_elapsed = time.time() - t_start
         if verbose:
@@ -142,7 +147,7 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
     mesh.type = 'orhto_quad'
     mesh.coord_sys = 'cartesian'
 
-    # ======================================== Create vertices
+    # Create vertices
     verts = []
     nx, ny = len(x_vertices), len(y_vertices)
     vmap = np.zeros((ny, nx), dtype=int)
@@ -152,15 +157,15 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
             verts.append(Vector(x_vertices[j], y_vertices[i]))
     mesh.vertices = verts
 
-    # ======================================== Create cells
+    # Create cells
     for i in range(ny - 1):
         for j in range(nx - 1):
             cell = Cell()
             cell.cell_type = 'quad'
             cell.id = i * (nx - 1) + j
 
-            # ========== Vertices start at the bottom left and
-            #            are numbered counter-clockwise
+            # Vertices start at the bottom left and are
+            # numbered counter-clockwise
             cell.vertex_ids = [vmap[i][j], vmap[i][j + 1],
                                vmap[i + 1][j + 1], vmap[i + 1][j]]
 
@@ -168,17 +173,17 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
             vbl = mesh.vertices[vmap[i][j]]
             vtr = mesh.vertices[vmap[i + 1][j + 1]]
 
-            # ========== Cell geometric quantites
+            # Cell geometric quantites
             cell.width = vtr - vbl
             cell.centroid = mesh.compute_centroid(cell)
             cell.volume = mesh.compute_volume(cell)
 
-            # ============================== Create faces
+            # Create faces
             for f in range(4):
                 face = Face()
 
-                # ========== Faces start at bottom and are defined
-                #            in a counter-clockwise manner
+                # Faces start at bottom and are defined in a
+                # counter-clockwise manner
                 if f < 3:
                     face.vertex_ids = [cell.vertex_ids[f],
                                        cell.vertex_ids[f + 1]]
@@ -189,13 +194,13 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
                 v0 = mesh.vertices[face.vertex_ids[0]]
                 v1 = mesh.vertices[face.vertex_ids[1]]
 
-                # ========== Face geometric quantities
+                # Face geometric quantities
                 face.centroid = mesh.compute_centroid(face)
                 face.area = mesh.compute_area(face)
                 normal = Vector(z=1.0).cross(v0 - v1)
                 face.normal = normal.normalize()
 
-                # ========== Define neighbors
+                # Define neighbors
                 if face.normal == Vector(x=1.0):
                     face.neighbor_id = cell.id + 1
                 elif face.normal == Vector(x=-1.0):
@@ -205,8 +210,8 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
                 elif face.normal == Vector(y=-1.0):
                     face.neighbor_id = cell.id - nx + 1
 
-                # ========== Define boundaries starting at the
-                #            bottom going counter-clockwise
+                # Define boundaries starting at the bottom
+                # going counter-clockwise
                 if v0.y == v1.y == mesh.y_min:
                     face.neighbor_id = -1
                 elif v0.x == v1.x == mesh.x_max:
@@ -220,14 +225,19 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
 
                 cell.faces.append(face)
 
-            # ============================== Cell on boundary?
+            # Cell on boundary?
             if any([face.neighbor_id < 0 for face in cell.faces]):
                 mesh.boundary_cell_ids.append(cell.id)
 
-            # ============================== Add cell to mesh
+            # Add cell to mesh
             mesh.cells.append(cell)
 
-    # ======================================== Verbose printout
+    # Define associated faces
+    for cell in mesh.cells:
+        for face in cell.faces:
+            face.associated_face = mesh.get_associated_face(face)
+
+    # Verbose printout
     t_elapsed = time.time() - t_start
     if verbose:
         print('\n***** Summary of the 2D mesh *****')
