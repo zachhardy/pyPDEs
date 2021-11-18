@@ -153,7 +153,7 @@ class Mesh:
         """
         return np.max([v.z for v in self.vertices])
 
-    def get_associated_face(self, face: Face) -> int:
+    def define_associated_face(self, face: Face) -> None:
         """
         Get the neighboring cell's face that coincides with the
         specified face.
@@ -161,10 +161,6 @@ class Mesh:
         Parameters
         ----------
         face : Face
-
-        Returns
-        -------
-        int
         """
         if not face.has_neighbor:
             raise AssertionError('The specified face is on a boundary.')
@@ -190,6 +186,44 @@ class Mesh:
             raise AssertionError(
                 'No associated face found on neighbor. Check that '
                 'the mesh was constructed correctly.')
-        return associated_face
+
+        face.associated_face = associated_face
+
+    def define_associated_vertices(self, face: Face) -> None:
+        """
+        Get the neighboring cell's vertex IDs that coincides with the
+        specified face's vertex IDs.
+
+        Parameters
+        ----------
+        face : Face
+        """
+        if not face.has_neighbor:
+            raise AssertionError('The specified face is on a boundary.')
+
+        # Clear associated vertices
+        face.associated_vertices.clear()
+
+        # Get adjacent cell and face
+        adj_cell: Cell = self.cells[face.neighbor_id]
+        adj_face: Face = adj_cell.faces[face.associated_face]
+
+        # Loop over current face vertices
+        for cfvid in face.vertex_ids:
+
+            # Loop over adjacent face vertices
+            found = False
+            for n, afvid in enumerate(adj_face.vertex_ids):
+                if cfvid == afvid:
+                    face.associated_vertices.append(n)
+                    found = True
+                    break
+
+            # There must be a matching vertex on associated faces
+            if not found:
+                raise AssertionError(
+                    'Could not find a matching vertex on the '
+                    'associated face.')
+
 
 

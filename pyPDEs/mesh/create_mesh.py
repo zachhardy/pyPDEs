@@ -114,7 +114,7 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
         # Define associated faces
         for cell in mesh.cells:
             for face in cell.faces:
-                face.associated_face = mesh.get_associated_face(face)
+                face.associated_face = mesh.define_associated_face(face)
 
         # Verbose printout
         t_elapsed = time.time() - t_start
@@ -235,7 +235,7 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
     # Define associated faces
     for cell in mesh.cells:
         for face in cell.faces:
-            face.associated_face = mesh.get_associated_face(face)
+            face.associated_face = mesh.define_associated_face(face)
 
     # Verbose printout
     t_elapsed = time.time() - t_start
