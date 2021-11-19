@@ -59,6 +59,7 @@ class SteadyStateSolver:
         # Quadrature object
         self.quadrature: ProductQuadrature = None
         self.harmonic_index_map: List[HarmonicIndex] = []
+        self.angle_aggregation_type: str = 'octant'
 
         # Unknown managers
         self.phi_uk_man: UnknownManager = None
@@ -70,7 +71,6 @@ class SteadyStateSolver:
 
         # Angular flux vector
         self.psi: ndarray = None
-        self.psi_interface: ndarray = None
 
         # Precursor vector
         self.precursors: ndarray = None
@@ -93,7 +93,7 @@ class SteadyStateSolver:
         ----------
         verbose : bool, default True
         """
-        self._check_inputs()
+        self.check_inputs()
 
         # Initialize the materials
         self.initialize_materials()
@@ -112,8 +112,7 @@ class SteadyStateSolver:
         # Initialize boundaries
         self.initialize_bondaries()
 
-
-    def execute(self,verbose: bool = True) -> None:
+    def execute(self, verbose: bool = True) -> None:
         """
         Execute the solver.
 
@@ -143,4 +142,3 @@ class SteadyStateSolver:
         """
         self.create_harmonic_indices()
         return len(self.harmonic_index_map)
-
