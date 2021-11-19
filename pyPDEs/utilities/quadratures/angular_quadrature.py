@@ -20,6 +20,12 @@ class Angle:
         self.varphi: float = varphi
         self.theta: float = theta
 
+    def __repr__(self) -> str:
+        return f'Angle({self.varphi:.3f}, {self.theta:.3f})'
+
+    def __str__(self) -> str:
+        return self.__repr__()
+
 
 class AngularQuadrature:
     """
@@ -51,8 +57,11 @@ class ProductQuadrature(AngularQuadrature):
     def __init__(self, n_polar: int, n_azimuthal: int = 1,
                  quadrature_type: str = 'gl') -> None:
         super().__init__()
+        self.azimuthal_angles: List[float] = []
+        self.polar_angles: List[float] = []
         self.direction_map: Dict[int, List[int]] = {}
-        self.initialize()
+
+        self.initialize(n_polar, n_azimuthal, quadrature_type)
 
     def initialize(self, n_polar: int, n_azimuthal: int = 1,
                    quadrature_type: str = 'gl') -> None:
@@ -78,7 +87,7 @@ class ProductQuadrature(AngularQuadrature):
 
         # Initialize Gauss-Legendre
         if quadrature_type == 'gl':
-            gl_polar = GaussLegendre(Np*2)
+            gl_polar = GaussLegendre(n_polar*2)
 
             # Create single azimuthal angle
             azimuthal_angles = [0.0]
@@ -90,6 +99,7 @@ class ProductQuadrature(AngularQuadrature):
                 # apply arccos. To sort from least to greatest, subtract
                 # this result from pi
                 theta = np.pi - np.arccos(gl_polar.qpoints[q].z)
+                polar_angles.append(theta)
 
             # Create weights
             weights = gl_polar.weights
@@ -107,6 +117,9 @@ class ProductQuadrature(AngularQuadrature):
             raise AssertionError(
                 'Invalid number of weights for the number of polar and '
                 'azimuthal angles.')
+
+        self.azimuthal_angles = azimuthal_angles
+        self.polar_angles = polar_angles
 
         # Initialize direction mapping
         self.direction_map = {}
