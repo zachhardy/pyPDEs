@@ -40,14 +40,54 @@ grid = [node.z for node in sim.nodes]
 times = sim.times
 t0, tf, dt = times[0], times[-1], times[1]-times[0]
 
-dmd = DMD(svd_rank=5, sort_method='amps')
+n = 4
+
+dmd = DMD(svd_rank=n, sort_method='amps')
 dmd.snapshot_time = {'t0': t0, 'tf': tf, 'dt': dt}
 dmd.fit(X)
 
-dmd.plot_modes_1D(x=grid, imaginary=True)
-dmd.plot_dynamics(t=times, logscale=False)
-dmd.plot_timestep_errors()
-dmd.plot_rankwise_errors()
-dmd.plot_eigs()
+Xdmd = dmd.reconstructed_data
 
+step_errors = []
+for t in range(len(times)):
+    x, xdmd = norm(X[:, t]), norm(Xdmd[:, t])
+    error = norm(x - xdmd) / norm(x)
+    step_errors.append(error)
+
+plt.figure()
+plt.xlabel('Time [sec]', fontsize=14)
+plt.ylabel(r'Relative $L^2$ Error', fontsize=14)
+plt.semilogy(times, step_errors, 'b*-')
+plt.grid(True)
+
+fname = '/Users/zacharyhardy/Documents/proposal/' \
+        'revision1/figures/dmd_timestep_errors.pdf'
+plt.savefig(fname)
+plt.show()
+
+from modules.neutron_diffusion.analytic import *
+
+exact: AnalyticSolution = load(script_path + '/sphere5cm.obj')
+alphas = np.array([mode.alpha for mode in exact.modes[:n]])
+alphas = np.exp(alphas * dt)
+
+eigs = dmd.eigenvalues
+for i in range(len(eigs)):
+    if eigs[i].imag != 0.0:
+        omega = np.log(eigs[i])/dt
+        if omega.imag % np.pi < 1.0e-12:
+            eigs[i] = eigs[i].real + 0.0j
+
+plt.figure()
+plt.xlabel(r'$\mathcal{R}~(\lambda)$', fontsize=14)
+plt.ylabel(r'$\mathcal{I}~(\lambda)$', fontsize=14)
+plt.plot(eigs.real, eigs.imag, 'bo', label='DMD')
+plt.plot(alphas.real, alphas.imag, 'r*', label='Exact')
+plt.grid(True)
+plt.legend()
+plt.tight_layout()
+
+fname = '/Users/zacharyhardy/Documents/proposal/' \
+        'revision1/figures/dmd_eigenvalues.pdf'
+plt.savefig(fname)
 plt.show()

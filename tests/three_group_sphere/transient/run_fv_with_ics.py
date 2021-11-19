@@ -45,7 +45,7 @@ solver.lag_precursors = False
 
 # Set time stepping options
 solver.t_final = 0.01
-solver.dt = 2.0e-4
+solver.dt = 1.0e-4
 solver.method = 'tbdf2'
 
 # Output informations
