@@ -57,7 +57,8 @@ def initialize_materials(self: 'SteadyStateSolver') -> None:
 
         # Check scattering order
         xs_id = self.matid_to_xs_map[mat_id]
-        if self.material_xs[xs_id] > self.scattering_order:
+        xs: CrossSections = self.material_xs[xs_id]
+        if xs.scattering_order > self.scattering_order:
             import warnings
             warnings.warn(f'Material {material.name} with material ID '
                           f'{mat_id} has a scattering order greater than '
@@ -68,8 +69,9 @@ def initialize_materials(self: 'SteadyStateSolver') -> None:
         # Check the source
         src_id = self.matid_to_src_map[mat_id]
         if src_id >= 0:
-            src = self.material_src[src_id]
-            if self.material_xs[xs_id] != len(src.values):
+            xs: CrossSections = self.material_xs[xs_id]
+            src: IsotropicMultiGroupSource = self.material_src[src_id]
+            if xs.n_groups != len(src.values):
                 raise ValueError(
                     f'Isotropic multigroup source on material '
                     f'{material.name} with material ID {mat_id} must have '

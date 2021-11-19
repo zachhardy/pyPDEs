@@ -2,6 +2,7 @@ import numpy as np
 from numpy import ndarray
 
 from pyPDEs.material import *
+from pyPDEs.utilities import UnknownManager
 from ..boundaries import *
 
 from typing import TYPE_CHECKING

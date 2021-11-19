@@ -10,7 +10,7 @@ def check_inputs(self: 'SteadyStateSolver') -> None:
     # Check the mesh
     if not self.mesh:
         raise AssertionError('No mesh is attached to the solver.')
-    if self.mesh > 1:
+    if self.mesh.dim > 1:
         raise NotImplementedError('Only 1D problems are implementd.')
 
     # Check the discretization
