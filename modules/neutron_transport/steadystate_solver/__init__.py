@@ -18,14 +18,14 @@ class SteadyStateSolver:
     """
 
     from ._check_inputs import check_inputs
-    from ._initialize import (initialize_materials,
-                              initialize_unknowns,
-                              initialize_bondaries,
-                              compute_n_moments,
-                              compute_n_angles)
+    from ._initialize_materials import initialize_materials
+    from ._initialize_boundaries import initialize_bondaries
+    from ._initialize_unknowns import initialize_unknowns
+
     from ._harmonics import create_harmonic_indices
     from ._angular_operators import (discrete_to_moment_matrix,
                                      moment_to_discrete_matrix)
+
     from ._setsource import set_source
 
     def __init__(self) -> None:
@@ -122,3 +122,25 @@ class SteadyStateSolver:
         verbose : bool, default True
         """
         pass
+
+    def compute_n_angles(self) -> int:
+        """
+        Compute the number of angles.
+
+        Returns
+        -------
+        int
+        """
+        return len(self.quadrature.abscissae)
+
+    def compute_n_moments(self) -> int:
+        """
+        Compute the number of moments.
+
+        Returns
+        -------
+        int
+        """
+        self.create_harmonic_indices()
+        return len(self.harmonic_index_map)
+
