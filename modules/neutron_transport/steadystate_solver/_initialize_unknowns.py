@@ -34,3 +34,6 @@ def initialize_unknowns(self: 'SteadyStateSolver') -> None:
     if self.use_precursors:
         n_precursors_dofs = self.n_precursors * self.mesh.n_cells
         self.precursors = np.zeros(n_precursors_dofs)
+
+    n_bndrys = 2*self.mesh.dim
+    self.psi_outflow = np.zeros((n_bndrys, self.n_angles))

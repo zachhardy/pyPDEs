@@ -3,7 +3,8 @@ from numpy import ndarray
 
 from pyPDEs.utilities.quadratures import Angle
 
-from ._harmonics import HarmonicIndex, spherical_harmonics
+from ..harmonics import spherical_harmonics
+from . import HarmonicIndex
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
