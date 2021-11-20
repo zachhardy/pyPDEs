@@ -24,18 +24,6 @@ class HarmonicIndex:
         return self.ell == other.ell and self.m == other.m
 
 
-class AngleSet:
-    """
-    Implementation for an angle set.
-
-    An angle set is defined as a collection of angles that
-    share a sweep ordering.
-    """
-    def __init__(self) -> None:
-        self.angles: List[int] = []
-        self.sweep_ordering: List[int] = []
-
-
 class SteadyStateSolver:
     """
     Steady state multigroup neutron transport solver
@@ -48,6 +36,7 @@ class SteadyStateSolver:
 
     from ._angular_operators import (discrete_to_moment_matrix,
                                      moment_to_discrete_matrix)
+    from ._compute_anglesets import create_angle_sets
 
     from ._setsource import set_source
     from ._source_iterations import source_iterations
@@ -97,6 +86,7 @@ class SteadyStateSolver:
 
         # Angular flux vector
         self.psi: ndarray = None
+        self.psi_interface: ndarray = None
         self.psi_outflow: ndarray = None
 
         # Precursor vector
@@ -184,32 +174,3 @@ class SteadyStateSolver:
             for ell in range(self.scattering_order + 1):
                 for m in range(-ell, ell + 1):
                     self.harmonic_index_map.append(HarmonicIndex(ell, m))
-
-    def create_angle_sets(self) -> None:
-        """
-        Create the angle sets.
-        """
-        # Clear current angle sets
-        self.angle_sets.clear()
-
-        # 1D problems
-        if self.mesh.dim == 1:
-            sweep_order = list(range(self.mesh.n_cells))
-
-            # Rightward directions
-            angle_set = AngleSet()
-            angle_set.sweep_ordering = sweep_order
-            for i in range(self.n_angles):
-                omega = self.quadrature.omegas[i]
-                if omega.z > 0.0:
-                    angle_set.angles.append(i)
-            self.angle_sets.append(angle_set)
-
-            # Leftward directions
-            angle_set = AngleSet()
-            angle_set.sweep_ordering = sweep_order[::-1]
-            for i in range(self.n_angles):
-                omega = self.quadrature.omegas[i]
-                if omega.z < 0.0:
-                    angle_set.angles.append(i)
-            self.angle_sets.append(angle_set)
