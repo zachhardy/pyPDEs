@@ -23,17 +23,24 @@ def initialize_unknowns(self: 'SteadyStateSolver') -> None:
     for n in range(self.n_angles):
         self.psi_uk_man.add_unknown(self.n_groups)
 
-    # Initialize vectors
+    # Initialize flux moments
     n_nodes = self.discretization.n_dofs()
-    n_phi_dofs = n_nodes * self.n_groups * self.n_moments
-    n_psi_dofs = n_nodes * self.n_groups * self.n_angles
+    n_phi_dofs = n_nodes * self.n_moments * self.n_groups
 
     self.phi = np.zeros(n_phi_dofs)
     self.phi_prev = np.zeros(n_phi_dofs)
-    self.psi = np.zeros(n_psi_dofs)
-    if self.use_precursors:
-        n_precursors_dofs = self.n_precursors * self.mesh.n_cells
-        self.precursors = np.zeros(n_precursors_dofs)
+    self.q_moments = np.zeros(n_phi_dofs)
 
-    n_bndrys = 2*self.mesh.dim
-    self.psi_outflow = np.zeros((n_bndrys, self.n_angles))
+    # Initialize anglular fluxes
+    n_psi_dofs = n_nodes * self.n_angles * self.n_groups
+    self.psi = np.zeros(n_psi_dofs)
+
+    n_cells = self.mesh.n_cells
+    n_faces = len(self.mesh.cells[0].faces)
+    shape = (self.n_angles, self.n_groups, n_cells, n_faces, 1)
+    self.psi_interface = np.zeros(shape=shape)
+
+    # Initialize precursors
+    if self.use_precursors:
+        n_precursor_dofs = self.mesh.n_cells * self.max_precursors
+        self.precursors = np.zeros(n_precursor_dofs)
