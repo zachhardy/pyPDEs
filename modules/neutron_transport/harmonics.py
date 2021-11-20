@@ -1,10 +1,6 @@
 import numpy as np
 from math import factorial, sqrt
 
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from . import SteadyStateSolver
-
 
 def legendre(n: int, x: float) -> float:
     """
@@ -93,35 +89,3 @@ def spherical_harmonics(ell: int, m: int,
             return c * np.sin(abs(m) * varphi)
         else:
             return c * np.cos(abs(m) * varphi)
-
-
-class HarmonicIndex:
-    """
-    Structure for spherical harmonic indices.
-    """
-
-    def __init__(self, ell: int, m: int) -> None:
-        self.ell: int = ell
-        self.m: int = m
-
-    def __eq__(self, other: 'HarmonicIndex') -> bool:
-        return self.ell == other.ell and self.m == other.m
-
-
-def create_harmonic_indices(self: 'SteadyStateSolver') -> None:
-    """
-    Generate the harmonic index ordering.
-    """
-    self.harmonic_index_map.clear()
-    if self.mesh.dim == 1:
-        for ell in range(self.scattering_order + 1):
-            self.harmonic_index_map.append(HarmonicIndex(ell, 0))
-    elif self.mesh.dim == 2:
-        for ell in range(self.scattering_order + 1):
-            for m in range(-ell, ell + 1, 2):
-                if ell == 0 or m != 0:
-                    self.harmonic_index_map.append(HarmonicIndex(ell, m))
-    else:
-        for ell in range(self.scattering_order + 1):
-            for m in range(-ell, ell + 1):
-                self.harmonic_index_map.append(HarmonicIndex(ell, m))
