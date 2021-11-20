@@ -39,5 +39,3 @@ solver.quadrature = quad
 
 solver.initialize()
 solver.create_angle_sets()
-solver.sweep()
-
