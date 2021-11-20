@@ -38,15 +38,13 @@ def initialize_materials(self: 'SteadyStateSolver') -> None:
 
             # Get cross sections
             if prop.type == 'xs':
-                xs: CrossSections = prop
-                self.material_xs.append(xs)
+                self.material_xs.append(prop)
                 self.matid_to_xs_map[mat_id] = len(self.material_xs) - 1
                 found_xs = True
 
             # Get sources
             if prop.type == 'isotropic_source':
-                src: IsotropicMultiGroupSource = prop
-                self.material_src.append(src)
+                self.material_src.append(prop)
                 self.matid_to_src_map[mat_id] = len(self.material_src) - 1
 
         # Check that cross sections were found
@@ -55,9 +53,11 @@ def initialize_materials(self: 'SteadyStateSolver') -> None:
                 f'No cross sections found for material {material.name} '
                 f'with material ID {mat_id}.')
 
-        # Check scattering order
         xs_id = self.matid_to_xs_map[mat_id]
-        xs: CrossSections = self.material_xs[xs_id]
+        src_id = self.matid_to_src_map[mat_id]
+
+        # Check scattering order
+        xs = self.material_xs[xs_id]
         if xs.scattering_order > self.scattering_order:
             import warnings
             warnings.warn(f'Material {material.name} with material ID '
@@ -69,8 +69,7 @@ def initialize_materials(self: 'SteadyStateSolver') -> None:
         # Check the source
         src_id = self.matid_to_src_map[mat_id]
         if src_id >= 0:
-            xs: CrossSections = self.material_xs[xs_id]
-            src: IsotropicMultiGroupSource = self.material_src[src_id]
+            src = self.material_src[src_id]
             if xs.n_groups != len(src.values):
                 raise ValueError(
                     f'Isotropic multigroup source on material '
