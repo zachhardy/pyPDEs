@@ -64,6 +64,7 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
             # Create cell
             cell = Cell()
             cell.id = count
+            mesh.cell_id_to_ijk_map.append([count])
             cell.cell_type = 'slab'
             cell.coord_sys = coord_sys
             cell.material_id = material_ids[i]
@@ -171,6 +172,7 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
             cell = Cell()
             cell.cell_type = 'quad'
             cell.id = i * (nx - 1) + j
+            mesh.cell_id_to_ijk_map.append([j, i])
 
             # Vertices start at the bottom left and are
             # numbered counter-clockwise

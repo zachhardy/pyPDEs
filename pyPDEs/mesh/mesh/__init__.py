@@ -29,8 +29,10 @@ class Mesh:
         self.dim: int = 0
         self.type: str = None
         self.coord_sys: str = 'cartesian'
+        self.is_orthogonal: bool = True
 
         self.vertices: List[Vector] = []
+        self.cell_id_to_ijk_map: List[List[int]] = []
 
         self.cells: List[Cell] = []
         self.boundary_cell_ids: List[int] = []
