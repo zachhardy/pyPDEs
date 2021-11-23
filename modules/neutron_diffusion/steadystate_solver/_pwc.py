@@ -268,8 +268,7 @@ def _pwc_apply_matrix_bcs(self: 'SteadyStateSolver',
         # Loop over faces
         for f, face in enumerate(cell.faces):
             if not face.has_neighbor:
-                bndry_id = -1 * (face.neighbor_id + 1)
-                bc = self.boundaries[bndry_id]
+                bc = self.boundaries[face.neighbor_id]
 
                 # Dirichlet boundary
                 if issubclass(type(bc), DirichletBoundary):
@@ -331,8 +330,7 @@ def _pwc_apply_vector_bcs(self: 'SteadyStateSolver', b: ndarray) -> ndarray:
         # Loop over faces
         for f, face in enumerate(cell.faces):
             if not face.has_neighbor:
-                bndry_id = -1 * (face.neighbor_id + 1)
-                bc = self.boundaries[bndry_id]
+                bc = self.boundaries[face.neighbor_id]
 
                 # Dirichlet boundary
                 if issubclass(type(bc), DirichletBoundary):

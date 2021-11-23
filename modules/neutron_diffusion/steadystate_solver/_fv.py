@@ -252,8 +252,7 @@ def _fv_apply_matrix_bcs(self: 'SteadyStateSolver',
         # Loop over faces
         for face in cell.faces:
             if not face.has_neighbor:
-                bndry_id = -1 * (face.neighbor_id + 1)
-                bc = self.boundaries[bndry_id]
+                bc = self.boundaries[face.neighbor_id]
 
                 # Geometric quantities
                 d_pf = (cell.centroid - face.centroid).norm()
@@ -299,8 +298,7 @@ def _fv_apply_vector_bcs(self: 'SteadyStateSolver', b: ndarray) -> ndarray:
         # Loop over faces
         for face in cell.faces:
             if not face.has_neighbor:
-                bndry_id = -1 * (face.neighbor_id + 1)
-                bc = self.boundaries[bndry_id]
+                bc = self.boundaries[face.neighbor_id]
 
                 # Geometric information
                 d_pf = (cell.centroid - face.centroid).norm()
