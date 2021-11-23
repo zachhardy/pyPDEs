@@ -8,20 +8,8 @@ from pyPDEs.utilities import Vector, UnknownManager
 from pyPDEs.utilities.boundaries import Boundary
 from pyPDEs.utilities.quadratures import ProductQuadrature
 
+from ..data_structures import FLUDS, HarmonicIndex, AngleSet
 from ..boundaries import *
-
-
-class HarmonicIndex:
-    """
-    Structure for spherical harmonic indices.
-    """
-
-    def __init__(self, ell: int, m: int) -> None:
-        self.ell: int = ell
-        self.m: int = m
-
-    def __eq__(self, other: 'HarmonicIndex') -> bool:
-        return self.ell == other.ell and self.m == other.m
 
 
 class SteadyStateSolver:
@@ -39,8 +27,6 @@ class SteadyStateSolver:
     from ._compute_anglesets import create_angle_sets
 
     from ._setsource import set_source
-    from ._source_iterations import source_iterations
-    from ._sweep import sweep
 
     def __init__(self) -> None:
         self.n_groups: int = 0
@@ -86,8 +72,6 @@ class SteadyStateSolver:
 
         # Angular flux vector
         self.psi: ndarray = None
-        self.psi_interface: ndarray = None
-        self.psi_outflow: ndarray = None
 
         # Precursor vector
         self.precursors: ndarray = None
@@ -125,6 +109,10 @@ class SteadyStateSolver:
 
         # Initialize boundaries
         self.initialize_bondaries()
+
+        # Compute angle sets
+        self.initialize_angle_sets()
+
 
     def execute(self, verbose: bool = True) -> None:
         """
@@ -174,3 +162,40 @@ class SteadyStateSolver:
             for ell in range(self.scattering_order + 1):
                 for m in range(-ell, ell + 1):
                     self.harmonic_index_map.append(HarmonicIndex(ell, m))
+
+    def initialize_angle_sets(self) -> None:
+        """
+        Initialize the angle sets for the problem.
+        """
+        self.angle_sets.clear()
+
+        # Octant aggregation
+        if self.angle_aggregation_type == 'octant':
+
+            # 1D hemisphere aggregation
+            if self.mesh.dim:
+                sweep_ordering = list(range(self.mesh.n_cells))
+
+                # Top hemisphere
+                as_top = AngleSet()
+                as_top.sweep_ordering = sweep_ordering
+                for i, omega in enumerate(self.quadrature.omegas):
+                    if omega.z > 0.0:
+                        as_top.angles.append(i)
+                self.angle_sets.append(as_top)
+
+                # Bottom hemisphere
+                as_bot = AngleSet()
+                as_bot.sweep_ordering = sweep_ordering[::-1]
+                for i, omega in enumerate(self.quadrature.omegas):
+                    if omega.z < 0.0:
+                        as_bot.angles.append(i)
+                self.angle_sets.append(as_bot)
+
+        # Initialize FLUDs
+        for angle_set in self.angle_sets:
+            angle_set: AngleSet = angle_set
+            angle_set.fluds = FLUDS()
+            angle_set.fluds.psi = \
+                np.zeros((self.mesh.n_cells, 2*self.mesh.dim,
+                          len(angle_set.angles), self.n_groups))
