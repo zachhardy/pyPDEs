@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 
-from typing import List, Union
+from typing import List, Tuple
 
 from ..cell import Cell
 from ..face import Face
@@ -29,6 +29,10 @@ class Mesh:
         self.dim: int = 0
         self.type: str = None
         self.coord_sys: str = 'cartesian'
+
+        self.is_orthogonal: bool = True
+        self.cell_to_ijk_mapping: List[List[int]] = []
+        self.n_cells_ijk: tuple = []
 
         self.vertices: List[Vector] = []
 
@@ -152,3 +156,28 @@ class Mesh:
         float
         """
         return np.max([v.z for v in self.vertices])
+
+    def map_ijk_to_cell_id(self, i: int, j: int = 0, k: int = 0) -> int:
+        """
+        Map an `ijk` index to a cell ID on the mesh.
+
+        Parameters
+        ----------
+        i : int
+        j : int, default 0
+        k : int, default 0
+
+        Returns
+        -------
+        int
+            The global ID of the cell.
+        """
+        if self.dim == 1:
+            return self.cells[i]
+        elif self.dim == 2:
+            nx = self._n_cells_ijk[0]
+            return self.cells[j*nx + i]
+        elif self.dim == 3:
+            nx = self.n_cells_ijk[0]
+            ny = self.n_cells_ijk[1]
+            return self.cells[k*nx*ny + j*nx + i]
