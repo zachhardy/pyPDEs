@@ -5,7 +5,7 @@ from pyPDEs.utilities import Vector
 
 
 __all__ = ['ReflectiveBoundary', 'VacuumBoundary',
-           'IncidentHomogeneousBoundary']
+           'HomogeneousBoudary', 'Boundary']
 
 
 class Boundary:
@@ -23,12 +23,10 @@ class Boundary:
                  values: List[float] = None) -> None:
         self.type: str = bndry_type
 
-        self.values: List[float] = []
-        if values is not None:
-            if isinstance(values, float):
-                values = [values]
-            for value in values:
-                self.values.append(value)
+        values = [] if values is None else values
+        if isinstance(values, float):
+            values = [values]
+        self.values: List[float] = values
 
     def boundary_psi_incoming(
             self, angle: int, group: int, cell: int,
@@ -43,7 +41,7 @@ class Boundary:
             'No boundary psi exists for this boundary type.')
 
 
-class IncidentHomogeneousBoundary(Boundary):
+class HomogeneousBoudary(Boundary):
     """
     Incident homogeneous transport boundary condition.
 
@@ -53,7 +51,7 @@ class IncidentHomogeneousBoundary(Boundary):
         Group-wise homogeneous boundary values.
     """
     def __init__(self, values: List[float]) -> None:
-        super().__init__('incident_homogeneous', values)
+        super().__init__('homogeneous', values)
 
 
 class VacuumBoundary(Boundary):
@@ -69,62 +67,44 @@ class ReflectiveBoundary(Boundary):
     Reflective transport boundary condition.
     """
     def __init__(self) -> None:
-        AngVec = List[List[List[List[float]]]]
+        AngVec = List[List[List[float]]]
 
         self.normal: Vector = None
         self.boundary_psi: List[AngVec] = []
-        self.reflected_angle: List[int] = []
+        self.reflected_angles: List[int] = []
 
-    def boundary_psi_incoming(
-            self, angle: int, group: int, cell: int,
-            face: int, node: int) -> float:
+    def boundary_psi_incoming(self, angle_num: int, cell_id: int,
+                              face_num: int) -> float:
         """
         Get the incident boundary psi.
 
         Parameters
         ----------
-        angle : int
+        angle_num : int
             The angle index.
-        group : int
-            The group index.
-        cell : int
+        cell_id : int
             The cell index.
-        face : int
+        face_num : int
             The face index.
-        node : int
-            The node index.
 
         Returns
         -------
         float
         """
-        psi_n = self.boundary_psi[self.reflected_angle[angle]]
-        return psi_n[group][cell][face][node]
+        refl = self.reflected_angles[angle_num]
+        return self.boundary_psi[refl][cell_id][face_num]
 
-    def boundary_psi_outgoing(
-            self, angle: int, group: int, cell: int,
-            face: int, node: int) -> float:
+    def set_psi_outgoing(self, psi: float, cell_id: int, face_num: int,
+                         angle_num: int, group_num: int) -> None:
         """
         Get the outgoing boundary psi.
 
         Parameters
         ----------
-        angle : int
-            The angle index.
-        group : int
-            The group index.
-        cell : int
-            The cell index.
-        face : int
-            The face index.
-        node : int
-            The node index.
-
-        Returns
-        -------
-        float
+        psi: float
+        angle_num : int
+        cell_id : int
+        face_num : int
+        group_num : int
         """
-        return self.boundary_psi[angle][group][cell][face][node]
-
-
-
+        self.boundary_psi[angle_num][cell_id][face_num][group_num] = psi

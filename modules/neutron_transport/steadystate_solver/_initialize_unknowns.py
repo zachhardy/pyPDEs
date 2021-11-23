@@ -3,7 +3,9 @@ from numpy import ndarray
 
 from pyPDEs.material import *
 from pyPDEs.utilities import UnknownManager
+
 from ..boundaries import *
+from ..data_structures import *
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -25,22 +27,21 @@ def initialize_unknowns(self: 'SteadyStateSolver') -> None:
 
     # Initialize flux moments
     n_nodes = self.discretization.n_dofs()
-    n_phi_dofs = n_nodes * self.n_moments * self.n_groups
+    phi_shape = (self.n_moments, self.n_groups, n_nodes)
 
-    self.phi = np.zeros(n_phi_dofs)
-    self.phi_prev = np.zeros(n_phi_dofs)
-    self.q_moments = np.zeros(n_phi_dofs)
+    self.phi = np.zeros(phi_shape)
+    self.phi_prev = np.zeros(phi_shape)
+    self.q_moments = np.zeros(phi_shape)
 
     # Initialize anglular fluxes
-    n_psi_dofs = n_nodes * self.n_angles * self.n_groups
-    self.psi = np.zeros(n_psi_dofs)
+    psi_shape = (self.n_angles, self.n_groups, n_nodes)
+    self.psi = np.zeros(psi_shape)
 
-    n_cells = self.mesh.n_cells
-    n_faces = len(self.mesh.cells[0].faces)
-    shape = (self.n_angles, self.n_groups, n_cells, n_faces, 1)
-    self.psi_interface = np.zeros(shape=shape)
+    fluds_shape = (self.n_angles, self.mesh.n_cells,
+                   2*self.mesh.dim, self.n_groups)
+    self._fluds = np.zeros(fluds_shape)
 
     # Initialize precursors
     if self.use_precursors:
-        n_precursor_dofs = self.mesh.n_cells * self.max_precursors
-        self.precursors = np.zeros(n_precursor_dofs)
+        precursor_shape = (self.max_precursors, n_nodes)
+        self.precursors = np.zeros(precursor_shape)
