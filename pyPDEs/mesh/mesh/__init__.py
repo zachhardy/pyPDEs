@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 
-from typing import List, Union
+from typing import List, Tuple
 
 from ..cell import Cell
 from ..face import Face
@@ -30,6 +30,10 @@ class Mesh:
         self.type: str = None
         self.coord_sys: str = 'cartesian'
         self.is_orthogonal: bool = True
+
+        self.is_orthogonal: bool = True
+        self.cell_to_ijk_mapping: List[List[int]] = []
+        self.n_cells_ijk: tuple = []
 
         self.vertices: List[Vector] = []
         self.cell_id_to_ijk_map: List[List[int]] = []
@@ -155,88 +159,27 @@ class Mesh:
         """
         return np.max([v.z for v in self.vertices])
 
-    def get_associated_face(self, face: Face) -> int:
+    def map_ijk_to_cell_id(self, i: int, j: int = 0, k: int = 0) -> int:
         """
-        Get the neighboring cell's face that coincides with the
-        specified face.
+        Map an `ijk` index to a cell ID on the mesh.
 
         Parameters
         ----------
-        face : Face
+        i : int
+        j : int, default 0
+        k : int, default 0
 
         Returns
         -------
         int
+            The global ID of the cell.
         """
-        if not face.has_neighbor:
-            raise AssertionError('The specified face is on a boundary.')
-
-        # Current face vertex IDs
-        cfvids = set(face.vertex_ids)
-
-        # Loop over adjacent cell faces
-        associated_face = -1
-        adj_cell: Cell = self.cells[face.neighbor_id]
-        for af, adj_face in enumerate(adj_cell.faces):
-            adj_face: Face = adj_face
-
-            # Adjacent face vertex IDs
-            afvids = set(adj_face.vertex_ids)
-
-            # If this is the associated face
-            if afvids == cfvids:
-                associated_face = af
-                break
-
-        if associated_face < 0:
-            raise AssertionError(
-                'No associated face found on neighbor. Check that '
-                'the mesh was constructed correctly.')
-        return associated_face
-
-    def get_associated_vertices(self, face: Face) -> List[int]:
-        """
-        Get the neighboring cell's vertex IDs that coincides with the
-        specified face's vertex IDs.
-
-        Parameters
-        ----------
-        face : Face
-
-        Returns
-        -------
-        List[int]
-        """
-        if not face.has_neighbor:
-            raise AssertionError('The specified face is on a boundary.')
-
-        # Create empty list
-        associated_vertices = []
-
-        # Get adjacent cell
-        adj_cell: Cell = self.cells[face.neighbor_id]
-
-        # Get associated face
-        associated_face = self.get_associated_face(face)
-        adj_face: Face = adj_cell.faces[associated_face]
-
-        # Loop over current face vertices
-        for cfvid in face.vertex_ids:
-
-            # Loop over adjacent face vertices
-            found = False
-            for n, afvid in enumerate(adj_face.vertex_ids):
-                if cfvid == afvid:
-                    associated_vertices.append(n)
-                    found = True
-                    break
-
-            # There must be a matching vertex on associated faces
-            if not found:
-                raise AssertionError(
-                    'Could not find a matching vertex on the '
-                    'associated face.')
-        return associated_vertices
-
-
-
+        if self.dim == 1:
+            return self.cells[i]
+        elif self.dim == 2:
+            nx = self._n_cells_ijk[0]
+            return self.cells[j*nx + i]
+        elif self.dim == 3:
+            nx = self.n_cells_ijk[0]
+            ny = self.n_cells_ijk[1]
+            return self.cells[k*nx*ny + j*nx + i]

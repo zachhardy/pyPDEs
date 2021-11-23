@@ -51,10 +51,10 @@ xs2 = CrossSections()
 xs2.read_from_xs_dict(xs_material_1)
 
 # Create boundary conditions
-boundaries = [ReflectiveBoundary(xs0.n_groups),
-              VacuumBoundary(xs0.n_groups),
-              VacuumBoundary(xs0.n_groups),
-              ReflectiveBoundary(xs0.n_groups)]
+boundaries = [ReflectiveBoundary(n_groups),
+              VacuumBoundary(n_groups),
+              ReflectiveBoundary(n_groups),
+              VacuumBoundary(n_groups)]
 
 # Initialize solver and attach objects
 solver = TransientSolver()

@@ -108,6 +108,9 @@ class AnalyticSolution:
                 fit += mode.evaluate_eigenfunction(r)
                 diff = np.linalg.norm(fit - ic)
 
+        k = lambda alpha_mode: abs(alpha_mode.b.real)
+        self.modes = sorted(self.modes, key=k, reverse=True)
+
         print(f'# of Modes:\t{len(self.modes)}')
         print(f'IC Fit Error:\t{diff:.4e}\n')
 

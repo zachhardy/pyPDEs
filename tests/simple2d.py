@@ -17,58 +17,39 @@ from xs import *
 abs_path = os.path.dirname(os.path.abspath(__file__))
 
 # Create mesh, assign material IDs
-x_verts = np.linspace(0.0, 80.0, 41)
-y_verts = np.linspace(0.0, 80.0, 41)
+x_verts = np.linspace(0.0, 10.0, 11)
+y_verts = np.linspace(0.0, 10.0, 11)
 
 mesh = create_2d_mesh(x_verts, y_verts, verbose=True)
-
 for cell in mesh.cells:
-    c = cell.centroid
-    if 24.0 <= c.x <= 56.0 and \
-            24.0 <= c.y <= 56.0:
-        cell.material_id = 0
-    elif 0.0 <= c.x <= 24.0 and \
-            24.0 <= c.y <= 56.0:
-        cell.material_id = 1
-    elif 24.0 <= c.x <= 56.0 and \
-            0 <= c.y <= 24.0:
-        cell.material_id = 1
-    else:
-        cell.material_id = 2
+    cell.material_id = 0
 
 # Create discretizations
 discretization = FiniteVolume(mesh)
 
 # Create materials
-materials = []
-materials.append(Material('Fuel 0'))
-materials.append(Material('Fuel 1'))
-materials.append(Material('Fuel 2'))
+material = Material()
 
-xs = [CrossSections() for _ in range(len(materials))]
-data = [xs_material_0, xs_material_0, xs_material_1]
-fcts = [sigma_a_step, None, None]
-for i in range(len(materials)):
-    xs[i].read_from_xs_dict(data[i])
-    xs[i].sigma_a_function = fcts[i]
-    materials[i].add_properties(xs[i])
+xs = CrossSections()
+xs.read_from_xs_file('xs/fuel_1g.cxs')
+material.add_properties(xs)
 
 # Create boundary conditions
-n_groups = xs[0].n_groups
+n_groups = xs.n_groups
 boundaries = [ReflectiveBoundary(n_groups),
               VacuumBoundary(n_groups),
               ReflectiveBoundary(n_groups),
               VacuumBoundary(n_groups)]
 
 # Initialize solver and attach objects
-solver = TransientSolver()
+solver = KEigenvalueSolver()
 solver.mesh = mesh
 solver.discretization = discretization
-solver.materials = materials
+solver.materials = [material]
 solver.boundaries = boundaries
 
-solver.tolerance = tolerance
-solver.max_iterations = max_iterations
+solver.tolerance = 1.0e-8
+solver.max_iterations = 1000
 
 # Set options
 solver.use_precursors = True
@@ -82,8 +63,13 @@ solver.method = 'tbdf2'
 # Output informations
 solver.write_outputs = True
 solver.output_directory = \
-    os.path.join(abs_path, 'outputs/step')
+    os.path.join(abs_path, 'outputs/ramp')
 
 # Run the problem
 solver.initialize(verbose=1)
 solver.execute(verbose=1)
+solver.plot_flux()
+
+plt.figure()
+plt.spy(solver.assemble_matrix())
+plt.show()

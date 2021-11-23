@@ -55,11 +55,15 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
         verts.extend(v if not verts else v[1::])
     mesh.vertices = np.array(verts, dtype=Vector)
 
+    # Cells per dimension
+    n_cells = sum(zone_subdivs)
+    mesh.n_cells_ijk = (n_cells,)
+
     # Define cells
     count = 0
-    n_cells = sum(zone_subdivs)
     for i in range(len(zone_subdivs)):
         for c in range(zone_subdivs[i]):
+            mesh.cell_to_ijk_mapping.append([count])
 
             # Create cell
             cell = Cell()
@@ -92,10 +96,8 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
                 else:
                     face.vertex_ids = [count + 1]
                     face.normal = Vector(z=1.0)
-                    face.has_neighbor = \
-                        True if count < n_cells - 1 else False
-                    face.neighbor_id = \
-                        count + 1 if count < n_cells - 1 else -2
+                    face.has_neighbor = True if count < n_cells - 1 else False
+                    face.neighbor_id = count + 1 if count < n_cells - 1 else -2
 
                 # Face geometric quantities
                 face.area = mesh.compute_area(face)
@@ -166,16 +168,27 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
             verts.append(Vector(x_vertices[j], y_vertices[i]))
     mesh.vertices = verts
 
+    # Cells per dimension
+    mesh.n_cells_ijk = (nx - 1, ny - 1)
+
+    # Reference normals
+    ihat = Vector(x=1.0)
+    jhat = Vector(y=1.0)
+    khat = Vector(z=1.0)
+
     # Create cells
     for i in range(ny - 1):
         for j in range(nx - 1):
+            mesh.cell_to_ijk_mapping.append([j, i])
+
+            # Initialize cell
             cell = Cell()
             cell.cell_type = 'quad'
             cell.id = i * (nx - 1) + j
             mesh.cell_id_to_ijk_map.append([j, i])
 
-            # Vertices start at the bottom left and are
-            # numbered counter-clockwise
+            # Vertices start at the bottom left and
+            # are numbered counter-clockwise
             cell.vertex_ids = [vmap[i][j], vmap[i][j + 1],
                                vmap[i + 1][j + 1], vmap[i + 1][j]]
 
@@ -192,14 +205,19 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
             for f in range(4):
                 face = Face()
 
-                # Faces start at bottom and are defined in a
-                # counter-clockwise manner
-                if f < 3:
-                    face.vertex_ids = [cell.vertex_ids[f],
-                                       cell.vertex_ids[f + 1]]
-                else:
-                    face.vertex_ids = [cell.vertex_ids[f],
+                # Left, right, back, front face
+                if f == 0:
+                    face.vertex_ids = [cell.vertex_ids[3],
                                        cell.vertex_ids[0]]
+                elif f == 1:
+                    face.vertex_ids = [cell.vertex_ids[1],
+                                       cell.vertex_ids[2]]
+                elif f == 2:
+                    face.vertex_ids = [cell.vertex_ids[0],
+                                       cell.vertex_ids[1]]
+                else:
+                    face.vertex_ids = [cell.vertex_ids[2],
+                                       cell.vertex_ids[3]]
 
                 v0 = mesh.vertices[face.vertex_ids[0]]
                 v1 = mesh.vertices[face.vertex_ids[1]]
@@ -207,54 +225,39 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
                 # Face geometric quantities
                 face.centroid = mesh.compute_centroid(face)
                 face.area = mesh.compute_area(face)
-                normal = Vector(z=1.0).cross(v0 - v1)
+                normal = khat.cross(v0 - v1)
                 face.normal = normal.normalize()
 
                 # Define neighbors
-                if face.normal == Vector(x=1.0):
+                if face.normal == ihat:
                     face.neighbor_id = cell.id + 1
-                elif face.normal == Vector(x=-1.0):
+                elif face.normal == -ihat:
                     face.neighbor_id = cell.id - 1
-                elif face.normal == Vector(y=1.0):
+                elif face.normal == jhat:
                     face.neighbor_id = cell.id + nx - 1
-                elif face.normal == Vector(y=-1.0):
+                elif face.normal == -jhat:
                     face.neighbor_id = cell.id - nx + 1
 
-                # Define boundaries starting at the bottom
-                # going counter-clockwise
-                if v0.y == v1.y == mesh.y_min:
-                    face.neighbor_id = -1
+                # Left, right, back, front boundaries
+                if v0.x == v1.x == mesh.x_min:
+                    face.neighbor_id = 0
                 elif v0.x == v1.x == mesh.x_max:
-                    face.neighbor_id = -2
+                    face.neighbor_id = 1
+                elif v0.y == v1.y == mesh.y_min:
+                    face.neighbor_id = 2
                 elif v0.y == v1.y == mesh.y_max:
-                    face.neighbor_id = -3
-                elif v0.x == v1.x == mesh.x_min:
-                    face.neighbor_id = -4
+                    face.neighbor_id = 3
                 else:
                     face.has_neighbor = True
 
                 cell.faces.append(face)
 
-            # Define face vertex mapping
-            cell.face_vertex_mapping = [[0, 1], [1, 2],
-                                        [2, 3], [3, 0]]
-
             # Cell on boundary?
-            if any([face.neighbor_id < 0 for face in cell.faces]):
+            if any([not face.has_neighbor for face in cell.faces]):
                 mesh.boundary_cell_ids.append(cell.id)
 
             # Add cell to mesh
             mesh.cells.append(cell)
-
-    # Define associated faces and vertices
-    for cell in mesh.cells:
-        for face in cell.faces:
-            if face.has_neighbor:
-                ass_face = mesh.get_associated_face(face)
-                ass_verts = mesh.get_associated_vertices(face)
-
-                face.associated_face = ass_face
-                face.associated_vertices = ass_verts
 
     # Verbose printout
     t_elapsed = time.time() - t_start
