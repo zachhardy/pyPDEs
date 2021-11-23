@@ -259,6 +259,16 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
             # Add cell to mesh
             mesh.cells.append(cell)
 
+    # Define associated faces and vertices
+    for cell in mesh.cells:
+        for face in cell.faces:
+            if face.has_neighbor:
+                ass_face = mesh.get_associated_face(face)
+                ass_verts = mesh.get_associated_vertices(face)
+
+                face.associated_face = ass_face
+                face.associated_vertices = ass_verts
+
     # Verbose printout
     t_elapsed = time.time() - t_start
     if verbose:
