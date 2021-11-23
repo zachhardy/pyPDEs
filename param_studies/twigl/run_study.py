@@ -82,8 +82,8 @@ for i in range(len(materials)):
 n_groups = xs[0].n_groups
 boundaries = [ReflectiveBoundary(n_groups),
               VacuumBoundary(n_groups),
-              VacuumBoundary(n_groups),
-              ReflectiveBoundary(n_groups)]
+              ReflectiveBoundary(n_groups),
+              VacuumBoundary(n_groups)]
 
 # Initialize solver and attach objects
 solver = TransientSolver()
