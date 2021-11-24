@@ -210,13 +210,13 @@ class Mesh:
         associated_face = self.get_associated_face(face)
         adj_face: Face = adj_cell.faces[associated_face]
 
-        for cfvid in face.vertex_ids:
-            for i, afvid in enumerate(adj_face.vertex_ids):
+        for i, cfvid in enumerate(face.vertex_ids):
+            for j, afvid in enumerate(adj_face.vertex_ids):
                 if cfvid == afvid:
-                    associated_vertices.append(i)
+                    associated_vertices.append(j)
                     break
-                if len(associated_vertices) < i + 1:
-                    raise AssertionError('Associated vertex not found.')
+            if len(associated_vertices) < i + 1:
+                raise AssertionError('Associated vertex not found.')
         return associated_vertices
 
 

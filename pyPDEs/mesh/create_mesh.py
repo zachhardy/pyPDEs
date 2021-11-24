@@ -121,11 +121,8 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
     for cell in mesh.cells:
         for face in cell.faces:
             if face.has_neighbor:
-                ass_face = mesh.get_associated_face(face)
-                ass_verts = mesh.get_associated_vertices(face)
-
-                face.associated_face = ass_face
-                face.associated_vertices = ass_verts
+                face.associated_face = mesh.get_associated_face(face)
+                face.associated_vertices = mesh.get_associated_vertices(face)
 
     # Verbose printout
     t_elapsed = time.time() - t_start
@@ -263,18 +260,17 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
     for cell in mesh.cells:
         for face in cell.faces:
             if face.has_neighbor:
-                ass_face = mesh.get_associated_face(face)
-                ass_verts = mesh.get_associated_vertices(face)
-
-                face.associated_face = ass_face
-                face.associated_vertices = ass_verts
+                face.associated_face = mesh.get_associated_face(face)
+                face.associated_vertices = mesh.get_associated_vertices(face)
 
     # Verbose printout
     t_elapsed = time.time() - t_start
     if verbose:
-        print('\n***** Summary of the 2D mesh *****')
+        print()
+        print('***** Summary of the 2D mesh *****')
         print(f'Number of Cells:\t{mesh.n_cells}')
         print(f'Number of Faces:\t{mesh.n_faces}')
         print(f'Number of Vertices:\t{mesh.n_vertices}')
         print(f'Mesh Creation Time:\t{t_elapsed:.4g} sec')
+        print()
     return mesh
