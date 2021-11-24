@@ -9,8 +9,8 @@ class DirectedGraph:
     Implementation of a directed graph.
     """
     def __init__(self) -> None:
-        self.vertices: VertexAccessor = None
-        self.valid_flags: List[bool] = []
+        self.vertices: List[GraphVertex] = []
+        self.vertex_valid_flags: List[bool] = []
 
     def add_vertex(self, v_id: int = -1) -> None:
         """
@@ -21,9 +21,9 @@ class DirectedGraph:
         v : int, default -1
             The ID to assign to the vertex.
         """
-        if self.vertices is None:
-            self.vertices = VertexAccessor()
-        self.vertices.add_vertex(v_id)
+        v_id = v_id if v_id >= 0 else len(self.vertices)
+        self.vertices.append(GraphVertex(v_id))
+        self.vertex_valid_flags.append(True)
 
     def remove_vertex(self, v: int) -> None:
         """
@@ -33,10 +33,23 @@ class DirectedGraph:
         ----------
         v : int
         """
-        if self.vertices is None:
-            raise AssertionError(
-                f'VertexAccessor has not been initialized.')
-        self.vertices.remove_vertex(v)
+        if v < 0 or v >= len(self.vertices):
+            raise ValueError(f'Invalid vertex index {v}.')
+
+        # Get adjacent vertices
+        adj_verts: List[int] = []
+        for u in self.vertices[v].upstream_edge:
+            adj_verts.append(u)
+        for u in self.vertices[v].downstream_edge:
+            adj_verts.append(u)
+
+        # Remove vertex from up/downstreams
+        for u in adj_verts:
+            self.vertices[u].upstream_edge.remove(v)
+            self.vertices[u].downstream_edge.remove(v)
+
+        # Change valid flag
+        self.vertex_valid_flags[v] = False
 
     def add_edge(self, start: int, end: int) -> None:
         """
@@ -49,37 +62,12 @@ class DirectedGraph:
         end : int
             The vertex index the edge goes to.
         """
+        if not self.vertex_valid_flags[start]:
+            raise ValueError(f'Invalid upstream vertex index {start}.')
+        if not self.vertex_valid_flags[end]:
+            raise ValueError(f'Invalid downstream vertex index {end}.')
         self.vertices[start].downstream_edge.add(end)
         self.vertices[end].upstream_edge.add(start)
-
-    def remove_vertex(self, v: int) -> None:
-        """
-        Remove a vertex from the directed graph.
-
-        Parameters
-        ----------
-        v : int
-            The vertex index to remove.
-        """
-        if v < 0 or v >= len(self.vertices):
-            raise ValueError(f'Invalid vertex index {v}.')
-
-        vertex = self.vertices[v]
-
-        # Get adjacent vertices
-        adj_vertices: List[int] = []
-        for u in vertex.upstream_edge:
-            adj_vertices.append(u)
-        for u in vertex.downstream_edge:
-            adj_vertices.append(u)
-
-        # Remove vertex from adjecent vertices
-        for u in adj_vertices:
-            self.vertices[u].upstream_edge.remove(v)
-            self.vertices[u].downstream_edge.remove(v)
-
-        # Change valid flag
-        self.valid_flags[v] = False
 
     def remove_edge(self, start: int, end: int) -> None:
         """
@@ -92,6 +80,10 @@ class DirectedGraph:
         end : int
             The vertex index the edge goes to.
         """
+        if not self.vertex_valid_flags[start]:
+            raise ValueError(f'Invalid upstream vertex index {start}.')
+        if not self.vertex_valid_flags[end]:
+            raise ValueError(f'Invalid downstream vertex index {end}.')
         self.vertices[start].downstream_edge.remove(end)
         self.vertices[end].upstream_edge.remove(start)
 
@@ -106,98 +98,30 @@ class DirectedGraph:
         L: List[int] = []
         S: List[GraphVertex] = []
 
-        # Copy the vertices
-        vertices: VertexAccessor = deepcopy(self.vertices)
-
-        # Identify vertices with no incoming edge
-        for vertex in vertices:
-            vertex: GraphVertex = vertices
-            if len(vertex.upstream_edge) == 0:
-                S.append(vertex)
-
-        if len(S) == 0:
-            raise AssertionError(
-                'There must be vertices with no incoming edge.')
+        # Identify count of upstream edges, add vertices
+        # with no upstream edges to queue
+        for v in range(len(self.vertices)):
+            node: GraphVertex = self.vertices[v]
+            if len(node.upstream_edge) == 0:
+                S.append(node)
 
         # Repeatedly remove vertices
         while len(S) > 0:
             node_n: GraphVertex = S.pop()
             L.append(node_n.id)
 
-            nodes_m = node_n.downstream_edge
-            for m in nodes_m:
-                node_m: GraphVertex = vertices[m]
+            ds_num = 0
+            while node_n.downstream_edge:
+                m = node_n.downstream_edge.pop()
+                node_m: GraphVertex = self.vertices[m]
 
-                node_n.downstream_edge.remove(m)
-                node_m.upstream_edge.remove(n)
+                # Remove upstream edge
+                node_m.upstream_edge.remove(node_n.id)
 
+                # Add no upstream node to queue
                 if len(node_m.upstream_edge) == 0:
                     S.append(node_m)
         return L
-
-
-class VertexAccessor:
-    """
-    Vertex accessor class.
-    """
-    def __init__(self) -> None:
-        self.vertices: List[GraphVertex] = []
-        self.vertex_valid_flags: List[bool] = []
-
-    def __getitem__(self, v: int) -> None:
-        """
-        Get vertex `v`.
-
-        Parameters
-        ----------
-        v : int
-            The vertex index to get.
-        """
-        if not self.vertex_valid_flags[v]:
-            raise ValueError(f'Invalid vertex index {v}.')
-        return self.vertices[v]
-
-    def add_vertex(self, v_id: int = -1) -> None:
-        """
-        Add a vertex to the directed graph.
-
-        Parameters
-        ----------
-        v_id : int, default -1
-            An ID to attach to the vertex.
-        """
-        v_id = v_id if v_id >= 0 else len(self.vertices)
-        self.vertices.append(GraphVertex(v_id))
-        self.vertex_valid_flags.append(True)
-
-    def remove_vertex(self, v: int) -> None:
-        """
-        Remove a vertex from the directed graph.
-
-        Parameters
-        ----------
-        v : int
-            The vertex to remove.
-        """
-        if v < 0 or v >= len(self.vertices):
-            raise ValueError(f'Invalid vertex ID {v}.')
-
-        vertex = self.vertices[v]
-
-        # Get adjacent vertices
-        adj_verts: List[int] = []
-        for u in vertex.upstream_edge:
-            adj_verts.append(u)
-        for u in vertex.downstream_edge:
-            adj_verts.append(u)
-
-        # Remove vertex fro up/downstream of neighbors
-        for u in adj_verts:
-            self.vertices[u].upstream_edge.remove(v)
-            self.vertices[u].downstream_edge.remove(v)
-
-        # Change flag
-        self.vertex_valid_flags[v] = False
 
 
 class GraphVertex:
@@ -206,9 +130,9 @@ class GraphVertex:
 
     Parameters
     ----------
-    v : int, default -1
+    v_id : int, default -1
     """
-    def __init__(self, v: int = -1) -> None:
-        self.id: int = v
+    def __init__(self, v_id: int = -1) -> None:
+        self.id: int = v_id
         self.upstream_edge: Set[int] = set()
         self.downstream_edge: Set[int] = set()
