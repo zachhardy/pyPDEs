@@ -104,4 +104,4 @@ def sweep(self: 'SteadyStateSolver'):
                                 bndry_id = face.neighbor_id
                                 bc: Boundary = self.boundaries[bndry_id]
                                 if isinstance(bc, ReflectiveBoundary):
-                                    bc.set_psi_outgoing(psi_out, c, fo, n, g)
+                                    bc.set_psi_outgoing(psi_out, c, f, n, g)
