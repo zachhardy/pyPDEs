@@ -59,6 +59,9 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
     n_cells = sum(zone_subdivs)
     mesh.n_cells_ijk = (n_cells,)
 
+    # Shorthand
+    khat = Vector(z=1.0)
+
     # Define cells
     count = 0
     for i in range(len(zone_subdivs)):
@@ -88,16 +91,16 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
                 # Left face
                 if f == 0:
                     face.vertex_ids = [count]
-                    face.normal = Vector(z=-1.0)
+                    face.normal = -khat
                     face.has_neighbor = True if count > 0 else False
-                    face.neighbor_id = count - 1 if count > 0 else -1
+                    face.neighbor_id = count - 1 if count > 0 else 0
 
                 # Right face
                 else:
                     face.vertex_ids = [count + 1]
-                    face.normal = Vector(z=1.0)
+                    face.normal = khat
                     face.has_neighbor = True if count < n_cells - 1 else False
-                    face.neighbor_id = count + 1 if count < n_cells - 1 else -2
+                    face.neighbor_id = count + 1 if count < n_cells - 1 else 1
 
                 # Face geometric quantities
                 face.area = mesh.compute_area(face)
