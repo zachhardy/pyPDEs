@@ -94,16 +94,37 @@ class ProductQuadrature(AngularQuadrature):
 
             # Create polar angles
             polar_angles = []
-            for q in range(n_polar*2):
-                # Quadrature points are cosines, to get the angles
-                # apply arccos. To sort from least to greatest, subtract
-                # this result from pi
-                theta = np.pi - np.arccos(gl_polar.qpoints[q].z)
-                polar_angles.append(theta)
+            for i in range(2*n_polar):
+                qpoint = gl_polar.qpoints[i].z
+                polar_angles.append(np.pi - np.arccos(gl_polar.qpoints[i].z))
 
             # Create weights
             weights = gl_polar.weights
 
+        # Initialize with Gauss-Legendre-Legendre
+        elif quadrature_type == 'gll':
+            gl_polar = GaussLegendre(2*n_polar)
+            gl_azimuthal = GaussLegendre(4*n_azimuthal)
+
+            # Create azimuthal angles in range 0, 2pi
+            azimuthal_angles = []
+            for i in range(4*n_azimuthal):
+                qpoint = gl_azimuthal.qpoints[i].z
+                azimuthal_angles.append(np.pi*qpoint + np.pi)
+
+            # Create polar angles in range 0, pi
+            polar_angles = []
+            for i in range(2*n_polar):
+                qpoint = gl_polar.qpoints[i].z
+                polar_angles.append(np.pi - np.arccos(qpoint))
+
+            # Create weights, multiply by pi for 4pi weight sum
+            weights = []
+            for i in range(len(azimuthal_angles)):
+                wi = gl_azimuthal.weights[i]
+                for j in range(len(polar_angles)):
+                    wj = gl_polar.weights[j]
+                    weights.append(np.pi*wi*wj)
         else:
             raise NotImplementedError('Quadrature type not implemented.')
 
