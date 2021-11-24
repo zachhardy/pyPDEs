@@ -10,21 +10,33 @@ from modules.neutron_transport import *
 
 
 # Create mesh and discretization
-mesh = create_1d_mesh([0.0, 1.0], [10])
+mesh = create_1d_mesh([0.0, 0.1, 0.7, 1.0], [10, 60, 30], [1, 0, 1])
 discretization = FiniteVolume(mesh)
 
 # Create cross sections and sources
-material = Material()
+materials = []
+materials.append(Material('Absorber'))
+materials.append(Material('Reflector'))
 
-xs = CrossSections()
-xs.read_from_xs_file('xs/transport_1g.cxs')
-material.add_properties(xs)
+absorber_xs = {'n_groups': 1, 'sigma_t': [10.0],
+               'transfer_matrix': [[[1.0]]]}
+reflector_xs = {'n_groups': 1, 'sigma_t': [5.0],
+                'transfer_matrix': [[[4.9]]]}
 
-src = IsotropicMultiGroupSource(np.ones(xs.n_groups))
-material.add_properties(src)
+xs_absorber = CrossSections()
+xs_reflector = CrossSections()
+
+xs_absorber.read_from_xs_dict(absorber_xs)
+xs_reflector.read_from_xs_dict(reflector_xs)
+
+materials[0].add_properties(xs_absorber)
+materials[1].add_properties(xs_reflector)
+
+src = IsotropicMultiGroupSource(np.ones(1))
+materials[0].add_properties(src)
 
 # Create boundary conditions
-boundaries = [VacuumBoundary(), ReflectiveBoundary()]
+boundaries = [VacuumBoundary(), VacuumBoundary()]
 
 # Create angular quadrature
 quad = ProductQuadrature(4, quadrature_type='gl')
@@ -34,7 +46,7 @@ solver = SteadyStateSolver()
 solver.mesh = mesh
 solver.discretization = discretization
 solver.boundaries = boundaries
-solver.materials = [material]
+solver.materials = materials
 solver.quadrature = quad
 
 solver.scattering_order = 0
@@ -43,6 +55,6 @@ solver.tolerance = 1.0e-6
 
 solver.initialize()
 solver.execute()
-solver.plot_flux_moment(0, 0, 0)
 
-
+solver.plot_flux_moment(ell=0, m=0, group_num=0)
+plt.show()
