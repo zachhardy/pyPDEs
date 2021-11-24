@@ -27,7 +27,8 @@ class SteadyStateSolver:
 
     from ._angular_operators import (discrete_to_moment_matrix,
                                      moment_to_discrete_matrix)
-    from ._compute_anglesets import create_angle_sets
+    from ._compute_anglesets import (initialize_angle_sets,
+                                     create_sweep_ordering)
 
     from ._setsource import set_source
     from ._sweep import sweep
@@ -65,6 +66,10 @@ class SteadyStateSolver:
         self.angle_aggregation_type: str = 'octant'
         self.angle_sets: List[AngleSet] = []
 
+        # Angular operators
+        self.M: ndarray = None
+        self.D: ndarray = None
+
         # Flux moment vectors
         self.phi: ndarray = None
         self.phi_prev: ndarray = None
@@ -78,10 +83,6 @@ class SteadyStateSolver:
 
         # Source moment vector
         self.q_moments: ndarray = None
-
-        # Angular operators
-        self.M: ndarray = None
-        self.D: ndarray = None
 
     def initialize(self, verbose: bool = True) -> None:
         """
@@ -112,7 +113,6 @@ class SteadyStateSolver:
 
         # Compute angle sets
         self.initialize_angle_sets()
-
 
     def execute(self, verbose: bool = True) -> None:
         """
@@ -162,7 +162,6 @@ class SteadyStateSolver:
             plt.plot(grid, self.phi[moment_num][group_num])
             plt.show()
 
-
     def compute_n_angles(self) -> int:
         """
         Compute the number of angles.
@@ -201,35 +200,6 @@ class SteadyStateSolver:
             for ell in range(self.scattering_order + 1):
                 for m in range(-ell, ell + 1):
                     self.harmonic_index_map.append(HarmonicIndex(ell, m))
-
-    def initialize_angle_sets(self) -> None:
-        """
-        Initialize the angle sets for the problem.
-        """
-        self.angle_sets.clear()
-
-        # Octant aggregation
-        if self.angle_aggregation_type == 'octant':
-
-            # 1D hemisphere aggregation
-            if self.mesh.dim == 1:
-                sweep_ordering = list(range(self.mesh.n_cells))
-
-                # Top hemisphere
-                as_top = AngleSet()
-                as_top.sweep_ordering = sweep_ordering
-                for i, omega in enumerate(self.quadrature.omegas):
-                    if omega.z > 0.0:
-                        as_top.angles.append(i)
-                self.angle_sets.append(as_top)
-
-                # Bottom hemisphere
-                as_bot = AngleSet()
-                as_bot.sweep_ordering = sweep_ordering[::-1]
-                for i, omega in enumerate(self.quadrature.omegas):
-                    if omega.z < 0.0:
-                        as_bot.angles.append(i)
-                self.angle_sets.append(as_bot)
 
     def psi_upwind(self, cell_id: int, face_num: int,
                    angle_num: int) -> List[int]:
