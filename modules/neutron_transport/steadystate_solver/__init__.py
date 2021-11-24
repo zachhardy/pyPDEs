@@ -149,18 +149,68 @@ class SteadyStateSolver:
                 print()
                 break
 
-    def plot_flux_moment(self, moment_num: int, group_num: int) -> None:
-        ell_m = self.harmonic_index_map[moment_num]
-        if self.mesh.dim == 1:
-            grid = [pt.z for pt in self.discretization.grid]
+    def plot_flux_moment(self, ell: int, m: int, group_num: int) -> None:
+        """
+        Plot flux moments.
 
+        Parameters
+        ----------
+        ell : int
+        m: int
+        group_num : int
+        """
+        moment_num = self.find_harmonic_index(ell, m)
+        grid = self.discretization.grid
+
+        # Plot 1D solutions
+        if self.mesh.dim == 1:
             plt.figure()
+            plt.title(f'Flux Moment\n$\ell$={ell}, $m$={m}', fontsize=12)
             plt.xlabel('z', fontsize=12)
-            plt.ylabel(rf'$\phi_{{{ell_m.ell}, {group_num}}}^{ell_m.m}$(z)')
+            plt.ylabel('$\phi$', fontsize=12)
+
+            grid = [pt.z for pt in grid]
+            plt.plot(grid, self.phi[moment_num][group_num])
             plt.grid(True)
 
-            plt.plot(grid, self.phi[moment_num][group_num])
-            plt.show()
+        # Plot 2D solutions
+        elif self.mesh.dim == 2:
+            plt.figure()
+            plt.title(f'Flux Moment\n$\ell$={ell} $m$={m}', fontsize=12)
+            plt.xlabel('X', fontsize=12)
+            plt.ylabel('Y', fontsize=12)
+
+            x = np.unique([p.x for p in grid])
+            y = np.unique([p.y for p in grid])
+            xx, yy = np.meshgrid(x, y)
+            phi: ndarray = self.phi[moment_num][group_num]
+            phi = phi.reshape(xx.shape)
+            im = plt.pcolor(xx, yy, phi, cmap='jet', shading='auto',
+                            vmin=0.0, vmax=phi.max())
+            plt.colorbar(im)
+        plt.tight_layout()
+
+    def plot_angular_flux(self, angle_num: int, group_num: int) -> None:
+        """
+        Plot the angular flux for a specific angle and group.
+
+        Parameters
+        ----------
+        angle_num : int
+        group_num : int
+        """
+        omega = self.quadrature.omegas[angle_num]
+        grid = self.discretization.grid
+        if self.mesh.dim == 1:
+            plt.figure()
+            plt.title(f'Angular Flux\n$\mu = {omega.z:.3f}$', fontsize=12)
+            plt.xlabel('z', fontsize=12)
+            plt.ylabel(rf'$\psi_n$', fontsize=12)
+
+            grid = [pt.z for pt in grid]
+            plt.plot(grid, self.psi[angle_num][group_num])
+            plt.grid(True)
+        plt.tight_layout()
 
     def compute_n_angles(self) -> int:
         """
@@ -182,6 +232,27 @@ class SteadyStateSolver:
         """
         self.create_harmonic_indices()
         return len(self.harmonic_index_map)
+
+    def find_harmonic_index(self, ell: int, m: int) -> int:
+        """
+        Get the moment number given a set of harmonic indices.
+
+        Parameters
+        ----------
+        ell : int
+        m : int
+
+        Returns
+        -------
+        int
+        """
+        ell_m = HarmonicIndex(ell, m)
+        for n in range(self.n_moments):
+            if ell_m == self.harmonic_index_map[n]:
+                return n
+        raise ValueError(
+            f'No harmonic index found for indices '
+            f'ell, m = {ell}, {m}.')
 
     def create_harmonic_indices(self) -> None:
         """
