@@ -50,7 +50,7 @@ def sweep(self: 'SteadyStateSolver'):
                 b *= 0.0
 
                 # Loop over faces
-                psi_inc_map, inc_to_outb_map = {}, {}
+                psi_inc = [Vector() for _ in range(self.n_groups)]
                 for f in range(len(cell.faces)):
                     face = cell.faces[f]
                     mu = omega.dot(face.normal)
@@ -62,17 +62,11 @@ def sweep(self: 'SteadyStateSolver'):
                         else:
                             bid = face.neighbor_id
                             psi = self.psi_boundary(bid, c, f, n)
-                        psi_inc_map[f] = psi
-
-                        # Find outbound face
-                        for f_ in range(len(cell.faces)):
-                            face_: Face = cell.faces[f_]
-                            if face.normal == -face_.normal:
-                                inc_to_outb_map[f] = f_
 
                         A -= 2.0 * mu * face.area
                         for g in range(self.n_groups):
                             b[g] -= 2.0*mu*face.area * psi[g]
+                            psi_inc[g] += abs(face.normal * psi[g])
 
                 # Loop over groups
                 for g in range(self.n_groups):
@@ -94,19 +88,20 @@ def sweep(self: 'SteadyStateSolver'):
                     self.psi[n][g][c] = psi_ijk
 
                     # Store outgoing angular fluxes
-                    for fi, fo in inc_to_outb_map.items():
-                        face: Face = cell.faces[fo]
+                    for f in range(len(cell.faces)):
+                        face: Face = cell.faces[f]
 
-                        # Compute diamond difference relationship
-                        psi_out = 2.0*psi_ijk - psi_inc_map[fi][g]
+                        if omega.dot(face.normal) > 0.0:
+                            psi_inc_g = abs(face.normal.dot(psi_inc[g]))
+                            psi_out = 2.0*psi_ijk - psi_inc_g
 
-                        # Interior faces
-                        if face.has_neighbor:
-                            self.psi_outflow(psi_out, c, fo, n, g)
+                            # Interior faces
+                            if face.has_neighbor:
+                                self.psi_outflow(psi_out, c, f, n, g)
 
-                        # Reflecting boundaries
-                        else:
-                            bndry_id = face.neighbor_id
-                            bc: Boundary = self.boundaries[bndry_id]
-                            if isinstance(bc, ReflectiveBoundary):
-                                bc.set_psi_outgoing(psi_out, c, fo, n, g)
+                            # Reflecting boundaries
+                            else:
+                                bndry_id = face.neighbor_id
+                                bc: Boundary = self.boundaries[bndry_id]
+                                if isinstance(bc, ReflectiveBoundary):
+                                    bc.set_psi_outgoing(psi_out, c, fo, n, g)
