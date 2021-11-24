@@ -62,17 +62,39 @@ def initialize_angle_sets(self: 'SteadyStateSolver') -> None:
             top_right, top_left = AngleSet(), AngleSet()
             bot_left, bot_right = AngleSet(), AngleSet()
 
-            # Loop over angles
-            has_sweep_order = [False for _ in range(4)]
+            # Loop over directions
             for i, omega in enumerate(self.quadrature.omegas):
-                print(omega)
 
-                # Top right quadr
+                # Top right
                 if omega.x > 0.0 and omega.y > 0.0:
+                    if not top_right.angles:
+                        sweep_order = self.create_sweep_ordering(omega)
+                        top_right.sweep_ordering = sweep_order
                     top_right.angles.append(i)
-                    print(i)
 
+                # Top left
+                if omega.x < 0.0 and omega.y > 0.0:
+                    if not top_left.angles:
+                        sweep_order = self.create_sweep_ordering(omega)
+                        top_left.sweep_ordering = sweep_order
+                    top_left.angles.append(i)
 
+                # Bottom left
+                if omega.x < 0.0 and omega.y < 0.0:
+                    if not bot_left.angles:
+                        sweep_order = self.create_sweep_ordering(omega)
+                        bot_left.sweep_ordering = sweep_order
+                    bot_left.angles.append(i)
+
+                # Bottom right
+                if omega.x > 0.0 and omega.y < 0.0:
+                    if not bot_right.angles:
+                        sweep_order = self.create_sweep_ordering(omega)
+                        bot_right.sweep_ordering = sweep_order
+                    bot_right.angles.append(i)
+
+            # Add angle sets to the solver
+            self.angle_sets = [top_right, top_left, bot_left, bot_right]
 
 def create_sweep_ordering(self: 'SteadyStateSolver',
                           omega: Vector) -> List[int]:
