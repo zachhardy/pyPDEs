@@ -115,7 +115,7 @@ def _check_materials(self: 'SteadyStateSolver') -> None:
                 found_xs = True
 
             # Get sources
-            if prop.type == 'isotropic':
+            if prop.type == 'isotropic_source':
                 self.material_src.append(prop)
                 self.matid_to_src_map[mat_id] = len(self.material_src) - 1
 

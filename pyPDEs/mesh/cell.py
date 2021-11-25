@@ -17,6 +17,7 @@ class Cell:
         self.vertex_ids: List[int] = []
 
         self.faces: List[Face] = []
+        self.face_vertex_mapping: List[List[int]] = []
 
         self.volume: float = 0.0
         self.centroid: Vector = Vector()

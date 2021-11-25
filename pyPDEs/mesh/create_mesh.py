@@ -59,6 +59,9 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
     n_cells = sum(zone_subdivs)
     mesh.n_cells_ijk = (n_cells,)
 
+    # Shorthand
+    khat = Vector(z=1.0)
+
     # Define cells
     count = 0
     for i in range(len(zone_subdivs)):
@@ -68,6 +71,7 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
             # Create cell
             cell = Cell()
             cell.id = count
+            mesh.cell_id_to_ijk_map.append([count])
             cell.cell_type = 'slab'
             cell.coord_sys = coord_sys
             cell.material_id = material_ids[i]
@@ -87,16 +91,16 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
                 # Left face
                 if f == 0:
                     face.vertex_ids = [count]
-                    face.normal = Vector(z=-1.0)
+                    face.normal = -khat
                     face.has_neighbor = True if count > 0 else False
-                    face.neighbor_id = count - 1 if count > 0 else -1
+                    face.neighbor_id = count - 1 if count > 0 else 0
 
                 # Right face
                 else:
                     face.vertex_ids = [count + 1]
-                    face.normal = Vector(z=1.0)
+                    face.normal = khat
                     face.has_neighbor = True if count < n_cells - 1 else False
-                    face.neighbor_id = count + 1 if count < n_cells - 1 else -2
+                    face.neighbor_id = count + 1 if count < n_cells - 1 else 1
 
                 # Face geometric quantities
                 face.area = mesh.compute_area(face)
@@ -104,6 +108,9 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
 
                 # Add face to cell
                 cell.faces.append(face)
+
+            # Define face vertex mapping
+            cell.face_vertex_mapping = [[0], [1]]
 
             # Cell on boundary?
             if count == 0 or count == n_cells - 1:
@@ -113,14 +120,21 @@ def create_1d_mesh(zone_edges: List[float], zone_subdivs: List[int],
             mesh.cells.append(cell)
             count += 1
 
-        # Verbose printout
-        t_elapsed = time.time() - t_start
-        if verbose:
-            print('\n***** Summary of the 1D mesh:\n')
-            print(f'Number of Cells:\t{mesh.n_cells}')
-            print(f'Number of Faces:\t{mesh.n_faces}')
-            print(f'Number of Vertices:\t{mesh.n_vertices}')
-            print(f'Mesh Creation Time:\t{t_elapsed:.4g} sec')
+    # Define associated faces and vertices
+    for cell in mesh.cells:
+        for face in cell.faces:
+            if face.has_neighbor:
+                face.associated_face = mesh.get_associated_face(face)
+                face.associated_vertices = mesh.get_associated_vertices(face)
+
+    # Verbose printout
+    t_elapsed = time.time() - t_start
+    if verbose:
+        print('\n***** Summary of the 1D mesh:\n')
+        print(f'Number of Cells:\t{mesh.n_cells}')
+        print(f'Number of Faces:\t{mesh.n_faces}')
+        print(f'Number of Vertices:\t{mesh.n_vertices}')
+        print(f'Mesh Creation Time:\t{t_elapsed:.4g} sec')
     return mesh
 
 
@@ -171,6 +185,7 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
             cell = Cell()
             cell.cell_type = 'quad'
             cell.id = i * (nx - 1) + j
+            mesh.cell_id_to_ijk_map.append([j, i])
 
             # Vertices start at the bottom left and
             # are numbered counter-clockwise
@@ -244,12 +259,21 @@ def create_2d_mesh(x_vertices: ndarray, y_vertices: ndarray,
             # Add cell to mesh
             mesh.cells.append(cell)
 
+    # Define associated faces and vertices
+    for cell in mesh.cells:
+        for face in cell.faces:
+            if face.has_neighbor:
+                face.associated_face = mesh.get_associated_face(face)
+                face.associated_vertices = mesh.get_associated_vertices(face)
+
     # Verbose printout
     t_elapsed = time.time() - t_start
     if verbose:
-        print('\n***** Summary of the 2D mesh *****')
+        print()
+        print('***** Summary of the 2D mesh *****')
         print(f'Number of Cells:\t{mesh.n_cells}')
         print(f'Number of Faces:\t{mesh.n_faces}')
         print(f'Number of Vertices:\t{mesh.n_vertices}')
         print(f'Mesh Creation Time:\t{t_elapsed:.4g} sec')
+        print()
     return mesh

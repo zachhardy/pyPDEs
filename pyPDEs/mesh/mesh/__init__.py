@@ -29,12 +29,14 @@ class Mesh:
         self.dim: int = 0
         self.type: str = None
         self.coord_sys: str = 'cartesian'
+        self.is_orthogonal: bool = True
 
         self.is_orthogonal: bool = True
         self.cell_to_ijk_mapping: List[List[int]] = []
         self.n_cells_ijk: tuple = []
 
         self.vertices: List[Vector] = []
+        self.cell_id_to_ijk_map: List[List[int]] = []
 
         self.cells: List[Cell] = []
         self.boundary_cell_ids: List[int] = []
@@ -156,6 +158,72 @@ class Mesh:
         float
         """
         return np.max([v.z for v in self.vertices])
+
+    def get_associated_face(self, face: Face) -> int:
+        """
+        Get the associated face index on the adjacent cell face.
+
+        Parameters
+        ----------
+        face : Face
+
+        Returns
+        -------
+        int
+        """
+        if not face.has_neighbor:
+            raise ValueError(
+                'The provided cell face cannot be a boundary.')
+
+        associated_face = -1
+        adj_cell: Cell = self.cells[face.neighbor_id]
+        cfvids = set(face.vertex_ids)
+        for af, adj_face in enumerate(adj_cell.faces):
+            adj_face: Face = adj_face
+            afvids = set(adj_face.vertex_ids)
+            if cfvids == afvids:
+                associated_face = af
+                break
+
+        if associated_face < 0:
+            raise AssertionError('Associated face not found.')
+        return associated_face
+
+    def get_associated_vertices(self, face: Face) -> List[int]:
+        """
+        Get the associated vertex indices on the adjacent cell face.
+
+        Parameters
+        ----------
+        face : Face
+
+        Returns
+        -------
+        List[int]
+        """
+        if not face.has_neighbor:
+            raise ValueError(
+                'The provided cell face cannot be a boundary.')
+
+        associated_vertices = []
+        adj_cell: Cell = self.cells[face.neighbor_id]
+        associated_face = self.get_associated_face(face)
+        adj_face: Face = adj_cell.faces[associated_face]
+
+        for i, cfvid in enumerate(face.vertex_ids):
+            for j, afvid in enumerate(adj_face.vertex_ids):
+                if cfvid == afvid:
+                    associated_vertices.append(j)
+                    break
+            if len(associated_vertices) < i + 1:
+                raise AssertionError('Associated vertex not found.')
+        return associated_vertices
+
+
+
+
+
+
 
     def map_ijk_to_cell_id(self, i: int, j: int = 0, k: int = 0) -> int:
         """

@@ -18,6 +18,9 @@ class Face:
         self.has_neighbor: bool = False
         self.neighbor_id = 0
 
+        self.associated_face: int = -1
+        self.associated_vertices: List[int] = []
+
     @property
     def n_vertices(self) -> int:
         """

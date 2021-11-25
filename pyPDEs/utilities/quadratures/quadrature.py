@@ -9,16 +9,9 @@ from .. import Vector
 class Quadrature:
     """
     Base class for quadratures.
-
-    Parameters
-    ----------
-    order : int, default 2
-        The maximum monomial order the quadrature set
-        can integrate exactly.
     """
 
-    def __init__(self, order: int = 2) -> None:
-        self.order: int = order
+    def __init__(self) -> None:
         self.qpoints: List[Vector] = None
         self.weights: List[float] = None
         self._domain: Tuple[float, float] = None  # only for 1D
