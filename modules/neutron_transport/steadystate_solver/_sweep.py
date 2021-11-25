@@ -23,9 +23,8 @@ def sweep(self: 'SteadyStateSolver'):
     sd = self.discretization
     A, b = 0.0, np.zeros(self.n_groups)
 
-    for angle_set in self.angle_sets:
-        angle_set: AngleSet = angle_set
-
+    for angle_set_num in range(len(self.angle_sets)):
+        angle_set: AngleSet = self.angle_sets[angle_set_num]
         sweep_order = angle_set.sweep_ordering
 
         # Loop over sweep ordering
@@ -46,6 +45,7 @@ def sweep(self: 'SteadyStateSolver'):
                 omega = self.quadrature.omegas[n]
                 w = self.quadrature.weights[n]
 
+                # Reset lhs and rhs
                 A *= 0.0
                 b *= 0.0
 
@@ -60,8 +60,8 @@ def sweep(self: 'SteadyStateSolver'):
                         if face.has_neighbor:
                             psi = self.psi_upwind(c, f, n)
                         else:
-                            bid = face.neighbor_id
-                            psi = self.psi_boundary(bid, c, f, n)
+                            b_id = face.neighbor_id
+                            psi = self.psi_boundary(b_id, c, f, n)
 
                         A -= 2.0 * mu * face.area
                         for g in range(self.n_groups):
@@ -92,8 +92,9 @@ def sweep(self: 'SteadyStateSolver'):
                         face: Face = cell.faces[f]
 
                         if omega.dot(face.normal) > 0.0:
-                            psi_inc_g = abs(face.normal.dot(psi_inc[g]))
-                            psi_out = 2.0*psi_ijk - psi_inc_g
+                            psi_inc_dot_n = abs(face.normal.dot(psi_inc[g]))
+                            psi_out = 2.0*psi_ijk - psi_inc_dot_n
+                            psi_out = psi_out if psi_out > 0.0 else 0.0
 
                             # Interior faces
                             if face.has_neighbor:
