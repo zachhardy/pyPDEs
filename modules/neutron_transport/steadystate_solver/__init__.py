@@ -32,6 +32,7 @@ class SteadyStateSolver:
 
     from ._setsource import set_source
     from ._sweep import sweep
+    from ._classicrichardson import classic_richardson
 
     def __init__(self) -> None:
         self.n_groups: int = 0
@@ -122,32 +123,7 @@ class SteadyStateSolver:
         ----------
         verbose : bool, default True
         """
-        pw_change_prev = 1.0
-        converged = False
-        for k in range(self.max_iterations):
-            self.q_moments *= 0.0
-            self.set_source(self.q_moments)
-            self.sweep()
-
-            pw_change = np.linalg.norm(self.phi - self.phi_prev)
-            self.phi_prev[:] = self.phi
-
-            rho = np.sqrt(pw_change / pw_change_prev)
-            if k == 0:
-                rho = 0.0
-
-            if pw_change < self.tolerance * (1.0 - rho):
-                converged = True
-
-            print(f'===== Iteration {k} =====')
-            print(f'\tPoint-wise change:\t{pw_change:.3e}')
-            print(f'\tSpectral radius est.:\t{rho:.3e}')
-            print()
-
-            if converged:
-                print('***** CONVERGED *****')
-                print()
-                break
+        self.classic_richardson(verbose=verbose)
 
     def plot_flux_moment(self, ell: int, m: int, group_num: int) -> None:
         """
@@ -211,6 +187,38 @@ class SteadyStateSolver:
             plt.plot(grid, self.psi[angle_num][group_num])
             plt.grid(True)
         plt.tight_layout()
+
+    def compute_piecewise_change(self) -> float:
+        """
+        Compute the point-wise change in phi.
+
+        Returns
+        -------
+        float
+        """
+        # Loop over cells, moments, groups
+        pw_change = 0.0
+        for c in range(self.mesh.n_cells):
+            for m in range(self.n_moments):
+                phi_m = self.phi[m]
+                phi_prev_m = self.phi_prev[m]
+
+                for g in range(self.n_groups):
+
+                    # Max scalar flux
+                    abs_phi_m0 = abs(self.phi[0][g][c])
+                    abs_phi_prev_m0 = abs(self.phi_prev[0][g][c])
+                    max_phi = max(abs_phi_m0, abs_phi_prev_m0)
+
+                    # Change in flux moment
+                    dphi = abs(phi_m[g][c] - phi_prev_m[g][c])
+
+                    # Compute max change
+                    if max_phi >= 1.0e-16:
+                        pw_change = max(dphi/max_phi, pw_change)
+                    else:
+                        pw_change = max(dphi, pw_change)
+        return pw_change
 
     def compute_n_angles(self) -> int:
         """
