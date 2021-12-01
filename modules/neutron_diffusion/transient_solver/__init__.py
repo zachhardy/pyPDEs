@@ -34,6 +34,19 @@ class TransientSolver(KEigenvalueSolver):
                        _pwc_update_precursors,
                        _pwc_compute_fission_rate)
 
+    from ._timestepping import (solve_time_step,
+                                refine_time_step,
+                                coarsen_time_step,
+                                step_solutions)
+
+    from ._updates import (update_phi,
+                           update_precursors,
+                           update_temperature,
+                           update_cross_sections)
+
+    from ._input_checks import (_check_time_step,
+                                _check_initial_conditions)
+
     from ._write_outputs import write_snapshot
 
     def __init__(self) -> None:
@@ -104,6 +117,64 @@ class TransientSolver(KEigenvalueSolver):
     @property
     def power_density(self) -> ndarray:
         return self.energy_per_fission * self.fission_rate
+
+    @property
+    def average_power_density(self) -> float:
+        """
+        Compute the average power density.
+
+        Parameters
+        ----------
+        float
+        """
+        intgrl, volume = 0.0, 0.0
+        for cell in self.mesh.cells:
+            xs = self.material_xs[cell.material_id]
+            if xs.is_fissile:
+                P = self.power_density[cell.id]
+                intgrl += P * cell.volume
+                volume += cell.volume
+        return intgrl / volume
+
+    @property
+    def average_temperature(self) -> float:
+        """
+        Compute the average fuel temperature.
+
+        Returns
+        -------
+        float
+        """
+        intgrl, volume = 0.0, 0.0
+        for cell in self.mesh.cells:
+            xs = self.material_xs[cell.material_id]
+            if xs.is_fissile:
+                T = self.temperature[cell.id]
+                intgrl += T * cell.volume
+                volume += cell.volume
+        return intgrl / volume
+
+    @property
+    def peak_power_density(self) -> float:
+        """
+        Get the peak power density.
+
+        Returns
+        -------
+        float
+        """
+        return max(self.power_density)
+
+    @property
+    def peak_temperature(self) -> float:
+        """
+        Get the peak temperature in the system.
+
+        Returns
+        -------
+        float
+        """
+        return max(self.temperature)
 
     def initialize(self, verbose: int = 0) -> None:
         """
@@ -228,159 +299,6 @@ class TransientSolver(KEigenvalueSolver):
                 print(f'Average Temperature:\t{T_avg:.3g} K')
 
         self.dt = dt_initial
-
-    def refine_time_step(self) -> None:
-        """
-        Refine the time step.
-        """
-        dP = abs(self.power - self.power_old) / self.power_old
-        while dP > self.refine_level:
-            # Half the time step
-            self.dt /= 2.0
-
-            # Take the reduced time step
-            self.solve_time_step(m=0)
-            if self.method == 'tbdf2':
-                self.solve_time_step(m=1)
-            self.power = self.compute_power()
-
-            # Compute new change in power
-            dP = abs(self.power - self.power_old) / self.power_old
-
-    def coarsen_time_step(self):
-        """
-        Coarsen the time step.
-        """
-        dP = abs(self.power - self.power_old) / self.power_old
-        if dP < self.coarsen_level:
-            self.dt *= 2.0
-            if self.dt > self.output_frequency:
-                self.dt = self.output_frequency
-
-    def solve_time_step(self, m: int = 0) -> None:
-        """
-        Solve the `m`'th step of a multi-step method.
-        """
-        if not self.is_nonlinear:
-            self.update_phi(m)
-            self.update_temperature(m)
-        else:
-            phi_ell = np.copy(self.phi_old)
-            T_ell = np.copy(self.temperature_old)
-            converged = False
-            for nit in range(self.nonlinear_max_iterations):
-                self.update_phi(m)
-                self.update_temperature(m)
-                if m == 0 and self.method == 'tbdf2':
-                    converged = True
-                    break
-
-                change = norm(self.phi - phi_ell)
-                change += norm(self.temperature - T_ell)
-                phi_ell[:] = self.phi
-                T_ell[:] = self.temperature
-
-                if change < self.nonlinear_tolerance:
-                    converged = True
-                    break
-
-            if not converged:
-                print('\n!!! WARNING: Nonlinear iterations '
-                      'did not converge !!!\n')
-
-        if self.use_precursors:
-            self.update_precursors(m)
-
-        if m == 0 and self.method in ['cn', 'tbdf2']:
-            self.phi = 2.0 * self.phi - self.phi_old
-            self.temperature = 2.0 * self.temperature - self.temperature_old
-            self.compute_fission_rate()
-
-            if self.method == 'tbdf2':
-                self.phi_aux[0][:] = self.phi
-                self.temperature_aux[0][:] = self.temperature
-                if self.use_precursors:
-                    self.precursors_aux[0][:] = self.precursors
-
-    def update_phi(self, m: int = 0) -> None:
-        """
-        Update the scalar flux for the `m`'th step.
-
-        Parameters
-        ----------
-        m : int, default 0
-            The step in a multi-step method.
-        """
-        A = self.assemble_transient_matrix(m)
-        b = self.assemble_transient_rhs(m)
-        self.phi = spsolve(A, b)
-        self.compute_fission_rate()
-
-    def update_precursors(self, m: int = 0) -> None:
-        """
-        Update the precursors for the `m`'th step.
-
-        Parameters
-        ----------
-        m : int, default 0
-            The step in a multi-step method.
-        """
-        if isinstance(self.discretization, FiniteVolume):
-            self._fv_update_precursors(m)
-        elif isinstance(self.discretization, PiecewiseContinuous):
-            self._pwc_update_precursors(m)
-
-        if m == 0 and self.method in ['cn', 'tbdf2']:
-            self.precursors = \
-                2.0 * self.precursors - self.precursors_old
-
-    def update_temperature(self, m: int = 0) -> None:
-        """
-        Update the temperature for the `m`'th step.
-
-        Parameters
-        ----------
-        m : int, default 0
-            The step in a multi-step method.
-        """
-        eff_dt = self.effective_time_step(m)
-        Ef = self.energy_per_fission
-
-        T_old = self.temperature_old
-        if m == 1:
-            T = self.temperature_aux[0]
-            T_old = (4.0*T - T_old) / 3.0
-
-        # Loop over cells
-        for cell in self.mesh.cells:
-            Sf = self.fission_rate[cell.id]
-            alpha = self.conversion_factor
-            self.temperature[cell.id] = \
-                T_old[cell.id] + eff_dt * alpha * Sf
-
-    def update_cross_sections(self, t: float) -> None:
-        """
-        Update the cell-wise cross sections.
-
-        Parameters
-        ----------
-        t : float,
-            The time to evaluate the cross sections.
-        """
-        for cell in self.mesh.cells:
-            x = [t, self.temperature[cell.id],
-                 self.initial_temperature, self.feedback_coeff]
-            self.cellwise_xs[cell.id].update(x)
-
-    def step_solutions(self) -> None:
-        """
-        Copy the current solutions to the old.
-        """
-        self.power_old = self.power
-        self.phi_old[:] = self.phi
-        self.temperature_old[:] = self.temperature
-        if self.use_precursors:
-            self.precursors_old[:] = self.precursors
 
     def assemble_transient_matrix(self, m: int = 0) -> List[csr_matrix]:
         """
@@ -524,64 +442,6 @@ class TransientSolver(KEigenvalueSolver):
                 power += P * cell.volume
         return power
 
-    @property
-    def average_power_density(self) -> float:
-        """
-        Compute the average power density.
-
-        Parameters
-        ----------
-        float
-        """
-        intgrl, volume = 0.0, 0.0
-        for cell in self.mesh.cells:
-            xs = self.material_xs[cell.material_id]
-            if xs.is_fissile:
-                P = self.power_density[cell.id]
-                intgrl += P * cell.volume
-                volume += cell.volume
-        return intgrl / volume
-
-    @property
-    def average_temperature(self) -> float:
-        """
-        Compute the average fuel temperature.
-
-        Returns
-        -------
-        float
-        """
-        intgrl, volume = 0.0, 0.0
-        for cell in self.mesh.cells:
-            xs = self.material_xs[cell.material_id]
-            if xs.is_fissile:
-                T = self.temperature[cell.id]
-                intgrl += T * cell.volume
-                volume += cell.volume
-        return intgrl / volume
-
-    @property
-    def peak_power_density(self) -> float:
-        """
-        Get the peak power density.
-
-        Returns
-        -------
-        float
-        """
-        return max(self.power_density)
-
-    @property
-    def peak_temperature(self) -> float:
-        """
-        Get the peak temperature in the system.
-
-        Returns
-        -------
-        float
-        """
-        return max(self.temperature)
-
     def effective_time_step(self, m: int = 0) -> float:
         """
         Compute the effective time step for step `m`.
@@ -661,40 +521,3 @@ class TransientSolver(KEigenvalueSolver):
             self.compute_precursors()
 
         self.step_solutions()
-
-    def _check_time_step(self) -> None:
-        self.time = self.t_start
-        if self.output_frequency is None:
-            self.output_frequency = self.dt
-        if self.dt > self.output_frequency:
-            self.dt = self.output_frequency
-
-    def _check_initial_conditions(self) -> None:
-        # Check number of ics
-        if len(self.initial_conditions) != self.n_groups:
-            raise AssertionError(
-                'Invalid number of initial conditions. There must be '
-                'as many initial conditions as groups.')
-
-        # Convert to lambdas, if sympy functions
-        if isinstance(self.initial_conditions, MutableDenseMatrix):
-            from sympy import lambdify
-            symbols = list(self.initial_conditions.free_symbols)
-
-            ics = []
-            for ic in self.initial_conditions:
-                ics += lambdify(symbols, ic)
-            self.initial_conditions = ics
-
-        # Check length for vector ics
-        if isinstance(self.initial_conditions, list):
-            n_phi_dofs = self.discretization.n_dofs(self.phi_uk_man)
-            for ic in self.initial_conditions:
-                array_like = (ndarray, List[float])
-                if not callable(ic) and isinstance(ic, array_like):
-                    if len(ic) != n_phi_dofs:
-                        raise AssertionError(
-                            'Vector initial conditions must agree with '
-                            'the number of DoFs associated with the '
-                            'attached discretization and phi unknown '
-                            'manager.')
