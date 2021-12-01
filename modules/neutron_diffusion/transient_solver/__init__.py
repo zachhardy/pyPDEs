@@ -139,6 +139,17 @@ class TransientSolver(KEigenvalueSolver):
         self.precursors_old = np.copy(self.precursors)
         self.temperature_old = np.copy(self.temperature)
 
+        # Precompute matrices
+        self.M = self.mass_matrix()
+
+    def execute(self, verbose: int = 0) -> None:
+        """
+        Execute the transient multigroup diffusion solver.
+
+        Parameters
+        ----------
+        verbose : int, default 0
+        """
         # Check output information
         if self.write_outputs:
             if not os.path.isdir(self.output_directory):
@@ -156,17 +167,7 @@ class TransientSolver(KEigenvalueSolver):
             self.precursors_aux = [np.copy(self.precursors)]
             self.temperature_aux = [np.copy(self.temperature)]
 
-        # Precompute matrices
-        self.M = self.mass_matrix()
-
-    def execute(self, verbose: int = 0) -> None:
-        """
-        Execute the transient multigroup diffusion solver.
-
-        Parameters
-        ----------
-        verbose : int, default 0
-        """
+        # Initialize outputting stuff
         next_output = self.output_frequency
         dt_initial = self.dt
 
