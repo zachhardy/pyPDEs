@@ -50,8 +50,8 @@ solver.materials = materials
 solver.quadrature = quad
 
 solver.scattering_order = 0
-solver.max_iterations = 100
-solver.tolerance = 1.0e-6
+solver.max_source_iterations = 100
+solver.source_iteration_tolerance = 1.0e-6
 
 solver.initialize()
 solver.execute()

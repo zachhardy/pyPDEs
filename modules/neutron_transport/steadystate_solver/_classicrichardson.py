@@ -32,7 +32,7 @@ def classic_richardson(self: 'SteadyStateSolver',
     # Start Richardson iterations
     converged = False
     pw_change_prev = 1.0
-    for k in range(self.max_iterations):
+    for k in range(self.max_source_iterations):
 
         # Set source and sweep
         self.q_moments[:] = init_q_moments
@@ -49,7 +49,7 @@ def classic_richardson(self: 'SteadyStateSolver',
 
         # Check convergence
         if k == 0: rho = 0.0
-        if pw_change < self.tolerance * (1.0 - rho):
+        if pw_change < self.source_iteration_tolerance * (1.0 - rho):
             converged = True
 
         # Print iteration summary
@@ -64,3 +64,6 @@ def classic_richardson(self: 'SteadyStateSolver',
         # End if converged
         if converged:
             break
+
+    if not converged:
+        print(f'!!!!! WARNING: Source iterations not converged.')

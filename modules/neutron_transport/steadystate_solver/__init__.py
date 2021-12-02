@@ -45,8 +45,8 @@ class SteadyStateSolver:
         self.use_precursors: bool = False
 
         # Iteration parameters
-        self.tolerance: float = 1.0e-8
-        self.max_iterations: int = 100
+        self.source_iteration_tolerance: float = 1.0e-8
+        self.max_source_iterations: int = 100
 
         # Domain objects
         self.mesh: Mesh = None

@@ -10,7 +10,7 @@ from modules.neutron_transport import *
 
 
 # Create mesh and discretization
-mesh = create_1d_mesh([0.0, 100.0], [100])
+mesh = create_1d_mesh([0.0, 10.0], [100])
 discretization = FiniteVolume(mesh)
 
 # Create cross sections and sources
@@ -37,8 +37,8 @@ solver.quadrature = quad
 
 solver.scattering_order = 0
 
-solver.max_iterations = 100
-solver.tolerance = 1.0e-6
+solver.max_source_iterations = 100
+solver.source_iteration_tolerance = 1.0e-6
 
 solver.max_power_iterations = 1000
 solver.power_iteration_tolerance = 1.0e-8
