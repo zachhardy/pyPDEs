@@ -22,6 +22,21 @@ class TransientSolver(KEigenvalueSolver):
     Transinet multigroup diffusion.
     """
 
+    from ._input_checks import (_check_time_step,
+                                _check_initial_conditions)
+
+    from ._timestepping import (solve_time_step,
+                                refine_time_step,
+                                coarsen_time_step,
+                                step_solutions)
+
+    from ._updates import (update_phi,
+                           update_precursors,
+                           update_temperature,
+                           update_cross_sections)
+
+    from ._write_outputs import write_snapshot
+
     from ._fv import (_fv_mass_matrix,
                       _fv_precursor_substitution_matrix,
                       _fv_old_precursor_source,
@@ -34,20 +49,7 @@ class TransientSolver(KEigenvalueSolver):
                        _pwc_update_precursors,
                        _pwc_compute_fission_rate)
 
-    from ._timestepping import (solve_time_step,
-                                refine_time_step,
-                                coarsen_time_step,
-                                step_solutions)
-
-    from ._updates import (update_phi,
-                           update_precursors,
-                           update_temperature,
-                           update_cross_sections)
-
-    from ._input_checks import (_check_time_step,
-                                _check_initial_conditions)
-
-    from ._write_outputs import write_snapshot
+    from ._alphaeigenvalue import solve_alpha_eigenproblem
 
     def __init__(self) -> None:
         super().__init__()

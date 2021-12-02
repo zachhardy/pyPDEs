@@ -20,6 +20,9 @@ def write_snapshot(self: 'TransientSolver',
         The output index.
         This is used to name the snapshot file.
     """
+    if self.output_directory is None:
+        return
+
     file_base = str(output_num).zfill(4)
     file_path = \
         os.path.join(self.output_directory, file_base + '.data')

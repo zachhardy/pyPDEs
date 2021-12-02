@@ -1,6 +1,6 @@
 from numpy import ndarray
 from sympy import MutableDenseMatrix
-from typing import TYPE_CHECKING
+from typing import List, TYPE_CHECKING
 if TYPE_CHECKING:
     from . import TransientSolver
 
