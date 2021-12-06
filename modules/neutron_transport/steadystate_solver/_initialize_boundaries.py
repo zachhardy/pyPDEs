@@ -57,7 +57,8 @@ def _initialize_reflective_bc(self: 'SteadyStateSolver',
     bc.reflected_angles = [-1 for _ in range(self.n_angles)]
     for n in range(self.n_angles):
         omega = self.quadrature.omegas[n]
-        omega_refl = omega - 2.0*bc.normal * omega.dot(bc.normal)
+        omega_refl = omega - 2.0*bc.normal*omega.dot(bc.normal)
+
         for ns in range(self.n_angles):
             omega_ns = self.quadrature.omegas[ns]
             if omega_refl.dot(omega_ns) > 1.0 - 1.0e-8:
@@ -101,5 +102,5 @@ def _initialize_reflective_bc(self: 'SteadyStateSolver',
                 face = cell.faces[f]
                 if not face.has_neighbor:
                     if face.normal.dot(bc.normal) > 1.0 - 1.0e-8:
-                        cell_vec[c][f] = [[0.0 for _ in range(self.n_groups)]]
+                        cell_vec[c][f] = [0.0 for _ in range(self.n_groups)]
         bc.boundary_psi[n] = cell_vec
