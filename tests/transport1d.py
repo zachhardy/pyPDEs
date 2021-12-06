@@ -36,7 +36,7 @@ src = IsotropicMultiGroupSource(np.ones(1))
 materials[0].add_properties(src)
 
 # Create boundary conditions
-boundaries = [VacuumBoundary(), VacuumBoundary()]
+boundaries = [ReflectiveBoundary(), VacuumBoundary()]
 
 # Create angular quadrature
 quad = ProductQuadrature(4, quadrature_type='gl')
@@ -56,5 +56,5 @@ solver.source_iteration_tolerance = 1.0e-6
 solver.initialize()
 solver.execute()
 
-solver.plot_flux_moment(ell=0, m=0, group_num=0)
+solver.plot_flux_moment(ell=0, m=0, group_nums=0)
 plt.show()

@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -39,11 +41,11 @@ src = IsotropicMultiGroupSource(np.ones(1))
 materials[1].add_properties(src)
 
 # Create boundary conditions
-boundaries = [VacuumBoundary(), VacuumBoundary(),
-              VacuumBoundary(), VacuumBoundary()]
+boundaries = [ReflectiveBoundary(), VacuumBoundary(),
+              ReflectiveBoundary(), VacuumBoundary()]
 
 # Create angular quadrature
-quad = ProductQuadrature(4, 4, quadrature_type='gll')
+quad = ProductQuadrature(1, 1, quadrature_type='glc', verbose=True)
 
 # Create solver
 solver = SteadyStateSolver()
@@ -60,5 +62,5 @@ solver.source_iteration_tolerance = 1.0e-6
 solver.initialize()
 solver.execute()
 
-solver.plot_flux_moment(ell=0, m=0, group_num=0)
+solver.plot_flux_moment(ell=0, m=0, group_nums=0)
 plt.show()
