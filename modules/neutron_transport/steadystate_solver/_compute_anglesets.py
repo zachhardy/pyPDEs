@@ -3,23 +3,12 @@ from numpy import ndarray
 from typing import List
 from pyPDEs.utilities import Vector
 
+from ..data_structures import AngleSet
 from ..directed_graph import DirectedGraph
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from . import SteadyStateSolver
-
-
-class AngleSet:
-    """
-    Implementation for an angle set.
-
-    An angle set is defined as a collection of angles that
-    share a sweep ordering.
-    """
-    def __init__(self) -> None:
-        self.angles: List[int] = []
-        self.sweep_ordering: List[int] = []
 
 
 def initialize_angle_sets(self: 'SteadyStateSolver') -> None:
@@ -96,6 +85,7 @@ def initialize_angle_sets(self: 'SteadyStateSolver') -> None:
             # Add angle sets to the solver
             self.angle_sets = [top_right, top_left, bot_left, bot_right]
 
+
 def create_sweep_ordering(self: 'SteadyStateSolver',
                           omega: Vector) -> List[int]:
     """
@@ -139,4 +129,3 @@ def create_sweep_ordering(self: 'SteadyStateSolver',
             dg.add_edge(c, successor)
 
     return dg.create_topological_sort()
-

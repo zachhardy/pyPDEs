@@ -16,6 +16,7 @@ class AngleSet:
     def __init__(self) -> None:
         self.sweep_ordering: List[int] = []
         self.angles: List[int] = []
+        self.executed: bool = False
 
 
 class HarmonicIndex:

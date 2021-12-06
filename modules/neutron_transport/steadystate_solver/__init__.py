@@ -32,7 +32,7 @@ class SteadyStateSolver:
                                      create_sweep_ordering)
 
     from ._setsource import set_source
-    from ._sweep import sweep
+    from ._sweep import sweep, prepare_for_sweep
     from ._classicrichardson import classic_richardson
 
     def __init__(self) -> None:

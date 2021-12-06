@@ -12,7 +12,7 @@ from modules.neutron_transport import *
 
 
 # Create mesh and discretization
-x_verts = np.linspace(0, 1.0, 51)
+x_verts = np.linspace(0, 1.0, 26)
 mesh = create_2d_mesh(x_verts, x_verts)
 
 for cell in mesh.cells:
@@ -45,7 +45,7 @@ boundaries = [ReflectiveBoundary(), VacuumBoundary(),
               ReflectiveBoundary(), VacuumBoundary()]
 
 # Create angular quadrature
-quad = ProductQuadrature(8, 4, quadrature_type='glc')
+quad = ProductQuadrature(4, 2, quadrature_type='glc')
 
 # Create solver
 solver = SteadyStateSolver()

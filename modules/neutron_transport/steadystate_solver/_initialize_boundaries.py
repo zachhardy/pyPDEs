@@ -72,6 +72,11 @@ def _initialize_reflective_bc(self: 'SteadyStateSolver',
                 f'({omega.x}, {omega.y}, {omega.z}). Ensure that the '
                 f'quadrature set is symmetric.')
 
+    # Initialize angle ready flags
+    bc.angle_ready_flags.clear()
+    for n in range(self.n_angles):
+        bc.angle_ready_flags.append(False)
+
     # Initialize boundary psi
     bc.boundary_psi = [[] for _ in range(self.n_angles)]
     for n in range(self.n_angles):

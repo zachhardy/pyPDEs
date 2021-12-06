@@ -23,6 +23,8 @@ class Boundary:
                  values: List[float] = None) -> None:
         self.type: str = bndry_type
 
+        self.angle_ready_flags: List[bool] = []
+
         values = [] if values is None else values
         if isinstance(values, float):
             values = [values]
@@ -39,6 +41,12 @@ class Boundary:
             face: int, node: int) -> float:
         raise AssertionError(
             'No boundary psi exists for this boundary type.')
+
+    def set_angle_ready_status(self, angles: List[int]) -> None:
+        return
+
+    def check_angle_ready_status(self, angles: List[int]) -> bool:
+        return True
 
 
 class HomogeneousBoudary(Boundary):
@@ -69,6 +77,7 @@ class ReflectiveBoundary(Boundary):
     def __init__(self) -> None:
         AngVec = List[List[List[float]]]
 
+        super().__init__('reflective')
         self.normal: Vector = None
         self.boundary_psi: List[AngVec] = []
         self.reflected_angles: List[int] = []
@@ -108,3 +117,19 @@ class ReflectiveBoundary(Boundary):
         group_num : int
         """
         self.boundary_psi[angle_num][cell_id][face_num][group_num] = psi
+
+    def set_angle_ready_status(self, angles: List[int]) -> None:
+        for n in angles:
+            self.angle_ready_flags[self.reflected_angles[n]] = True
+
+    def check_angle_ready_status(self, angles: List[int]) -> bool:
+        for n in angles:
+            if len(self.boundary_psi[self.reflected_angles[n]]) > 0:
+                if not self.angle_ready_flags[n]:
+                    return False
+        return True
+
+    def reset_angle_ready_status(self) -> None:
+        for flag in self.angle_ready_flags:
+            flag = False
+
