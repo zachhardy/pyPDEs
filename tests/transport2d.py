@@ -45,7 +45,7 @@ boundaries = [ReflectiveBoundary(), VacuumBoundary(),
               ReflectiveBoundary(), VacuumBoundary()]
 
 # Create angular quadrature
-quad = ProductQuadrature(1, 1, quadrature_type='glc', verbose=True)
+quad = ProductQuadrature(8, 4, quadrature_type='glc')
 
 # Create solver
 solver = SteadyStateSolver()

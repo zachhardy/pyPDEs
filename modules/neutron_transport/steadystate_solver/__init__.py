@@ -168,7 +168,9 @@ class SteadyStateSolver:
         # Plot 2D solutions
         elif self.mesh.dim == 2:
             n_rows, n_cols = self._format_subplots(len(group_nums))
-            fig: Figure = plt.figure(figsize=(4*n_rows, 4*n_cols))
+            row_size = max(4*n_rows, 6)
+            col_size = max(4*n_cols, 6)
+            fig: Figure = plt.figure(figsize=(row_size, col_size))
             fig.suptitle(f'Flux Moment\n$\ell$={ell} $m$={m}', fontsize=12)
 
             # Get grid
