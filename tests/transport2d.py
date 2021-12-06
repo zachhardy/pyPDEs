@@ -43,7 +43,7 @@ boundaries = [VacuumBoundary(), VacuumBoundary(),
               VacuumBoundary(), VacuumBoundary()]
 
 # Create angular quadrature
-quad = ProductQuadrature(8, 8, quadrature_type='gll')
+quad = ProductQuadrature(4, 4, quadrature_type='gll')
 
 # Create solver
 solver = SteadyStateSolver()

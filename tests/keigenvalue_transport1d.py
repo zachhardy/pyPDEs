@@ -10,7 +10,7 @@ from modules.neutron_transport import *
 
 
 # Create mesh and discretization
-mesh = create_1d_mesh([0.0, 10.0], [100])
+mesh = create_1d_mesh([0.0, 2.5], [100])
 discretization = FiniteVolume(mesh)
 
 # Create cross sections and sources
@@ -18,7 +18,7 @@ materials = []
 materials.append(Material('Fuel'))
 
 xs_fuel = CrossSections()
-xs_fuel.read_from_xs_file('xs/fuel_1g.cxs')
+xs_fuel.read_from_xs_file('xs/three_grp_us.cxs', density=0.05)
 materials[0].add_properties(xs_fuel)
 
 # Create boundary conditions
@@ -46,5 +46,5 @@ solver.power_iteration_tolerance = 1.0e-8
 solver.initialize()
 solver.execute()
 
-solver.plot_flux_moment(ell=0, m=0, group_num=0)
+solver.plot_flux_moment(ell=0, m=0)
 plt.show()

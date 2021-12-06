@@ -1,7 +1,8 @@
 import numpy as np
 from numpy import ndarray
-from typing import List
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import Figure, Axes
+from typing import List, Tuple
 
 from pyPDEs.mesh import *
 from pyPDEs.material import *
@@ -125,7 +126,8 @@ class SteadyStateSolver:
         """
         self.classic_richardson(verbose=verbose)
 
-    def plot_flux_moment(self, ell: int, m: int, group_num: int) -> None:
+    def plot_flux_moment(self, ell: int, m: int,
+                         group_nums: List[int] = None) -> None:
         """
         Plot flux moments.
 
@@ -133,10 +135,19 @@ class SteadyStateSolver:
         ----------
         ell : int
         m: int
-        group_num : int
+        group_nums : List[int], default None
+            Default is to plot all groups.
         """
         moment_num = self.find_harmonic_index(ell, m)
         grid = self.discretization.grid
+
+        # Validate group numbers
+        if isinstance(group_nums, int):
+            group_nums = [group_nums]
+        if group_nums is None:
+            group_nums = list(range(self.n_groups))
+        if not isinstance(group_nums, list):
+            raise AssertionError('group_nums must be a list.')
 
         # Plot 1D solutions
         if self.mesh.dim == 1:
@@ -145,25 +156,37 @@ class SteadyStateSolver:
             plt.xlabel('z', fontsize=12)
             plt.ylabel('$\phi$', fontsize=12)
 
+            # Get grid
             grid = [pt.z for pt in grid]
-            plt.plot(grid, self.phi[moment_num][group_num])
+
+            # Plot each group
+            for g in group_nums:
+                plt.plot(grid, self.phi[moment_num][g], label=f'Group {g}')
+            plt.legend()
             plt.grid(True)
 
         # Plot 2D solutions
         elif self.mesh.dim == 2:
-            plt.figure()
-            plt.title(f'Flux Moment\n$\ell$={ell} $m$={m}', fontsize=12)
-            plt.xlabel('X', fontsize=12)
-            plt.ylabel('Y', fontsize=12)
+            n_rows, n_cols = self._format_subplots(len(group_nums))
+            fig: Figure = plt.figure(figsize=(4*n_rows, 4*n_cols))
+            fig.suptitle(f'Flux Moment\n$\ell$={ell} $m$={m}', fontsize=12)
 
+            # Get grid
             x = np.unique([p.x for p in grid])
             y = np.unique([p.y for p in grid])
             xx, yy = np.meshgrid(x, y)
-            phi: ndarray = self.phi[moment_num][group_num]
-            phi = phi.reshape(xx.shape)
-            im = plt.pcolor(xx, yy, phi, cmap='jet', shading='auto',
-                            vmin=0.0, vmax=phi.max())
-            plt.colorbar(im)
+
+            # Plot each group
+            for g, group in enumerate(group_nums):
+                phi: ndarray = self.phi[moment_num][g].reshape(xx.shape)
+
+                ax: Axes = fig.add_subplot(n_rows, n_cols, g + 1)
+                ax.set_title(f'Group {group}', fontsize=12)
+                ax.set_xlabel('X', fontsize=12)
+                ax.set_ylabel('Y', fontsize=12)
+                im = ax.pcolor(xx, yy, phi, cmap='jet', shading='auto',
+                                vmin=0.0, vmax=phi.max())
+            fig.colorbar(im)
         plt.tight_layout()
 
     def plot_angular_flux(self, angle_num: int, group_num: int) -> None:
@@ -338,3 +361,27 @@ class SteadyStateSolver:
         else:
             n, c, f = angle_num, cell_id, face_num
             return bc.boundary_psi_incoming(n, c, f)
+
+    @staticmethod
+    def _format_subplots(n_plots: int) -> Tuple[int, int]:
+        """
+        Determine the number of rows and columns for subplots.
+
+        Parameters
+        ----------
+        n_plots : int
+            The number of subplots that will be used.
+
+        """
+        if n_plots < 4:
+            n_rows, n_cols = 1, n_plots
+        elif 4 <= n_plots < 9:
+            ref = int(np.ceil(np.sqrt((n_plots))))
+            n_rows = n_cols = ref
+            for n in range(1, n_cols + 1):
+                if n * n_cols >= n_plots:
+                    n_rows = n
+                    break
+        else:
+            raise AssertionError('Maximum number of plots is 9.')
+        return n_rows, n_cols
