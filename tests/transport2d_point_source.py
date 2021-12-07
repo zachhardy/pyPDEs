@@ -10,17 +10,32 @@ from pyPDEs.utilities.quadratures import *
 
 from modules.neutron_transport import *
 
+mode = 0
+if len(sys.argv) > 1:
+    mode = int(sys.argv[1])
+    if mode > 1:
+        raise AssertionError('Invalid mode argument.')
 
 # Create mesh and discretization
-x_verts = np.linspace(0, 1.0, 41)
+n_verts = 51 if mode == 1 else 101
+x_verts = np.linspace(0, 1.0, n_verts)
 mesh = create_2d_mesh(x_verts, x_verts)
 
-for cell in mesh.cells:
-    centroid = cell.centroid
-    if centroid.x <= 0.05 and centroid.y <= 0.05:
-        cell.material_id = 1
-    else:
-        cell.material_id = 0
+if mode == 0:
+    for cell in mesh.cells:
+        centroid = cell.centroid
+        if centroid.x <= 0.1 and centroid.y <= 0.1:
+            cell.material_id = 1
+        else:
+            cell.material_id = 0
+elif mode == 1:
+    for cell in mesh.cells:
+        centroid = cell.centroid
+        if 0.45 <= centroid.x <= 0.55 and \
+                0.45 <= centroid.y <= 0.55:
+            cell.material_id = 1
+        else:
+            cell.material_id = 0
 
 discretization = FiniteVolume(mesh)
 
@@ -41,11 +56,15 @@ src = IsotropicMultiGroupSource(np.ones(1))
 materials[1].add_properties(src)
 
 # Create boundary conditions
-boundaries = [ReflectiveBoundary(), VacuumBoundary(),
-              ReflectiveBoundary(), VacuumBoundary()]
+if mode == 0:
+    boundaries = [ReflectiveBoundary(), VacuumBoundary(),
+                  ReflectiveBoundary(), VacuumBoundary()]
+elif mode == 1:
+    boundaries = [VacuumBoundary(), VacuumBoundary(),
+                  VacuumBoundary(), VacuumBoundary()]
 
 # Create angular quadrature
-quad = ProductQuadrature(4, 4, quadrature_type='glc')
+quad = ProductQuadrature(4, 2, quadrature_type='glc')
 
 # Create solver
 solver = SteadyStateSolver()
