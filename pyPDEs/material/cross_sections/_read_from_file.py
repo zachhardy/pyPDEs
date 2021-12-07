@@ -26,19 +26,37 @@ def read_from_xs_file(self: 'CrossSections', filename: str,
     incompat_w_J = 'is incompatible with n_precursors'
 
     def read_1d_xs(key, xs, f, ln):
-        words = f[ln + 1].split()
-        while words[0] != f'{key}_END':
+        # Get first non-empty line
+        ln += 1
+        words = f[ln].split()
+        while len(words) == 0:
             ln += 1
+            words = f[ln].split()
+
+        # Get entries until end keyword
+        while words[0] != f'{key}_END':
             group = int(words[0])
             value = float(words[1])
             xs[group] = value
-            words = f[ln + 1].split()
+
+            # Get next non-empty line
+            ln += 1
+            words = f[ln].split()
+            while not words:
+                ln += 1
+                words = f[ln].split()
         ln += 1
 
     def read_transfer_matrix(key, matrix, f, ln):
-        words = f[ln + 1].split()
-        while words[0] != f'{key}_END':
+        # Get first non-empty line
+        ln += 1
+        words = f[ln].split()
+        while len(words) == 0:
             ln += 1
+            words = f[ln].split()
+
+        # Get info until end keyword
+        while words[0] != f'{key}_END':
             if words[0] == 'M_GPRIME_G_VAL':
                 m = int(words[1])
                 gprime = int(words[2])
@@ -46,19 +64,36 @@ def read_from_xs_file(self: 'CrossSections', filename: str,
                 value = float(words[4])
                 if m < len(matrix):
                     matrix[m][gprime][group] = value
-            words = f[ln + 1].split()
+
+            # Next non-empty line
+            ln += 1
+            words = f[ln].split()
+            while len(words) == 0:
+                ln += 1
+                words = f[ln].split()
         ln += 1
 
     def read_chi_delayed(key, xs, f, ln):
-        words = f[ln + 1].split()
-        while words[0] != f'{key}_END':
+        # Get first non-empty line
+        ln += 1
+        words = f[ln].split()
+        while len(words) == 0:
             ln += 1
+            words = f[ln].split()
+
+        while words[0] != f'{key}_END':
             if words[0] == 'G_PRECURSORJ_VAL':
                 group = int(words[1])
                 precursor_num = int(words[2])
                 value = float(words[3])
                 xs[group][precursor_num] = value
-            words = f[ln + 1].split()
+
+            # Get next non-empty line
+            ln += 1
+            words = f[ln].split()
+            while len(words) == 0:
+                ln += 1
+                words = f[ln].split()
         ln += 1
 
     if not os.path.isfile(filename):
