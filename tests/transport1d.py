@@ -10,7 +10,7 @@ from modules.neutron_transport import *
 
 
 # Create mesh and discretization
-mesh = create_1d_mesh([0.0, 0.1, 0.7, 1.0], [10, 60, 30], [1, 0, 1])
+mesh = create_1d_mesh([0.0, 0.2, 0.9, 1.0], [20, 70, 10], [1, 0, 1])
 discretization = FiniteVolume(mesh)
 
 # Create cross sections and sources
