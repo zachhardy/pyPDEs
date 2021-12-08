@@ -29,7 +29,7 @@ def write_snapshot(self: 'TransientSolver',
 
     header_info = \
         b"pyPDEs neutron_diffusion TransientSolver: Snapshot file\n" \
-        b"Header size: 1650 bytes\n" \
+        b"Header size: 1700 bytes\n" \
         b"Structure(type-info):\n" \
         b"uint64_t      time_step_index\n" \
         b"uint64_t      num_global_cells\n" \
@@ -87,7 +87,7 @@ def write_snapshot(self: 'TransientSolver',
         b"       double      power_density_value\n"
 
     header_size = len(header_info)
-    header_info += b"-" * (1649 - header_size)
+    header_info += b"-" * (1700 - header_size)
 
     with open(file_path, 'wb') as f:
         f.write(bytearray(header_info))
