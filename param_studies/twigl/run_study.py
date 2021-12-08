@@ -42,8 +42,8 @@ keys = list(parameters.keys())
 values = list(itertools.product(*parameters.values()))
 
 # Create mesh, assign material IDs
-x_verts = np.linspace(0.0, 80.0, 41)
-y_verts = np.linspace(0.0, 80.0, 41)
+x_verts = np.linspace(0.0, 80.0, 21)
+y_verts = np.linspace(0.0, 80.0, 21)
 
 mesh = create_2d_mesh(x_verts, y_verts, verbose=True)
 
