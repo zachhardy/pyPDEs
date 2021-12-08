@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-from simulation_reader import SimulationReader
+from neutronics_reader import NeutronicsReader
 
 try:
     if len(sys.argv) != 2:
@@ -29,7 +29,7 @@ if arg == 0:
 else:
     path = os.path.join(base, 'pwc')
 
-sim = SimulationReader(path)
+sim = NeutronicsReader(path)
 sim.read_simulation_data()
 
 from rom.dmd import DMD
@@ -60,9 +60,9 @@ plt.ylabel(r'Relative $L^2$ Error', fontsize=14)
 plt.semilogy(times, step_errors, 'b*-')
 plt.grid(True)
 
-fname = '/Users/zacharyhardy/Documents/proposal/' \
-        'revision1/figures/dmd_timestep_errors.pdf'
-plt.savefig(fname)
+# fname = '/Users/zacharyhardy/Documents/proposal/' \
+#         'revision1/figures/dmd_timestep_errors.pdf'
+# plt.savefig(fname)
 plt.show()
 
 from modules.neutron_diffusion.analytic import *
@@ -87,7 +87,7 @@ plt.grid(True)
 plt.legend()
 plt.tight_layout()
 
-fname = '/Users/zacharyhardy/Documents/proposal/' \
-        'revision1/figures/dmd_eigenvalues.pdf'
-plt.savefig(fname)
+# fname = '/Users/zacharyhardy/Documents/proposal/' \
+#         'revision1/figures/dmd_eigenvalues.pdf'
+# plt.savefig(fname)
 plt.show()

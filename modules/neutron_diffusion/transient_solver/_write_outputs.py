@@ -87,7 +87,7 @@ def write_snapshot(self: 'TransientSolver',
         b"       double      power_density_value\n"
 
     header_size = len(header_info)
-    header_info += b"-" * (1700 - header_size)
+    header_info += b"-" * (1699 - header_size)
 
     with open(file_path, 'wb') as f:
         f.write(bytearray(header_info))
