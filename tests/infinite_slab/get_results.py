@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-from simulation_reader import SimulationReader
+from neutronics_reader import NeutronicsReader
 
 try:
     if len(sys.argv) != 2:
@@ -35,7 +35,7 @@ else:
     path = os.path.join(base, 'prompt_supercritical')
     times = [0.0, 0.01, 0.02]
 
-sim = SimulationReader(path)
+sim = NeutronicsReader(path)
 sim.read_simulation_data()
 
 sim.plot_flux_moments(0, 1, times)

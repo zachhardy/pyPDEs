@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-from simulation_reader import SimulationReader
+from neutronics_reader import NeutronicsReader
 
 try:
     if len(sys.argv) != 2:
@@ -29,7 +29,7 @@ if arg == 0:
 else:
     path = os.path.join(base, 'minicore')
 
-sim = SimulationReader(path)
+sim = NeutronicsReader(path)
 sim.read_simulation_data()
 
 sim.plot_flux_moments(0, 0, [0.0, 0.6, 1.1, 2.0])
