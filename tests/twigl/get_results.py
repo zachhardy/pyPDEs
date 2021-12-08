@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-from neutronics_reader import NeutronicsReader
+from readers import NeutronicsSimulationReader
 
 try:
     if len(sys.argv) != 2:
@@ -29,7 +29,7 @@ if arg == 0:
 else:
     path = os.path.join(base, 'step')
 
-sim = NeutronicsReader(path)
+sim = NeutronicsSimulationReader(path)
 sim.read_simulation_data()
 
 sim.plot_flux_moments(0, 0, [0.0, 0.2, 0.5])

@@ -7,12 +7,12 @@ import matplotlib.pyplot as plt
 
 from numpy import ndarray
 
-from simulation_reader import SimulationReader
+from readers import NeutronicsSimulationReader
 
 script_path = os.path.dirname(os.path.abspath(__file__))
 path = os.path.join(script_path, 'outputs')
 
-sim = SimulationReader(path)
+sim = NeutronicsSimulationReader(path)
 sim.read_simulation_data()
 
 sim.plot_flux_moments(0, 0, [0.0, 1.44])
