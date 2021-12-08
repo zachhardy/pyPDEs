@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.linalg import norm
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from . import TransientSolver
