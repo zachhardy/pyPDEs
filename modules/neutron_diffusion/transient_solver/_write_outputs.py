@@ -32,18 +32,19 @@ def write_snapshot(self: 'TransientSolver',
         b"Header size: 1650 bytes\n" \
         b"Structure(type-info):\n" \
         b"uint64_t      time_step_index\n" \
+        b"uint64_t      num_global_cells\n" \
+        b"uint64_t      num_global_nodes\n" \
+        b"uint64_t      num_moments\n" \
+        b"uint64_t      num_groups\n" \
+        b"uint64_t      num_precursors\n" \
+        b"uint64_t      max_precursors\n" \
+        b"unsigned int  num_data_blocks\n" \
         b"double        time\n" \
         b"double        system_power\n" \
         b"double        peak_power_density\n" \
         b"double        average_power_density\n" \
         b"double        peak_fuel_temperature\n" \
         b"double        average_fuel_temperature\n" \
-        b"uint64_t      num_global_cells\n" \
-        b"uint64_t      num_global_nodes\n" \
-        b"uint64_t      num_groups\n" \
-        b"uint64_t      num_precursors\n" \
-        b"uint64_t      max_precursors\n" \
-        b"unsigned int  num_data_blocks\n" \
         b"Each cell:\n" \
         b"   uint64_t    cell_global_id\n" \
         b"   uint64_t    cell_material_id\n" \
@@ -67,6 +68,7 @@ def write_snapshot(self: 'TransientSolver',
         b"Precursor Records:\n" \
         b"   unsigned int    record_type\n" \
         b"   uint64_t        num_records\n" \
+        b"   Each Record:\n" \
         b"       uint64_t        cell_global_id\n" \
         b"       uint64_t        cell_material_id\n" \
         b"       unsigned int    precursor_num\n" \
