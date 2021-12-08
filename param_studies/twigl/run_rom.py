@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split
 
-from dataset_reader import DatasetReader
+from readers import NeutronicsDatasetReader
 from rom.pod import POD
 from rom.dmd import DMD
 
@@ -17,7 +17,7 @@ from rom.dmd import DMD
 script_path = os.path.dirname(os.path.abspath(__file__))
 
 # Parse the database
-dataset = DatasetReader(f'{script_path}/outputs')
+dataset = NeutronicsDatasetReader(f'{script_path}/outputs')
 dataset.read_dataset()
 
 # Get the domain information
@@ -65,11 +65,11 @@ Y_train = np.vstack((Y_train, Y[bndry]))
 tstart = time.time()
 svd_rank = 1.0 - 1.0e-12
 pod = POD(svd_rank=svd_rank)
-pod.fit(X_train, Y_train, verbose=True)
+pod.fit(X_train.T, Y_train, verbose=True)
 offline_time = time.time() - tstart
 
 tstart = time.time()
-X_pred = pod.predict(Y_test, 'cubic')
+X_pred = pod.predict(Y_test, 'cubic').T
 predict_time = time.time() - tstart
 
 # Format POD predictions for DMD

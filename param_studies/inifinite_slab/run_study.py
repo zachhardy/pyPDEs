@@ -34,10 +34,8 @@ def step_up(g, x, sigma_a) -> float:
 script_path = os.path.dirname(os.path.abspath(__file__))
 
 # Define paramter space
-multiplier = np.linspace(1.01, 1.04, 31)
-
 parameters = {}
-parameters['multiplier'] = np.round(multiplier, 6)
+parameters['multiplier'] = np.linspace(1.01, 1.04, 31)
 
 keys = list(parameters.keys())
 values = list(itertools.product(*parameters.values()))
@@ -120,7 +118,7 @@ for n, params in enumerate(values):
     print('\n'.join(['', head, msg, head]))
     for p in range(len(params)):
         pname = keys[p].capitalize()
-        print(f'{pname:<10}:\t{params[p]:<5}')
+        print(f'{pname:<10}:\t{params[p]:<5.4f}')
 
     # Setup output path
     simulation_path = os.path.join(output_path, str(n).zfill(3))

@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-from simulation_reader import SimulationReader
+from readers import NeutronicsSimulationReader
 
 
 script_path = os.path.dirname(os.path.abspath(__file__))
@@ -27,7 +27,7 @@ except BaseException as err:
     sys.exit()
 
 
-sim = SimulationReader(path)
+sim = NeutronicsSimulationReader(path)
 sim.read_simulation_data()
 
 sim.plot_flux_moments(0, [0, 1], [0.0, 0.05, 0.1])

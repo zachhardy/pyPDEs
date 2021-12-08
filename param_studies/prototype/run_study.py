@@ -8,7 +8,7 @@ from typing import List
 
 from pyPDEs.mesh import create_1d_mesh
 from pyPDEs.spatial_discretization import *
-from pyPDEs.material import CrossSections
+from pyPDEs.material import *
 from pyPDEs.utilities.boundaries import *
 
 from modules.neutron_diffusion import *
@@ -30,10 +30,8 @@ def sigma_a_function(g, x, sigma_a) -> float:
 script_path = os.path.dirname(os.path.abspath(__file__))
 
 # Define paramter space
-sigma_a = np.linspace(1.09, 1.1, 21)
-
 parameters = {}
-parameters['sigma_a'] = np.round(sigma_a, 8)
+parameters['sigma_a'] = np.linspace(1.09, 1.1, 21)
 
 keys = list(parameters.keys())
 values = list(itertools.product(*parameters.values()))
@@ -47,26 +45,32 @@ mesh = create_1d_mesh(zones, n_cells, material_ids, coord_sys='cartesian')
 discretization = FiniteVolume(mesh)
 
 # Create cross sections and sources
-xs0 = CrossSections()
-xs0.read_from_xs_dict(xs_vals)
+materials = []
+materials.append(Material('Material 0'))
+materials.append(Material('Material 1'))
+materials.append(Material('Material 2'))
+materials.append(Material('Material 4'))
 
-xs1 = deepcopy(xs0)
-xs2 = deepcopy(xs0)
-xs3 = deepcopy(xs0)
+xs = [CrossSections() for _ in range(len(materials))]
+fct = [None, sigma_a_function, None,
+       sigma_a_function]
+for i in range(len(materials)):
+    xs[i].read_from_xs_dict(xs_vals)
+    xs[i].sigma_a_function = fct[i]
+    materials[i].add_properties(xs[i])
 
-xs1.sigma_a_function = sigma_a_function
-xs3.sigma_a_function = sigma_a_function
 
 # Create boundary conditions
-boundaries = [VacuumBoundary(xs0.n_groups),
-              VacuumBoundary(xs0.n_groups)]
+n_groups = xs_vals['n_groups']
+boundaries = [VacuumBoundary(n_groups),
+              VacuumBoundary(n_groups)]
 
 # Initialize solver and attach objects
 solver = TransientSolver()
 solver.mesh = mesh
 solver.discretization = discretization
 solver.boundaries = boundaries
-solver.material_xs = [xs0, xs1, xs2, xs3]
+solver.materials = materials
 
 solver.tolerance = tolerance
 solver.max_iterations = max_iterations
