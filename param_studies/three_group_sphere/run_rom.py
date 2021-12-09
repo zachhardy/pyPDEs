@@ -16,9 +16,30 @@ from rom.dmd import DMD
 
 script_path = os.path.dirname(os.path.abspath(__file__))
 
+# Get inputs
+case = 0
+with_ics = True
+for arg in sys.argv:
+    if 'case' in arg:
+        case = int(arg.split('=')[1])
+    if 'with_ics' in arg:
+        with_ics = bool(int(arg.split('=')[1]))
+
+if case == 0:
+    study_name = 'density'
+elif case == 1:
+    study_name = 'size'
+elif case == 2:
+    study_name = 'density_size'
+study_name += '_ics' if with_ics else '_k'
+
 # Parse the database
-dataset = NeutronicsDatasetReader(f'{script_path}/outputs/density_size_ics')
+dataset = NeutronicsDatasetReader(f'{script_path}/outputs/{study_name}')
 dataset.read_dataset()
+
+t_f = dataset.times[-1]
+dataset.simulations[0].plot_flux_moments(0, -1, times=t_f)
+dataset.simulations[-1].plot_flux_moments(0, -1, times=t_f)
 
 # Get the domain information
 n_groups = dataset.n_groups
@@ -28,18 +49,8 @@ times = dataset.times
 X = dataset.create_dataset_matrix(variables='power_density')
 Y = dataset.parameters
 
-# Get parameters and index for reference
-y_ref = [0.05]
+# Get number of parameters
 n_parameters = dataset.n_parameters
-if dataset.n_parameters == 1:
-    iref = list(np.ravel(Y)).index(y_ref[0])
-else:
-    y_ref += [6.0]
-    for p in range(len(Y)):
-        y = Y[p]
-        if all(Y[p] == y_ref):
-            iref = p
-            break
 
 # Get parameter bounds
 bounds = np.zeros((n_parameters, 2))
@@ -57,13 +68,13 @@ for i in range(len(Y)):
             on_bndry = True
             break
 
-    if not on_bndry:
-        interior += [i]
-    else:
-        bndry += [i]
+    if not on_bndry:  interior += [i]
+    else:  bndry += [i]
 
 
-splits = train_test_split(X[interior], Y[interior], train_size=0.5)
+seed = 777
+splits = train_test_split(X[interior], Y[interior],
+                          train_size=0.5, random_state=seed)
 X_train, X_test, Y_train, Y_test = splits
 X_train = np.vstack((X_train, X[bndry]))
 Y_train = np.vstack((Y_train, Y[bndry]))
@@ -77,7 +88,7 @@ pod.fit(X_train.T, Y_train)
 offline_time = time.time() - tstart
 
 tstart = time.time()
-X_pred = pod.predict(Y_test, 'cubic').T
+X_pred = pod.predict(Y_test, 'linear').T
 predict_time = time.time() - tstart
 
 # Format POD predictions for DMD
@@ -101,47 +112,56 @@ for t in range(len(x_test)):
 msg = f'===== Summary of {len(errors)} POD Models ====='
 header = '=' * len(msg)
 print('\n'.join(['', header, msg, header]))
+print(f'Number of Training Snapshots:\t\t{len(X_train)}')
 print(f'Average POD Reconstruction Error:\t{np.mean(errors):.3e}')
 print(f'Maximum POD Reconstruction Error:\t{np.max(errors):.3e}')
 print(f'Minimum POD Reconstruction Error:\t{np.min(errors):.3e}')
 print()
 
 plt.figure()
+plt.title(f'Worst Result\n'
+          f'$\\rho$ = {Y[argmax][0]:.3f} $\\frac{{atoms}}{{b-cm}}$\n'
+          f'Error = {np.max(errors):.3e}')
 plt.xlabel(r'Time [$\mu$s]', fontsize=12)
 plt.ylabel('Relative Error [arb. units]', fontsize=12)
 plt.semilogy(times, timestep_errors, '-*b')
 plt.grid(True)
+plt.tight_layout()
+
+# fname = '/Users/zacharyhardy/Documents/phd/prelim/figures/'
+# plt.savefig(fname + f'timestep_errors_{n_parameters}d.pdf')
+
 plt.show()
 
-# Construct DMD models, compute errors
-dmd_time = 0.0
-errors = np.zeros(len(X_pred))
-for i in range(len(X_pred)):
-    tstart = time.time()
-    dmd = DMD(svd_rank=svd_rank)
-    dmd.fit(X_pred[i].T, verbose=False)
-    dmd_time += time.time() - tstart
-
-    x_dmd = dmd.reconstructed_data.real
-    errors[i] = norm(X_test[i] - x_dmd.T) / norm(X_test[i])
-query_time = predict_time + dmd_time
-
-# Print aggregated DMD results
-msg = f'===== Summary of {errors.size} DMD Models ====='
-header = '=' * len(msg)
-print('\n'.join(['', header, msg, header]))
-print(f'Average DMD Reconstruction Error:\t{np.mean(errors):.3e}')
-print(f'Maximum DMD Reconstruction Error:\t{np.max(errors):.3e}')
-print(f'Minimum DMD Reconstruction Error:\t{np.min(errors):.3e}')
-print()
-
-# msg = f'===== Summary of POD-DMD Model Cost ====='
+# # Construct DMD models, compute errors
+# dmd_time = 0.0
+# errors = np.zeros(len(X_pred))
+# for i in range(len(X_pred)):
+#     tstart = time.time()
+#     dmd = DMD(svd_rank=svd_rank)
+#     dmd.fit(X_pred[i].T, verbose=False)
+#     dmd_time += time.time() - tstart
+#
+#     x_dmd = dmd.reconstructed_data.real
+#     errors[i] = norm(X_test[i] - x_dmd.T) / norm(X_test[i])
+# query_time = predict_time + dmd_time
+#
+# # Print aggregated DMD results
+# msg = f'===== Summary of {errors.size} DMD Models ====='
 # header = '=' * len(msg)
-# print('\n'.join([header, msg, header]))
-# print(f'Construction:\t\t\t{offline_time:.3e} s')
-# print(f'Prediction:\t\t\t{predict_time:.3e} s')
-# print(f'Decomposition:\t\t\t{dmd_time:.3e} s')
-# print(f'Total query cost:\t\t{query_time:.3e} s')
+# print('\n'.join(['', header, msg, header]))
+# print(f'Average DMD Reconstruction Error:\t{np.mean(errors):.3e}')
+# print(f'Maximum DMD Reconstruction Error:\t{np.max(errors):.3e}')
+# print(f'Minimum DMD Reconstruction Error:\t{np.min(errors):.3e}')
 # print()
-
-plt.show()
+#
+# # msg = f'===== Summary of POD-DMD Model Cost ====='
+# # header = '=' * len(msg)
+# # print('\n'.join([header, msg, header]))
+# # print(f'Construction:\t\t\t{offline_time:.3e} s')
+# # print(f'Prediction:\t\t\t{predict_time:.3e} s')
+# # print(f'Decomposition:\t\t\t{dmd_time:.3e} s')
+# # print(f'Total query cost:\t\t{query_time:.3e} s')
+# # print()
+#
+# plt.show()

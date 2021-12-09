@@ -21,6 +21,7 @@ except BaseException as err:
     print(); print(err.args[0]); print()
     sys.exit()
 
+n = 4
 
 script_path = os.path.dirname(os.path.abspath(__file__))
 base = os.path.join(script_path, 'outputs')
@@ -38,9 +39,8 @@ from numpy.linalg import norm
 X = sim.create_simulation_matrix().T
 grid = [node.z for node in sim.nodes]
 times = sim.times
-t0, tf, dt = times[0], times[-1], times[1]-times[0]
 
-n = 4
+t0, tf, dt = times[0], times[-1], times[1]-times[0]
 
 dmd = DMD(svd_rank=n, sort_method='amps')
 dmd.snapshot_time = {'t0': t0, 'tf': tf, 'dt': dt}
@@ -59,15 +59,11 @@ plt.xlabel('Time [sec]', fontsize=14)
 plt.ylabel(r'Relative $L^2$ Error', fontsize=14)
 plt.semilogy(times, step_errors, 'b*-')
 plt.grid(True)
-
-# fname = '/Users/zacharyhardy/Documents/proposal/' \
-#         'revision1/figures/dmd_timestep_errors.pdf'
-# plt.savefig(fname)
 plt.show()
 
 from modules.neutron_diffusion.analytic import *
 
-exact: AnalyticSolution = load(script_path + '/sphere5cm.obj')
+exact: AnalyticSolution = load(script_path + '/sphere6cm.obj')
 alphas = np.array([mode.alpha for mode in exact.modes[:n]])
 alphas = np.exp(alphas * dt)
 
@@ -87,7 +83,7 @@ plt.grid(True)
 plt.legend()
 plt.tight_layout()
 
-# fname = '/Users/zacharyhardy/Documents/proposal/' \
-#         'revision1/figures/dmd_eigenvalues.pdf'
-# plt.savefig(fname)
+fname = '/Users/zacharyhardy/Documents/phd/prelim/' \
+        'figures/dmd_eigenvalues.pdf'
+plt.savefig(fname)
 plt.show()

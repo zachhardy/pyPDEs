@@ -1,6 +1,7 @@
 import os
 import sys
 import itertools
+
 import numpy as np
 
 from pyPDEs.mesh import create_1d_mesh
@@ -23,33 +24,30 @@ script_path = os.path.dirname(os.path.abspath(__file__))
 
 
 # Get inputs
+case = 0
 with_ics = True
-with_size = False
 for arg in sys.argv:
+    if 'case' in arg:
+        case = int(arg.split('=')[1])
     if 'with_ics' in arg:
         with_ics = bool(int(arg.split('=')[1]))
-    if 'with_size' in arg:
-        with_size = bool(int(arg.split('=')[1]))
 
-study_name = 'density'
-study_name += '_size' if with_size else ''
-study_name += '_ics' if with_ics else '_k'
-
-# Define parameter space
+# Setup studies
 parameters = {}
-if with_size:
-    densities = np.linspace(0.049, 0.051, 11)
-    parameters['density'] = list(np.round(densities, 6))
-
-    sizes = np.linspace(5.9, 6.0, 11)
-    parameters['size'] = list(np.round(sizes, 6))
-else:
-    densities = np.linspace(0.048, 0.052, 41)
-    parameters['density'] = list(np.round(densities, 6))
+if case == 0:
+    parameters['density'] = np.linspace(0.048, 0.052, 26)
+elif case == 1:
+    parameters['size'] = np.linspace(5.8, 6.2, 26)
+elif case == 2:
+    parameters['density'] = np.linspace(0.047, 0.051, 6)
+    parameters['size'] = np.linspace(5.7, 6.0, 6)
 
 keys = list(parameters.keys())
 values = list(itertools.product(*parameters.values()))
 
+for k, key in enumerate(keys):
+    study_name = key if k == 0 else study_name + f'_{key}'
+study_name += '_ics' if with_ics else '_k'
 
 # Setup the problem
 mesh = create_1d_mesh([0.0, 6.0], [100], coord_sys='spherical')
@@ -76,6 +74,7 @@ ics = [lambda r: 1.0 - r**2 / rf**2,
        lambda r: 0.0]
 solver.initial_conditions = ics if with_ics else None
 solver.normalize_fission = False
+solver.phi_norm_method = None
 
 solver.t_final = 0.1
 solver.dt = 2.0e-3
@@ -129,7 +128,7 @@ for n, params in enumerate(values):
     print('\n'.join(['', head, msg, head]))
     for p in range(len(params)):
         pname = keys[p].capitalize()
-        print(f'{pname:<10}:\t{params[p]:<5}')
+        print(f'{pname:<10}:\t{params[p]:<5.3e}')
     print(f"{'k_eff':<10}:\t{solver.k_eff:<8.5f}")
 
     solver.execute()

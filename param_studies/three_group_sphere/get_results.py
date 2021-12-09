@@ -30,7 +30,7 @@ except BaseException as err:
 sim = NeutronicsSimulationReader(path)
 sim.read_simulation_data()
 
-sim.plot_flux_moments(0, [0, 1], [0.0, 0.05, 0.1])
+sim.plot_flux_moments(0, [0, 1, 2], [0.0, 0.1])
 plt.show()
 
 from rom.dmd import DMD

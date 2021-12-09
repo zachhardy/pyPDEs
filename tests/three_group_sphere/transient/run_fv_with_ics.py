@@ -12,7 +12,7 @@ from modules.neutron_diffusion import *
 abs_path = os.path.dirname(os.path.abspath(__file__))
 
 # Create mesh and discretization
-mesh = create_1d_mesh([0.0, 5.0], [100], coord_sys='spherical')
+mesh = create_1d_mesh([0.0, 6.0], [100], coord_sys='spherical')
 discretization = FiniteVolume(mesh)
 
 # Create cross sections and sources
@@ -42,10 +42,11 @@ solver.initial_conditions = \
 # Set options
 solver.use_precursors = False
 solver.lag_precursors = False
+solver.phi_norm_method = None
 
 # Set time stepping options
-solver.t_final = 0.01
-solver.dt = 1.0e-4
+solver.t_final = 0.1
+solver.dt = 2.0e-3
 solver.method = 'tbdf2'
 
 # Output informations

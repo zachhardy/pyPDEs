@@ -108,9 +108,18 @@ class AnalyticSolution:
                 fit += mode.evaluate_eigenfunction(r)
                 diff = np.linalg.norm(fit - ic)
 
-        k = lambda alpha_mode: abs(alpha_mode.b.real)
-        self.modes = sorted(self.modes, key=k, reverse=True)
+        # Sort by eigenvalue
+        n_modes = len(self.modes)
+        k = lambda i: abs(self.modes[i].alpha.real)
+        idx_eig = sorted(list(range(n_modes)), key=k)
+        self.modes = [self.modes[i] for i in idx_eig]
 
+        # Sort by amplitude
+        k = lambda i: abs(self.modes[i].b.real)
+        idx_b = sorted(list(range(n_modes)), key=k, reverse=True)
+        self.modes = [self.modes[i] for i in idx_b]
+
+        print(f'Dominant Mode Index:\t{idx_b[0]}')
         print(f'# of Modes:\t{len(self.modes)}')
         print(f'IC Fit Error:\t{diff:.4e}\n')
 
