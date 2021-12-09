@@ -37,10 +37,6 @@ study_name += '_ics' if with_ics else '_k'
 dataset = NeutronicsDatasetReader(f'{script_path}/outputs/{study_name}')
 dataset.read_dataset()
 
-t_f = dataset.times[-1]
-dataset.simulations[0].plot_flux_moments(0, -1, times=t_f)
-dataset.simulations[-1].plot_flux_moments(0, -1, times=t_f)
-
 # Get the domain information
 n_groups = dataset.n_groups
 grid = np.array([p.z for p in dataset.nodes])
@@ -70,7 +66,6 @@ for i in range(len(Y)):
 
     if not on_bndry:  interior += [i]
     else:  bndry += [i]
-
 
 seed = 777
 splits = train_test_split(X[interior], Y[interior],
@@ -118,6 +113,7 @@ print(f'Maximum POD Reconstruction Error:\t{np.max(errors):.3e}')
 print(f'Minimum POD Reconstruction Error:\t{np.min(errors):.3e}')
 print()
 
+# Worst POD result
 plt.figure()
 plt.title(f'Worst Result\n'
           f'$\\rho$ = {Y[argmax][0]:.3f} $\\frac{{atoms}}{{b-cm}}$\n'
@@ -127,41 +123,96 @@ plt.ylabel('Relative Error [arb. units]', fontsize=12)
 plt.semilogy(times, timestep_errors, '-*b')
 plt.grid(True)
 plt.tight_layout()
-
-# fname = '/Users/zacharyhardy/Documents/phd/prelim/figures/'
-# plt.savefig(fname + f'timestep_errors_{n_parameters}d.pdf')
-
 plt.show()
 
-# # Construct DMD models, compute errors
-# dmd_time = 0.0
-# errors = np.zeros(len(X_pred))
-# for i in range(len(X_pred)):
-#     tstart = time.time()
-#     dmd = DMD(svd_rank=svd_rank)
-#     dmd.fit(X_pred[i].T, verbose=False)
-#     dmd_time += time.time() - tstart
-#
-#     x_dmd = dmd.reconstructed_data.real
-#     errors[i] = norm(X_test[i] - x_dmd.T) / norm(X_test[i])
-# query_time = predict_time + dmd_time
-#
-# # Print aggregated DMD results
-# msg = f'===== Summary of {errors.size} DMD Models ====='
-# header = '=' * len(msg)
-# print('\n'.join(['', header, msg, header]))
-# print(f'Average DMD Reconstruction Error:\t{np.mean(errors):.3e}')
-# print(f'Maximum DMD Reconstruction Error:\t{np.max(errors):.3e}')
-# print(f'Minimum DMD Reconstruction Error:\t{np.min(errors):.3e}')
-# print()
-#
-# # msg = f'===== Summary of POD-DMD Model Cost ====='
-# # header = '=' * len(msg)
-# # print('\n'.join([header, msg, header]))
-# # print(f'Construction:\t\t\t{offline_time:.3e} s')
-# # print(f'Prediction:\t\t\t{predict_time:.3e} s')
-# # print(f'Decomposition:\t\t\t{dmd_time:.3e} s')
-# # print(f'Total query cost:\t\t{query_time:.3e} s')
-# # print()
-#
-# plt.show()
+# DMD on worst result
+dmd = DMD(svd_rank=svd_rank)
+
+dmd.snapshot_time = {'t0': times[0],
+                     'tf': times[-1],
+                     'dt': np.diff(times)[0]}
+
+dmd.fit(x_pred.T)
+x_dmd = dmd.reconstructed_data.T
+
+timestep_errors = []
+for t in range(len(x_test)):
+    error = norm(x_test[t]-x_dmd[t]) / norm(x_test[t])
+    timestep_errors.append(error)
+
+plt.figure()
+plt.xlabel(f'Time ($\mu$s)', fontsize=12)
+plt.ylabel(f'$L^2$ Error', fontsize=12)
+plt.semilogy(times, timestep_errors, '-b*')
+plt.grid(True)
+
+base = '/Users/zacharyhardy/Documents/phd/prelim'
+fname = base + '/figures/worst_dmd_reconstruction.pdf'
+plt.savefig(fname)
+
+# Interpolation and extrapolation on worst result
+dmd.snapshot_time['tf'] /= 2.0
+dmd.snapshot_time['dt'] *= 2.0
+
+mid = len(x_pred) // 2
+x = x_pred[:mid + 1:2]
+dmd.fit(x.T)
+
+dmd.plot_timestep_errors()
+
+dmd.dmd_time['tf'] *= 2
+dmd.dmd_time['dt'] /= 2
+
+x_dmd = dmd.reconstructed_data.T
+
+timestep_errors = []
+for t in range(len(x_test)):
+    error = norm(x_test[t]-x_dmd[t]) / norm(x_test[t])
+    timestep_errors.append(error)
+
+plt.figure()
+plt.xlabel('Time ($\mu$s)', fontsize=12)
+plt.ylabel('$L^2$ Error', fontsize=12)
+plt.semilogy(times[:mid+1:2], timestep_errors[:mid+1:2],
+             '-*b', markersize=3.0, label='Reconstuction')
+plt.semilogy(times[1:mid+1:2], timestep_errors[1:mid+1:2],
+             '--^r', markersize=3.0, label='Interpolation')
+plt.semilogy(times[mid+1:], timestep_errors[mid+1:],
+             '-.og', markersize=3.0, label='Extrapolation')
+plt.legend()
+plt.grid(True)
+
+fname = base + '/figures/worst_dmd_interp_extrap.pdf'
+plt.savefig(fname)
+plt.show()
+
+# Construct DMD models, compute errors
+dmd_time = 0.0
+errors = np.zeros(len(X_pred))
+for i in range(len(X_pred)):
+    tstart = time.time()
+    dmd = DMD(svd_rank=svd_rank)
+    dmd.fit(X_pred[i].T, verbose=False)
+    dmd_time += time.time() - tstart
+
+    x_dmd = dmd.reconstructed_data.real
+    errors[i] = norm(X_test[i] - x_dmd.T) / norm(X_test[i])
+query_time = predict_time + dmd_time
+
+# Print aggregated DMD results
+msg = f'===== Summary of {errors.size} DMD Models ====='
+header = '=' * len(msg)
+print('\n'.join(['', header, msg, header]))
+print(f'Average DMD Reconstruction Error:\t{np.mean(errors):.3e}')
+print(f'Maximum DMD Reconstruction Error:\t{np.max(errors):.3e}')
+print(f'Minimum DMD Reconstruction Error:\t{np.min(errors):.3e}')
+print()
+
+msg = f'===== Summary of POD-DMD Model Cost ====='
+header = '=' * len(msg)
+print('\n'.join([header, msg, header]))
+print(f'Construction:\t\t\t{offline_time:.3e} s')
+print(f'Prediction:\t\t\t{predict_time:.3e} s')
+print(f'Decomposition:\t\t\t{dmd_time:.3e} s')
+print(f'Total query cost:\t\t{query_time:.3e} s')
+print()

@@ -77,7 +77,7 @@ solver.normalize_fission = False
 solver.phi_norm_method = None
 
 solver.t_final = 0.1
-solver.dt = 2.0e-3
+solver.dt = 1.0e-3
 solver.stepping_method = 'tbdf2'
 
 solver.write_outputs = True
