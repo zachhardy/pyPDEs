@@ -38,7 +38,7 @@ else:
 sim = NeutronicsSimulationReader(path)
 sim.read_simulation_data()
 
-sim.plot_flux_moments(0, 1, times)
+sim.plot_flux_moments(0, [0, 1], times, grouping='time')
 if arg == 2:
     from typing import List
     from matplotlib.pyplot import Axes, Line2D

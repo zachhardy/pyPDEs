@@ -32,6 +32,6 @@ else:
 sim = NeutronicsSimulationReader(path)
 sim.read_simulation_data()
 
-sim.plot_flux_moments(0, 0, [0.0, 0.2, 0.5])
+sim.plot_flux_moments(0, 0, [0.5], grouping='time')
 sim.plot_power()
 plt.show()
