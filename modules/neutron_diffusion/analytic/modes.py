@@ -111,11 +111,11 @@ class AlphaEigenfunction:
         # Initialize the figure
         fig: Figure = plt.figure()
         ax: Axes = fig.add_subplot(1, 1, 1)
-        ax.set_xlabel('r')
-        ax.set_ylabel(r'$f_{nm,g}$ $\varphi_{n}(r)')
+        ax.set_xlabel('r', fontsize=12)
+        ax.set_ylabel(r'$f_{nm,g}$ $\varphi_{n}(r)$', fontsize=12)
         title = f'Alpha Mode n={self.n-1}, m={self.m}\n' \
                 f'$\\alpha$ = {self.alpha.real:.3e}{self.alpha.imag:+.5g}j'
-        fig.suptitle(title)
+        fig.suptitle(title, fontsize=12)
 
         # Plot the profiles
         for g in range(self._n_groups):

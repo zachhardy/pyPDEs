@@ -46,9 +46,16 @@ class AnalyticSolution:
         self._rhs: Expr = None
         self._lhs: List[Expr] = None
 
+        self._eigval_order: List[int] = []
+        self._amplitude_order: List[int] = []
+
     @property
     def n_groups(self) -> int:
         return self.xs.n_groups
+
+    @property
+    def n_modes(self) -> int:
+        return len(self.modes)
 
     @property
     def varphi_n(self) -> Expr:
@@ -109,17 +116,16 @@ class AnalyticSolution:
                 diff = np.linalg.norm(fit - ic)
 
         # Sort by eigenvalue
-        n_modes = len(self.modes)
         k = lambda i: abs(self.modes[i].alpha.real)
-        idx_eig = sorted(list(range(n_modes)), key=k)
-        self.modes = [self.modes[i] for i in idx_eig]
+        self._eigval_order = sorted(list(range(self.n_modes)), key=k)
 
-        # Sort by amplitude
+        # Define amplitude sorting
         k = lambda i: abs(self.modes[i].b.real)
-        idx_b = sorted(list(range(n_modes)), key=k, reverse=True)
-        self.modes = [self.modes[i] for i in idx_b]
+        self._amplitude_order = sorted(list(range(self.n_modes)),
+                                       key=k, reverse=True)
 
-        print(f'Dominant Mode Index:\t{idx_b[0]}')
+        ind = self._eigval_order.index(self._amplitude_order[0])
+        print(f'Dominant Mode:\t{ind}')
         print(f'# of Modes:\t{len(self.modes)}')
         print(f'IC Fit Error:\t{diff:.4e}\n')
 
@@ -149,7 +155,8 @@ class AnalyticSolution:
             phi += mode.evaluate_eigenfunction(r, t)
         return phi.real if len(t) > 1 else phi.real.ravel()
 
-    def get_eigenfunction(self, n: int, m: int) -> AlphaEigenfunction:
+    def get_mode(self, n: int, m: int = None,
+                 method: str = 'nm') -> AlphaEigenfunction:
         """
         Return the specified alpha-eigenfunction object.
 
@@ -159,14 +166,23 @@ class AnalyticSolution:
             The spatial index.
         m : int
             The energy index.
+        method : {'nm', 'eig', 'amp'}
+            Whether to get mode n, m, the mode with
+            the n'th largest eigenvalue, or the n'th largest
+            amplitude.
 
         Returns
         -------
         AlphaEigenfunction
         """
-        for mode in self.modes:
-            if mode.n == n + 1 and mode.m == m:
-                return mode
+        if method == 'nm':
+            for mode in self.modes:
+                if mode.n == n + 1 and mode.m == m:
+                    return mode
+        elif method == 'eig':
+            return self.modes[self._eigval_order[n]]
+        elif method == 'amp':
+            return self.modes[self._amplitude_order[n]]
 
     def plot_eigenfunction(self, n: int, m: int, r: ndarray) -> None:
         """
