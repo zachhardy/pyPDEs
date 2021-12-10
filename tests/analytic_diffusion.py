@@ -20,7 +20,8 @@ ics = Matrix([1.0 - r ** 2 / r_b ** 2,
 dr = r_b / 100.0
 r = np.linspace(0.5 * dr, r_b - 0.5 * dr, 1001)
 
-exact = AnalyticSolution(xs, ics, r_b, 'spherical', max_n_modes=1000)
+exact = AnalyticSolution(xs, ics, r_b, 'spherical',
+                         tolerance=1.0e-16, max_n_modes=5000)
 exact.execute()
 
 exact.get_mode(0, method='amp').plot_eigenfunction(r)
