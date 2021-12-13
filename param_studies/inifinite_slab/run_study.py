@@ -128,11 +128,14 @@ for n, params in enumerate(values):
     # Modify system parameters
     if 'multiplier' in keys:
         ind = keys.index('multiplier')
+
+
         def function(g, x, sigma_a) -> float:
             if g == 1 and x[0] > 0.0:
                 return params[ind] * sigma_a
             else:
                 return sigma_a
+
 
         solver.materials = deepcopy(materials)
         for material_property in solver.materials[0].properties:

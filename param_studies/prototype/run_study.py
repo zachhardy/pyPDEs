@@ -26,6 +26,7 @@ def setup_directory(path: str):
 def sigma_a_function(g, x, sigma_a) -> float:
     return 1.1 if x[0] == 0.0 else 1.09
 
+
 # Define current directory
 script_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -45,11 +46,8 @@ mesh = create_1d_mesh(zones, n_cells, material_ids, coord_sys='cartesian')
 discretization = FiniteVolume(mesh)
 
 # Create cross sections and sources
-materials = []
-materials.append(Material('Material 0'))
-materials.append(Material('Material 1'))
-materials.append(Material('Material 2'))
-materials.append(Material('Material 4'))
+materials = [Material('Material 0'), Material('Material 1'),
+             Material('Material 2'), Material('Material 4')]
 
 xs = [CrossSections() for _ in range(len(materials))]
 fct = [None, sigma_a_function, None,
@@ -124,8 +122,12 @@ for n, params in enumerate(values):
     # Modify system parameters
     if 'sigma_a' in keys:
         ind = keys.index('sigma_a')
+
+
         def function(g, x, sigma_a) -> float:
             return 1.1 if x[0] == 0.0 else params[ind]
+
+
         solver.material_xs[1].sigma_a_function = function
         solver.material_xs[3].sigma_a_function = function
 

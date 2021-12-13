@@ -49,14 +49,11 @@ mesh = create_2d_mesh(x_verts, y_verts, verbose=True)
 
 for cell in mesh.cells:
     c = cell.centroid
-    if 24.0 <= c.x <= 56.0 and \
-            24.0 <= c.y <= 56.0:
+    if 24.0 <= c.x <= 56.0 and 24.0 <= c.y <= 56.0:
         cell.material_id = 0
-    elif 0.0 <= c.x <= 24.0 and \
-            24.0 <= c.y <= 56.0:
+    elif 0.0 <= c.x <= 24.0 and 24.0 <= c.y <= 56.0:
         cell.material_id = 1
-    elif 24.0 <= c.x <= 56.0 and \
-            0 <= c.y <= 24.0:
+    elif 24.0 <= c.x <= 56.0 and 0 <= c.y <= 24.0:
         cell.material_id = 1
     else:
         cell.material_id = 2
@@ -65,10 +62,9 @@ for cell in mesh.cells:
 discretization = FiniteVolume(mesh)
 
 # Create materials
-materials = []
-materials.append(Material())
-materials.append(Material())
-materials.append(Material())
+materials = [Material('Material 1'),
+             Material('Material 2'),
+             Material('Material 3')]
 
 xs = [CrossSections() for _ in range(len(materials))]
 data = [xs_material_0, xs_material_0, xs_material_1]
@@ -147,11 +143,15 @@ for n, params in enumerate(values):
     # Modify system parameters
     if 'multiplier' in keys:
         ind = keys.index('multiplier')
+
+
         def function(g, x, sigma_a) -> float:
             if g == 1 and x[0] > 0.0:
                 return params[ind] * sigma_a
             else:
                 return sigma_a
+
+
 
         solver.materials = deepcopy(materials)
         for material_property in solver.materials[0].properties:
