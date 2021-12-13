@@ -9,7 +9,7 @@ from modules.heat_conduction import HeatConductionSolver
 
 mesh = create_1d_mesh([0.0, 0.45], [50], coord_sys='cartesian')
 discretization = PiecewiseContinuous(mesh, degree=1)
-boundaries = [NeumannBoundary(0.0), DirichletBoundary(0.0)]
+boundaries = [DirichletBoundary(0.0), NeumannBoundary(0.0)]
 
 k = [lambda temp: 1.5 + (2510.0 / (215.0 + temp))]
 q = [3.0e4]
@@ -29,7 +29,7 @@ for method in methods:
     msg = '=========='
     msg += f' Starting {method} Execution '
     msg += '=========='
-    print('\n'.join(['=' * len(msg), msg, '=' * len(msg)]))
+    print('\n'.join(['', '=' * len(msg), msg, '=' * len(msg)]))
 
     solver.initialize()
     solver.nonlinear_method = method

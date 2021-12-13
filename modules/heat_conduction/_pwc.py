@@ -173,6 +173,7 @@ def apply_vector_bcs(self: 'HeatConductionSolver',
                     # Loop over face nodes
                     n_face_nodes = len(view.face_node_mapping[f])
                     for fi in range(n_face_nodes):
+                        ii = pwc.map_face_dof(cell, f, fi)
                         b[ii] = value
 
                 # Neumann boundary
