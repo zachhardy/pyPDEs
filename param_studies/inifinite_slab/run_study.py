@@ -1,5 +1,7 @@
 import os
 import itertools
+import sys
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -23,9 +25,17 @@ def setup_directory(path: str):
         os.system(f'rm -r {path}/*')
 
 
-def step_up(g, x, sigma_a) -> float:
-    if g == 1 and x[0] > 0.0:
-        return 1.03 * sigma_a
+# Nominal function parameters
+m = 0.03
+t_ramp = 1.0
+
+
+def function(g, x, sigma_a) -> float:
+    t = x[0]
+    if g == 1 and 0.0 <= t <= t_ramp:
+        return sigma_a * (1.0 + t * m)
+    elif g == 1 and t > t_ramp:
+        return (1.0 + m) * sigma_a
     else:
         return sigma_a
 
@@ -33,29 +43,52 @@ def step_up(g, x, sigma_a) -> float:
 # Define current directory
 script_path = os.path.dirname(os.path.abspath(__file__))
 
-# Define paramter space
+# Get inputs
+case = int(sys.argv[1]) if len(sys.argv) > 1 else 0
+if case > 6:
+    raise AssertionError('Invalid case to run.')
+
+# Define parameter space
 parameters = {}
-parameters['multiplier'] = np.linspace(1.01, 1.04, 31)
+if case == 0:
+    parameters['multiplier'] = np.linspace(0.01, 0.05, 21)
+elif case == 1:
+    parameters['duration'] = np.linspace(0.5, 1.5, 21)
+elif case == 2:
+    parameters['interface'] = np.linspace(38.0, 42.0, 21)
+elif case == 3:
+    parameters['multiplier'] = np.linspace(0.02, 0.04, 6)
+    parameters['duration'] = np.linspace(0.5, 1.5, 6)
+elif case == 4:
+    parameters['multiplier'] = np.linspace(0.02, 0.04, 6)
+    parameters['interface'] = np.linspace(38.0, 42.0, 5)
+elif case == 5:
+    parameters['duration'] = np.linspace(0.5, 1.5, 6)
+    parameters['interface'] = np.linspace(38.0, 42.0, 5)
+elif case == 6:
+    parameters['multiplier'] = np.linspace(0.02, 0.04, 4)
+    parameters['duration'] = np.linspace(0.5, 1.5, 4)
+    parameters['interface'] = np.linspace(38.0, 42.0, 4)
 
 keys = list(parameters.keys())
 values = list(itertools.product(*parameters.values()))
+
+study_name = ''
+for k, key in enumerate(keys):
+    study_name = key if k == 0 else study_name + f'_{key}'
 
 # Create mesh and discretization
 zones = [0.0, 40.0, 200.0, 240.0]
 n_cells = [20, 80, 20]
 material_ids = [0, 1, 2]
-mesh = create_1d_mesh(zones, n_cells, material_ids, coord_sys='cartesian')
+mesh = create_1d_mesh(zones, n_cells, material_ids)
 discretization = FiniteVolume(mesh)
 
 # Create cross sections and sources
-materials = []
-materials.append(Material())
-materials.append(Material())
-materials.append(Material())
-
+materials = [Material(f'Material {i + 1}') for i in range(3)]
 xs = [CrossSections() for _ in range(len(materials))]
 data = [xs_material_0_and_2, xs_material_1, xs_material_0_and_2]
-fcts = [step_up, None, None]
+fcts = [function, None, None]
 for i in range(len(materials)):
     xs[i].read_from_xs_dict(data[i])
     xs[i].sigma_a_function = fcts[i]
@@ -82,7 +115,7 @@ solver.lag_precursors = False
 
 # Set time stepping options
 solver.t_final = 2.0
-solver.dt = 0.04
+solver.dt = 0.02
 solver.method = 'tbdf2'
 
 solver.max_iterations = max_iterations
@@ -92,7 +125,8 @@ solver.tolerance = tolerance
 solver.write_outputs = True
 
 # Define output path
-output_path = os.path.join(script_path, 'outputs/subcritical')
+output_path = os.path.join(script_path,
+                           f'outputs/subcritical/{study_name}')
 setup_directory(output_path)
 
 # Save parameters
@@ -126,21 +160,35 @@ for n, params in enumerate(values):
     solver.output_directory = simulation_path
 
     # Modify system parameters
-    if 'multiplier' in keys:
-        ind = keys.index('multiplier')
-
-
-        def function(g, x, sigma_a) -> float:
-            if g == 1 and x[0] > 0.0:
-                return params[ind] * sigma_a
-            else:
-                return sigma_a
-
-
+    if 'multiplier' in keys and 'duration' not in keys:
+        t_ramp = 1.0
+        m = params[keys.index('multiplier')]
         solver.materials = deepcopy(materials)
         for material_property in solver.materials[0].properties:
             if isinstance(material_property, CrossSections):
                 material_property.sigma_a_function = function
+
+    if 'duration' in keys and 'multiplier' not in keys:
+        m = 0.03
+        t_ramp = params[keys.index('duration')]
+        solver.materials = deepcopy(materials)
+        for material_property in solver.materials[0].properties:
+            if isinstance(material_property, CrossSections):
+                material_property.sigma_a_function = function
+
+    if 'multiplier' in keys and 'duration' in keys:
+        m = params[keys.index('multiplier')]
+        t_ramp = params[keys.index('duration')]
+        solver.materials = deepcopy(materials)
+        for material_property in solver.materials[0].properties:
+            if isinstance(material_property, CrossSections):
+                material_property.sigma_a_function = function
+
+    if 'interface' in keys:
+        x_int = params[keys.index('interface')]
+        zones = [0.0, x_int, 200.0, 240.0]
+        solver.mesh = create_1d_mesh(zones, n_cells, material_ids)
+        solver.discretization = FiniteVolume(mesh)
 
     # Run the problem
     solver.initialize()

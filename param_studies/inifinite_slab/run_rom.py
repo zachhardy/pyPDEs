@@ -16,8 +16,28 @@ from rom.dmd import DMD
 
 script_path = os.path.dirname(os.path.abspath(__file__))
 
+# Get inputs
+case = int(sys.argv[1]) if len(sys.argv) > 1 else 0
+if case == 0:
+    study_name = 'multiplier'
+elif case == 1:
+    study_name = 'duration'
+elif case == 2:
+    study_name = 'interface'
+elif case == 3:
+    study_name = 'multiplier_duration'
+elif case == 4:
+    study_name = 'multiplier_interface'
+elif case == 5:
+    study_name = 'duration_interface'
+elif case == 6:
+    study_name = 'multiplier_duration_interface'
+else:
+    raise AssertionError('Invalid case index.')
+
 # Parse the database
-dataset = NeutronicsDatasetReader(f'{script_path}/outputs/subcritical')
+path = f'{script_path}/outputs/subcritical/{study_name}'
+dataset = NeutronicsDatasetReader(path)
 dataset.read_dataset()
 
 # Get the domain information
@@ -29,11 +49,7 @@ X = dataset.create_dataset_matrix()
 Y = dataset.parameters
 
 # Get parameters and index for reference
-y_ref = [1.03]
 n_parameters = dataset.n_parameters
-if dataset.n_parameters == 1:
-    if y_ref in Y:
-        iref = list(np.ravel(Y)).index(y_ref[0])
 
 # Get parameter bounds
 bounds = np.zeros((n_parameters, 2))
@@ -63,13 +79,15 @@ Y_train = np.vstack((Y_train, Y[bndry]))
 
 # Construct POD model, predict test data
 tstart = time.time()
-svd_rank = 1.0 - 1.0e-12
+svd_rank = 1.0 - 1.0e-8
 pod = POD(svd_rank=svd_rank)
 pod.fit(X_train.T, Y_train, verbose=True)
 offline_time = time.time() - tstart
 
+pod.plot_scree()
+
 tstart = time.time()
-X_pred = pod.predict(Y_test, 'cubic').T
+X_pred = pod.predict(Y_test, 'linear').T
 predict_time = time.time() - tstart
 
 # Format POD predictions for DMD
@@ -103,6 +121,7 @@ plt.xlabel(r'Time [$\mu$s]', fontsize=12)
 plt.ylabel('Relative Error [arb. units]', fontsize=12)
 plt.semilogy(times, timestep_errors, '-*b')
 plt.grid(True)
+plt.tight_layout()
 plt.show()
 
 # # Construct DMD models, compute errors
