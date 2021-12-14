@@ -39,12 +39,13 @@ if case == 0:
 elif case == 1:
     parameters['size'] = np.linspace(5.8, 6.2, 26)
 elif case == 2:
-    parameters['density'] = np.linspace(0.047, 0.051, 6)
-    parameters['size'] = np.linspace(5.7, 6.0, 6)
+    parameters['density'] = np.linspace(0.049, 0.051, 7)
+    parameters['size'] = np.linspace(5.9, 6.0, 7)
 
 keys = list(parameters.keys())
 values = list(itertools.product(*parameters.values()))
 
+study_name = ''
 for k, key in enumerate(keys):
     study_name = key if k == 0 else study_name + f'_{key}'
 study_name += '_ics' if with_ics else '_k'
