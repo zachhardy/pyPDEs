@@ -1,4 +1,5 @@
 import os
+import sys
 import itertools
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,23 +24,45 @@ def setup_directory(path: str):
         os.system(f'rm -r {path}/*')
 
 
-def step(g, x, sigma_a) -> float:
-    if g == 1 and x[0] > 0.0:
-        return 0.97666 * sigma_a
+def function(g: int, x: List[float], sigma_a: float) -> float:
+    t = x[0]
+    if g == 1:
+        if 0.0 <= t <= t_ramp:
+            return sigma_a * (1.0 - t/t_ramp*(m - 1.0))
+        else:
+            return m * sigma_a
     else:
         return sigma_a
 
 
+# Nominal parameters
+m = 0.11667
+t_ramp = 0.2
+
 # Define current directory
 script_path = os.path.dirname(os.path.abspath(__file__))
 
-multiplier = np.linspace(0.96, 0.99, 31)
+# Get inputs
+case = int(sys.argv[1]) if len(sys.argv) > 1 else 0
+if case > 6:
+    raise AssertionError('Invalid case to run.')
 
+# Define parameter space
 parameters = {}
-parameters['multiplier'] = np.round(multiplier, 6)
+if case == 0:
+    parameters['multiplier'] = np.linspace(0.105, 0.125, 21)
+elif case == 1:
+    parameters['duration'] = np.linspace(0.1, 0.3, 21)
+elif case == 2:
+    parameters['multiplier'] = np.linspace(0.11, 0.12, 6)
+    parameters['duration'] = np.linspace(0.15, 0.25, 6)
 
 keys = list(parameters.keys())
 values = list(itertools.product(*parameters.values()))
+
+study_name = ''
+for k, key in enumerate(keys):
+    study_name = key if k == 0 else study_name + f'_{key}'
 
 # Create mesh, assign material IDs
 x_verts = np.linspace(0.0, 80.0, 21)
@@ -68,7 +91,7 @@ materials = [Material('Material 1'),
 
 xs = [CrossSections() for _ in range(len(materials))]
 data = [xs_material_0, xs_material_0, xs_material_1]
-fcts = [step, None, None]
+fcts = [function, None, None]
 for i in range(len(materials)):
     xs[i].read_from_xs_dict(data[i])
     xs[i].sigma_a_function = fcts[i]
@@ -104,7 +127,7 @@ solver.method = 'tbdf2'
 solver.write_outputs = True
 
 # Define output path
-output_path = os.path.join(script_path, 'outputs')
+output_path = os.path.join(script_path, f'outputs/{study_name}')
 setup_directory(output_path)
 
 # Save parameters
@@ -141,22 +164,20 @@ for n, params in enumerate(values):
     solver.output_directory = simulation_path
 
     # Modify system parameters
-    if 'multiplier' in keys:
-        ind = keys.index('multiplier')
+    if 'multiplier' in keys and 'duration' not in keys:
+        t_ramp = 0.2
+        m = params[keys.index('multiplier')]
+    if 'duration' in keys and 'multiplier' not in keys:
+        m = 0.11667
+        t_ramp = params[keys.index('duration')]
+    if 'multiplier' in keys and 'duration' in keys:
+        m = params[keys.index('multiplier')]
+        t_ramp = params[keys.index('duration')]
 
-
-        def function(g, x, sigma_a) -> float:
-            if g == 1 and x[0] > 0.0:
-                return params[ind] * sigma_a
-            else:
-                return sigma_a
-
-
-
-        solver.materials = deepcopy(materials)
-        for material_property in solver.materials[0].properties:
-            if isinstance(material_property, CrossSections):
-                material_property.sigma_a_function = function
+    solver.materials = deepcopy(materials)
+    for material_property in solver.materials[0].properties:
+        if isinstance(material_property, CrossSections):
+            material_property.sigma_a_function = function
 
     # Run the problem
     solver.initialize()

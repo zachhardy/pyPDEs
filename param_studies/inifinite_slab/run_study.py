@@ -26,16 +26,16 @@ def setup_directory(path: str):
 
 
 # Nominal function parameters
-m = 0.03
+m = 1.03
 t_ramp = 1.0
 
 
 def function(g, x, sigma_a) -> float:
     t = x[0]
-    if g == 1 and 0.0 <= t <= t_ramp:
-        return sigma_a * (1.0 + t * m)
+    if g == 1 and 0.0 < t <= t_ramp:
+        return sigma_a * (1.0 + t/t_ramp*(m - 1.0))
     elif g == 1 and t > t_ramp:
-        return (1.0 + m) * sigma_a
+        return m * sigma_a
     else:
         return sigma_a
 
@@ -51,23 +51,23 @@ if case > 6:
 # Define parameter space
 parameters = {}
 if case == 0:
-    parameters['multiplier'] = np.linspace(0.01, 0.05, 21)
+    parameters['multiplier'] = np.linspace(1.01, 1.05, 21)
 elif case == 1:
-    parameters['duration'] = np.linspace(0.5, 1.5, 21)
+    parameters['duration'] = np.linspace(0.9, 1.1, 41)
 elif case == 2:
     parameters['interface'] = np.linspace(38.0, 42.0, 21)
 elif case == 3:
-    parameters['multiplier'] = np.linspace(0.02, 0.04, 6)
-    parameters['duration'] = np.linspace(0.5, 1.5, 6)
+    parameters['multiplier'] = np.linspace(1.02, 1.04, 6)
+    parameters['duration'] = np.linspace(0.95, 1.05, 6)
 elif case == 4:
-    parameters['multiplier'] = np.linspace(0.02, 0.04, 6)
+    parameters['multiplier'] = np.linspace(1.02, 1.04, 6)
     parameters['interface'] = np.linspace(38.0, 42.0, 5)
 elif case == 5:
-    parameters['duration'] = np.linspace(0.5, 1.5, 6)
+    parameters['duration'] = np.linspace(0.95, 1.05, 6)
     parameters['interface'] = np.linspace(38.0, 42.0, 5)
 elif case == 6:
-    parameters['multiplier'] = np.linspace(0.02, 0.04, 4)
-    parameters['duration'] = np.linspace(0.5, 1.5, 4)
+    parameters['multiplier'] = np.linspace(1.02, 1.04, 4)
+    parameters['duration'] = np.linspace(0.95, 1.05, 4)
     parameters['interface'] = np.linspace(38.0, 42.0, 4)
 
 keys = list(parameters.keys())
@@ -152,7 +152,7 @@ for n, params in enumerate(values):
     print('\n'.join(['', head, msg, head]))
     for p in range(len(params)):
         pname = keys[p].capitalize()
-        print(f'{pname:<10}:\t{params[p]:<5.4f}')
+        print(f'{pname:<10}:\t{params[p]:<5.4g}')
 
     # Setup output path
     simulation_path = os.path.join(output_path, str(n).zfill(3))
