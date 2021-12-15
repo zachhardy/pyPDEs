@@ -47,8 +47,6 @@ times = dataset.times
 
 X = dataset.create_dataset_matrix()
 Y = dataset.parameters
-
-# Get parameters and index for reference
 n_parameters = dataset.n_parameters
 
 # Get parameter bounds

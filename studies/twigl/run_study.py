@@ -50,11 +50,11 @@ if case > 6:
 # Define parameter space
 parameters = {}
 if case == 0:
-    parameters['multiplier'] = np.linspace(0.96, 0.99, 21)
+    parameters['multiplier'] = np.linspace(0.96, 0.98, 21)
 elif case == 1:
     parameters['duration'] = np.linspace(0.1, 0.3, 21)
 elif case == 2:
-    parameters['multiplier'] = np.linspace(0.11, 0.12, 6)
+    parameters['multiplier'] = np.linspace(0.97, 0.98, 6)
     parameters['duration'] = np.linspace(0.15, 0.25, 6)
 
 keys = list(parameters.keys())
@@ -156,7 +156,7 @@ for n, params in enumerate(values):
     print('\n'.join(['', head, msg, head]))
     for p in range(len(params)):
         pname = keys[p].capitalize()
-        print(f'{pname:<10}:\t{params[p]:<5}')
+        print(f'{pname:<10}:\t{params[p]:<5g}')
 
     # Setup output path
     simulation_path = os.path.join(output_path, str(n).zfill(3))
