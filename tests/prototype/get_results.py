@@ -32,16 +32,6 @@ else:
 sim = NeutronicsSimulationReader(path)
 sim.read_simulation_data()
 
-sim.plot_flux_moments(0, 0, [0.0, 0.6, 1.1, 2.0])
+sim.plot_flux_moments(0, 0, [0.0, 0.6, 1.1, 2.0], grouping='time')
 sim.plot_power()
-plt.show()
-
-
-from rom.dmd import DMD
-X = sim.create_simulation_matrix().T
-dmd = DMD(svd_rank=1.0-1.0e-12, opt=False)
-dmd.fit(X)
-
-dmd.plot_rankwise_errors()
-dmd.plot_timestep_errors()
 plt.show()
