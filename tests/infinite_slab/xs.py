@@ -9,7 +9,7 @@ __all__ = ['sigma_a_ramp_up', 'sigma_a_ramp_down', 'sigma_a_fast_ramp_down',
 def sigma_a_ramp_up(g: int, x: List[float], sigma_a: float) -> float:
     t = x[0]
     if g == 1 and 0.0 <= t <= 1.0:
-        return sigma_a * (1.0 + t * 0.03)
+        return sigma_a * (1.0 + t/1.0 * (1.03 - 1.0))
     elif g == 1 and t > 1.0:
         return 1.03 * sigma_a
     else:
