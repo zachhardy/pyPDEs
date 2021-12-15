@@ -28,7 +28,7 @@ def function(g: int, x: List[float], sigma_a: float) -> float:
     t = x[0]
     if g == 1:
         if 0.0 <= t <= t_ramp:
-            return sigma_a * (1.0 - t/t_ramp*(m - 1.0))
+            return sigma_a * (1.0 + t/t_ramp*(m - 1.0))
         else:
             return m * sigma_a
     else:
@@ -36,7 +36,7 @@ def function(g: int, x: List[float], sigma_a: float) -> float:
 
 
 # Nominal parameters
-m = 0.11667
+m = 0.97667
 t_ramp = 0.2
 
 # Define current directory
@@ -50,7 +50,7 @@ if case > 6:
 # Define parameter space
 parameters = {}
 if case == 0:
-    parameters['multiplier'] = np.linspace(0.105, 0.125, 21)
+    parameters['multiplier'] = np.linspace(0.96, 0.99, 21)
 elif case == 1:
     parameters['duration'] = np.linspace(0.1, 0.3, 21)
 elif case == 2:
@@ -168,7 +168,7 @@ for n, params in enumerate(values):
         t_ramp = 0.2
         m = params[keys.index('multiplier')]
     if 'duration' in keys and 'multiplier' not in keys:
-        m = 0.11667
+        m = 0.97667
         t_ramp = params[keys.index('duration')]
     if 'multiplier' in keys and 'duration' in keys:
         m = params[keys.index('multiplier')]

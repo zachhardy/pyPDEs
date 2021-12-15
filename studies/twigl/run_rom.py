@@ -27,13 +27,7 @@ times = dataset.times
 
 X = dataset.create_dataset_matrix()
 Y = dataset.parameters
-
-# # Get parameters and index for reference
-y_ref = [0.97666]
 n_parameters = dataset.n_parameters
-if dataset.n_parameters == 1:
-    if y_ref in Y:
-        iref = list(np.ravel(Y)).index(y_ref[0])
 
 # Get parameter bounds
 bounds = np.zeros((n_parameters, 2))
@@ -69,7 +63,7 @@ pod.fit(X_train.T, Y_train, verbose=True)
 offline_time = time.time() - tstart
 
 tstart = time.time()
-X_pred = pod.predict(Y_test, 'cubic').T
+X_pred = pod.predict(Y_test, 'linear').T
 predict_time = time.time() - tstart
 
 # Format POD predictions for DMD
