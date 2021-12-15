@@ -25,6 +25,9 @@ def read_from_xs_file(self: 'CrossSections', filename: str,
     incompat_w_G = 'is incompatible with n_groups'
     incompat_w_J = 'is incompatible with n_precursors'
 
+    # Set density
+    self.density = density
+
     def read_1d_xs(key, xs, f, ln):
         # Get first non-empty line
         ln += 1
@@ -121,7 +124,7 @@ def read_from_xs_file(self: 'CrossSections', filename: str,
                 assert self.n_groups > 0
                 M = int(line[1])
                 self.scattering_order = M - 1
-                self.transfer_matrix = \
+                self._transfer_matrix = \
                     np.zeros((M, self.n_groups, self.n_groups))
 
             if line[0] == 'NUM_PRECURSORS':
@@ -133,22 +136,19 @@ def read_from_xs_file(self: 'CrossSections', filename: str,
                         self.precursor_yield = np.ones(1)
 
             if line[0] == 'SIGMA_T_BEGIN':
-                read_1d_xs('SIGMA_T', self.sigma_t, lines, line_num)
-                self.sigma_t *= density  # scale by density
+                read_1d_xs('SIGMA_T', self._sigma_t, lines, line_num)
 
             if line[0] == 'SIGMA_A_BEGIN':
-                read_1d_xs('SIGMA_A', self.sigma_a, lines, line_num)
-                self.sigma_a *= density  # scale by density
+                read_1d_xs('SIGMA_A', self._sigma_a, lines, line_num)
 
             if line[0] == 'DIFFUSION_COEFF_BEGIN':
-                read_1d_xs('DIFFUSION_COEFF', self.D, lines, line_num)
+                read_1d_xs('DIFFUSION_COEFF', self._D, lines, line_num)
 
-            if (line[0] == 'BUCKLING_BEGIN'):
+            if line[0] == 'BUCKLING_BEGIN':
                 read_1d_xs('BUCKLING', self.B_sq, lines, line_num)
 
             if line[0] == 'SIGMA_F_BEGIN':
-                read_1d_xs('SIGMA_F', self.sigma_f, lines, line_num)
-                self.sigma_f *= density
+                read_1d_xs('SIGMA_F', self._sigma_f, lines, line_num)
 
             if line[0] == 'NU_BEGIN':
                 read_1d_xs('NU', self.nu, lines, line_num)
@@ -175,8 +175,7 @@ def read_from_xs_file(self: 'CrossSections', filename: str,
 
             if line[0] == 'TRANSFER_MOMENTS_BEGIN':
                 read_transfer_matrix(
-                    'TRANSFER_MOMENTS', self.transfer_matrix, lines, line_num)
-                self.transfer_matrix *= density
+                    'TRANSFER_MOMENTS', self._transfer_matrix, lines, line_num)
 
             if line[0] == 'PRECURSOR_LAMBDA_BEGIN':
                 read_1d_xs(

@@ -24,6 +24,9 @@ def read_from_xs_dict(
     incompat_w_M = 'is incompatible with n_moments'
     incompat_w_J = 'is incompatible with n_precursors'
 
+    # Set density
+    self.density = density
+
     # Get number of groups
     self.n_groups = xs.get('n_groups')
     if not self.n_groups:
@@ -34,7 +37,7 @@ def read_from_xs_dict(
     M = xs.get('n_moments')
     M = M if M is not None else 1
     self.scattering_order = M - 1
-    self.transfer_matrix = \
+    self._transfer_matrix = \
         np.zeros((M, self.n_groups, self.n_groups))
 
     # Get number of precursors
@@ -51,14 +54,14 @@ def read_from_xs_dict(
         sig_t = np.array(xs.get('sigma_t'))
         if len(sig_t) != self.n_groups:
             raise ValueError( f'sigma_t {incompat_w_G}.')
-        self.sigma_t = density * sig_t
+        self._sigma_t = sig_t
 
     # Get absorption cross section
     if 'sigma_a' in xs:
         sig_a = np.array(xs.get('sigma_a'))
         if len(sig_a) != self.n_groups:
             raise ValueError(f'sigma_a {incompat_w_G}.')
-        self.sigma_a = density * sig_a
+        self._sigma_a = sig_a
 
     # Get analytic buckling
     if 'buckling' in xs:
@@ -78,22 +81,21 @@ def read_from_xs_dict(
             raise ValueError(f'transfer_matrix {incompat_w_M}.')
         if not trnsfr.shape[1] == trnsfr.shape[2] == self.n_groups:
             raise ValueError(f'transfer_matrix {incompat_w_G}.')
-        self.transfer_matrix = density * trnsfr
-
+        self._transfer_matrix = trnsfr
 
     # Get diffusion coefficient or set to default
     if 'D' in xs:
         D = np.array(xs.get('D'))
         if len(D) != self.n_groups:
             raise ValueError(f'D {incompat_w_G}.')
-        self.D = D
+        self._D = D
 
     # Get fission xs
     if 'sigma_f' in xs:
         sig_f = np.array(xs.get('sigma_f'))
         if len(sig_f) != self.n_groups:
             raise ValueError(f'sigma_f {incompat_w_G}.')
-        self.sigma_f = density * sig_f
+        self._sigma_f = sig_f
         self.is_fissile = sum(sig_f) > 0.0
 
     # Get nu

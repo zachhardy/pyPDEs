@@ -20,18 +20,21 @@ class CrossSections(MaterialProperty):
         super().__init__()
         self.type = 'xs'
 
+        self.density: float = 1.0
+        self.k_eff: float = 1.0
+
         self.n_groups: int = 0
         self.n_precursors: int = 0
         self.scattering_order: int = 0
         self.is_fissile: bool = False
 
-        self.sigma_t: ndarray = []
-        self.sigma_a: ndarray = []
-        self.sigma_r: ndarray = []
-        self.sigma_f: ndarray = []
-        self.sigma_s: ndarray = []
-        self.transfer_matrix: ndarray = []
-        self.D: ndarray = []
+        self._sigma_t: ndarray = []
+        self._sigma_a: ndarray = []
+        self._sigma_r: ndarray = []
+        self._sigma_f: ndarray = []
+        self._sigma_s: ndarray = []
+        self._transfer_matrix: ndarray = []
+        self._D: ndarray = []
         self.B_sq: ndarray = []
 
         self.nu: ndarray = []
@@ -50,39 +53,49 @@ class CrossSections(MaterialProperty):
         self.sigma_a_function: XSFunc = None
 
     @property
-    def nu_sigma_f(self) -> ndarray:
-        """
-        Get total nu times the fission cross sections.
+    def sigma_t(self) -> ndarray:
+        return self.density * self._sigma_t
 
-        Returns
-        -------
-        ndarray (n_groups,)
-        """
+    @property
+    def sigma_a(self) -> ndarray:
+        return self.density * self._sigma_a
+
+    @property
+    def sigma_r(self) -> ndarray:
+        return self.density * self._sigma_r
+
+    @property
+    def sigma_f(self) -> ndarray:
+        return self.density * self._sigma_f / self.k_eff
+
+    @property
+    def sigma_s(self) -> ndarray:
+        return self.density * self._sigma_s
+
+    @property
+    def transfer_matrix(self) -> ndarray:
+        return self.density * self._transfer_matrix
+
+    @property
+    def D(self) -> ndarray:
+        if sum(self._D) == 0.0:
+            return 1.0 / (3.0 * self.sigma_t)
+        else:
+            return self._D
+
+    @property
+    def nu_sigma_f(self) -> ndarray:
         return self.nu * self.sigma_f
 
     @property
     def nu_prompt_sigma_f(self) -> ndarray:
-        """
-        Get prompt nu times the fission cross sections.
-
-        Returns
-        -------
-        ndarray (n_groups,)
-        """
         return self.nu_prompt * self.sigma_f
 
     @property
     def nu_delayed_sigma_f(self) -> ndarray:
-        """
-        Get delayed nu times the fission cross sections.
-
-        Returns
-        -------
-        ndarray (n_groups,)
-        """
         return self.nu_delayed * self.sigma_f
 
-    def _validate_xs(self) -> []:
+    def _validate_xs(self) -> None:
         """
         Validate the parsed cross sections.
         """
@@ -95,23 +108,19 @@ class CrossSections(MaterialProperty):
                 'must be provided.')
 
         # Compute sigma_s from transfer matrix
-        self.sigma_s = np.sum(self.transfer_matrix[0], axis=1)
+        self._sigma_s = np.sum(self._transfer_matrix[0], axis=1)
 
         # Enfore sigma_t = sigma_a + sigma_s
         if has_sig_a:
-            self.sigma_t = self.sigma_a + self.sigma_s
+            self._sigma_t = self._sigma_a + self._sigma_s
         else:
-            self.sigma_a = self.sigma_t - self.sigma_s
-
-        # Compute diffusion coefficient, if not provided
-        if np.sum(self.D) == 0.0:
-            self.D = (3.0 * self.sigma_t) ** (-1.0)
+            self._sigma_a = self._sigma_t - self._sigma_s
 
         # Compute removal cross sections
-        self.sigma_r = self.sigma_t - np.diag(self.transfer_matrix[0])
+        self._sigma_r = self._sigma_t - np.diag(self._transfer_matrix[0])
 
         # Set fissile
-        self.is_fissile = sum(self.sigma_f) > 0.0
+        self.is_fissile = sum(self._sigma_f) > 0.0
 
         # If not fissile with precursors
         if not self.is_fissile and self.n_precursors > 0:
@@ -128,7 +137,7 @@ class CrossSections(MaterialProperty):
                 self.chi = np.ones(1)
                 if self.n_precursors > 0:
                     self.chi_prompt = np.ones(1)
-                    self.chi_delayed =  np.ones((1, self.n_precursors))
+                    self.chi_delayed = np.ones((1, self.n_precursors))
 
             # Check whether total quantities
             has_nu = sum(self.nu) > 0.0
@@ -153,12 +162,13 @@ class CrossSections(MaterialProperty):
             has_chi_delayed = len(self.chi_delayed) > 0
             if has_chi_delayed:
                 chi_dj_sums = np.sum(self.chi_delayed, axis=0)
-                has_chi_delayed = all([s > 0.0 for s in chi_dj_sums])
-
-            has_delayed = has_nu_delayed and has_chi_delayed
-            if has_delayed:
+                nonzero_chi_d = all([s > 0.0 for s in chi_dj_sums])
+                if not nonzero_chi_d:
+                    raise ValueError('All delayed chi spectra must have '
+                                     'non-zero components')
                 self.chi_delayed /= chi_dj_sums
 
+            has_delayed = has_nu_delayed and has_chi_delayed
             if self.n_precursors > 0 and not has_delayed:
                 raise AssertionError(
                     'Delayed quantities must be provided when precursors '
@@ -196,12 +206,12 @@ class CrossSections(MaterialProperty):
         Initialize the group-wise only data.
         """
         # General cross sections
-        self.sigma_t = np.zeros(self.n_groups)
-        self.sigma_a = np.zeros(self.n_groups)
-        self.sigma_s = np.zeros(self.n_groups)
-        self.sigma_r = np.zeros(self.n_groups)
-        self.sigma_f = np.zeros(self.n_groups)
-        self.D = np.zeros(self.n_groups)
+        self._sigma_t = np.zeros(self.n_groups)
+        self._sigma_a = np.zeros(self.n_groups)
+        self._sigma_s = np.zeros(self.n_groups)
+        self._sigma_r = np.zeros(self.n_groups)
+        self._sigma_f = np.zeros(self.n_groups)
+        self._D = np.zeros(self.n_groups)
         self.B_sq = np.zeros(self.n_groups)
 
         # Fission neutron production data
