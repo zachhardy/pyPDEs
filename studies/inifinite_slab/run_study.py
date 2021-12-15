@@ -25,11 +25,6 @@ def setup_directory(path: str):
         os.system(f'rm -r {path}/*')
 
 
-# Nominal function parameters
-m = 1.03
-t_ramp = 1.0
-
-
 def function(g, x, sigma_a) -> float:
     t = x[0]
     if g == 1 and 0.0 < t <= t_ramp:
@@ -39,6 +34,9 @@ def function(g, x, sigma_a) -> float:
     else:
         return sigma_a
 
+
+# Nominal function parameters
+m, t_ramp = 1.03, 1.0
 
 # Define current directory
 script_path = os.path.dirname(os.path.abspath(__file__))
@@ -53,21 +51,21 @@ parameters = {}
 if case == 0:
     parameters['multiplier'] = np.linspace(1.01, 1.05, 21)
 elif case == 1:
-    parameters['duration'] = np.linspace(0.9, 1.1, 41)
+    parameters['duration'] = np.linspace(0.75, 1.25, 21)
 elif case == 2:
     parameters['interface'] = np.linspace(38.0, 42.0, 21)
 elif case == 3:
     parameters['multiplier'] = np.linspace(1.02, 1.04, 6)
-    parameters['duration'] = np.linspace(0.95, 1.05, 6)
+    parameters['duration'] = np.linspace(0.9, 1.1, 6)
 elif case == 4:
     parameters['multiplier'] = np.linspace(1.02, 1.04, 6)
     parameters['interface'] = np.linspace(38.0, 42.0, 5)
 elif case == 5:
-    parameters['duration'] = np.linspace(0.95, 1.05, 6)
+    parameters['duration'] = np.linspace(0.9, 1.1, 6)
     parameters['interface'] = np.linspace(38.0, 42.0, 5)
 elif case == 6:
     parameters['multiplier'] = np.linspace(1.02, 1.04, 4)
-    parameters['duration'] = np.linspace(0.95, 1.05, 4)
+    parameters['duration'] = np.linspace(0.9, 1.1, 4)
     parameters['interface'] = np.linspace(38.0, 42.0, 4)
 
 keys = list(parameters.keys())
@@ -163,32 +161,26 @@ for n, params in enumerate(values):
     if 'multiplier' in keys and 'duration' not in keys:
         t_ramp = 1.0
         m = params[keys.index('multiplier')]
-        solver.materials = deepcopy(materials)
-        for material_property in solver.materials[0].properties:
-            if isinstance(material_property, CrossSections):
-                material_property.sigma_a_function = function
 
     if 'duration' in keys and 'multiplier' not in keys:
-        m = 0.03
+        m = 1.03
         t_ramp = params[keys.index('duration')]
-        solver.materials = deepcopy(materials)
-        for material_property in solver.materials[0].properties:
-            if isinstance(material_property, CrossSections):
-                material_property.sigma_a_function = function
 
     if 'multiplier' in keys and 'duration' in keys:
         m = params[keys.index('multiplier')]
         t_ramp = params[keys.index('duration')]
-        solver.materials = deepcopy(materials)
-        for material_property in solver.materials[0].properties:
-            if isinstance(material_property, CrossSections):
-                material_property.sigma_a_function = function
 
     if 'interface' in keys:
         x_int = params[keys.index('interface')]
         zones = [0.0, x_int, 200.0, 240.0]
         solver.mesh = create_1d_mesh(zones, n_cells, material_ids)
         solver.discretization = FiniteVolume(mesh)
+
+    if 'multiplier' in keys or 'duration' in keys:
+        solver.materials = deepcopy(materials)
+        for material_property in solver.materials[0].properties:
+            if isinstance(material_property, CrossSections):
+                material_property.sigma_a_function = function
 
     # Run the problem
     solver.initialize()

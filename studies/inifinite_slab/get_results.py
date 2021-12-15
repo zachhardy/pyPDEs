@@ -24,6 +24,8 @@ elif case == 5:
     study_name = 'duration_interface'
 elif case == 6:
     study_name = 'multiplier_duration_interface'
+else:
+    raise AssertionError('Invalid case number.')
 
 
 base = os.path.join(script_path, f'outputs/subcritical/{study_name}')
@@ -35,7 +37,7 @@ try:
             'the study and simulation number.\n')
 
     if sys.argv[2] == 'reference':
-        path = os.path.join(base, sys.argv[1])
+        path = os.path.join(base, sys.argv[2])
     else:
         if int(sys.argv[2]) > len(os.listdir(base)):
             raise ValueError(
@@ -61,35 +63,27 @@ sim.read_simulation_data()
 
 sim.plot_flux_moments(0, 1, [0.0, 1.0, 2.0], grouping='time')
 
-title = ''
-for n, name in enumerate(param_names):
-    suffix = ''
-    if name == 'multiplier':
-        name = '$\sigma_a$ Increase'
-        suffix = '%'
-    if name == 'duration':
-        name = 'Ramp Duration'
-        suffix = 'sec'
-    if name == 'interface':
-        name = 'Interface Location'
-        suffix = 'cm'
+title = 'Reference'
+if sys.argv[2] != 'reference':
+    title = ''
+    for n, name in enumerate(param_names):
+        suffix = ''
+        if name == 'multiplier':
+            name = '$\sigma_a$ Increase'
+            suffix = '%'
+        if name == 'duration':
+            name = 'Ramp Duration'
+            suffix = 'sec'
+        if name == 'interface':
+            name = 'Interface Location'
+            suffix = 'cm'
 
-    tmp = f'{name} = {params[int(sys.argv[2])][n]:.3f} {suffix}'
-    if n == 0:
-        title += tmp
-    else:
-        title += '\n'+tmp
+        tmp = f'{name} = {params[int(sys.argv[2])][n]:.3f} {suffix}'
+        if n == 0:
+            title += tmp
+        else:
+            title += '\n'+tmp
 
 plt.title(title)
 plt.tight_layout()
 plt.show()
-
-# from rom.dmd import DMD
-# X = sim.create_simulation_matrix()
-# dmd = DMD(svd_rank=1.0-1.0e-12)
-# dmd.fit(X, sim.times)
-#
-# dmd.plot_error_decay()
-# dmd.plot_timestep_errors()
-# plt.show()
-

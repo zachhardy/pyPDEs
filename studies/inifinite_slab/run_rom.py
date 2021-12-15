@@ -72,14 +72,14 @@ for i in range(len(Y)):
     else:
         bndry += [i]
 
-splits = train_test_split(X[interior], Y[interior], train_size=0.75)
+splits = train_test_split(X[interior], Y[interior], train_size=0.6)
 X_train, X_test, Y_train, Y_test = splits
 X_train = np.vstack((X_train, X[bndry]))
 Y_train = np.vstack((Y_train, Y[bndry]))
 
 # Construct POD model, predict test data
 tstart = time.time()
-svd_rank = 1.0 - 1.0e-8
+svd_rank = 1.0 - 1.0e-10
 pod = POD(svd_rank=svd_rank)
 pod.fit(X_train.T, Y_train, verbose=True)
 offline_time = time.time() - tstart
