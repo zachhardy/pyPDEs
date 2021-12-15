@@ -500,12 +500,12 @@ class TransientSolver(KEigenvalueSolver):
                     k = self.k_eff
                     if self.exact_keff_for_ic is not None:
                         k = self.exact_keff_for_ic
-                    xs.sigma_f /= k
+                    xs.k_eff = k
 
-            # Reconstruct pompt/total and delayd matrices
-            self.Fp = self.prompt_fission_matrix()
-            if self.use_precursors:
-                self.Fd = self.delayed_fission_matrix()
+                # Reconstruct pompt/total and delayd matrices
+                self.Fp = self.prompt_fission_matrix()
+                if self.use_precursors:
+                    self.Fd = self.delayed_fission_matrix()
 
         # Normalize phi to initial power conditions
         if self.phi_norm_method is not None:
