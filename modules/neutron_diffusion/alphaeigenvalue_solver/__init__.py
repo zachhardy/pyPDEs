@@ -14,6 +14,7 @@ class AlphaEigenvalueSolver(SteadyStateSolver):
     """
     def __init__(self) -> None:
         super().__init__()
+        self.initial_condition: List[callable] = None
 
         self._alphas: ndarray = None
         self._modes: ndarray = None
@@ -40,8 +41,11 @@ class AlphaEigenvalueSolver(SteadyStateSolver):
     def amplitudes(self) -> ndarray:
         return self._b
 
-    def eigendecomposition(self, ic: List[callable],
-                           verbose: bool = False) -> None:
+    @property
+    def dominant_mode(self) -> int:
+        return np.argmax(self._b.real)
+
+    def eigendecomposition(self, verbose: bool = False) -> None:
         A = self.assemble_eigensystem()
         evals, evecs_l, evecs_r = eig(A, left=True)
 
@@ -50,45 +54,41 @@ class AlphaEigenvalueSolver(SteadyStateSolver):
         evecs_r = evecs_r[:, idx]
         evecs_l = evecs_l[:, idx]
 
-        # Compute initial condition
-        phi_ic = np.zeros(self.phi.shape)
-        z = np.array([p.z for p in self.discretization.grid])
-        for g in range(self.n_groups):
-            if not callable(ic[g]):
-                raise AssertionError('IC functions must be callable.')
-            phi_ic[g::self.n_groups] = ic[g](z)
-
-        # Compute inner products
-        evecs_l_star = evecs_l.conj().T
-        A = evecs_l_star @ evecs_r
-        b = evecs_l_star @ phi_ic.reshape(-1, 1)
-        b = np.linalg.solve(A, b).ravel()
-
-        # Enforce positive amplitudes
-        for m in range(len(evals)):
-            if b[m] < 0.0:
-                b[m] *= -1.0
-                evecs_r[:, m] *= -1.0
-                evecs_l[:, m] *= -1.0
-
-        # Eliminate zero amplitudes
-        nonzero_map = b > 1.0e-12
-        vals = evals[nonzero_map]
-        evecs_r = evecs_r[:, nonzero_map]
-        evecs_l = evecs_l[:, nonzero_map]
-        b = b[nonzero_map]
-
-        self.phi = evecs_r @ b
-        diff = np.linalg.norm(phi_ic - self.phi)
-
-        if verbose:
-            print(f'\nDifference in IC Fit\t{diff:.3e}\n')
-
-        # Set properties
         self._alphas = evals
         self._modes = evecs_r
         self._adjoint_modes = evecs_l
-        self._b = b
+
+        if self.initial_condition is not None:
+            self.fit_to_initial_condition(verbose)
+
+    def fit_to_initial_condition(self, verbose: bool) -> None:
+        # Evaluate initial condition
+        phi = np.zeros(self.phi.shape)
+        z = np.array([p.z for p in self.discretization.grid])
+        for g in range(self.n_groups):
+            if not callable(self.initial_condition[g]):
+                raise AssertionError('IC functions must be callable.')
+            phi[g::self.n_groups] = self.initial_condition[g](z)
+
+        # Compute amplitudes
+        evecs_l_star = self._adjoint_modes.conj().T
+        A = evecs_l_star @ self._modes
+        b = evecs_l_star @ phi.reshape(-1, 1)
+        self._b = np.linalg.solve(A, b).ravel()
+
+        # Enforce positive amplitudes
+        for m in range(self.n_modes):
+            if self._b[m] < 0.0:
+                self._b[m] *= -1.0
+                self._modes[:, m] *= -1.0
+                self._adjoint_modes[:, m] *= -1.0
+
+        # Compute the initial condition
+        self.phi = self._modes @ self._b
+        diff = np.linalg.norm(phi - self.phi)
+
+        if verbose:
+            print(f'\nDifference in IC Fit\t{diff:.3e}\n')
 
     def assemble_eigensystem(self) -> ndarray:
         """
