@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 Function = Callable[[ndarray], ndarray]
 
 
-class AlphaEigenfunction:
+class AlphaMode:
     """
     Alpha-eigenfunction for a given spatio-energy mode.
     """
@@ -36,8 +36,8 @@ class AlphaEigenfunction:
         self._n_groups: int = expansion.n_groups
         self._coord_sys: str = expansion.coord_sys
 
-    def evaluate_eigenfunction(self, r: ndarray, t: ndarray = None,
-                               with_amplitudes: bool = True) -> ndarray:
+    def evaluate_mode(self, r: ndarray, t: ndarray = None,
+                      with_amplitudes: bool = True) -> ndarray:
         """
         Evaluate the eigenfunction on a spatiotemporal grid.
 
@@ -88,13 +88,13 @@ class AlphaEigenfunction:
         """
         r = np.array(r)
         if self._coord_sys == 'cartesian':
-            coeff = 0.5 * (2 * self.n - 1) * np.pi / self._r_f
+            coeff = 0.5 * (2 * (self.n + 1) - 1) * np.pi / self._r_f
             return np.cos(coeff * r)
         else:
-            coeff = self.n * np.pi / self._r_f
+            coeff = (self.n + 1) * np.pi / self._r_f
             return np.sin(coeff * r) / (coeff * r)
 
-    def plot_eigenfunction(self, r: ndarray) -> None:
+    def plot_mode(self, r: ndarray) -> None:
         """
         Plot the eigenfunction profile.
 
@@ -104,7 +104,7 @@ class AlphaEigenfunction:
             The grid to plot the eigenfunction on.
         """
         r = np.array(r)
-        phi = self.evaluate_eigenfunction(r, with_amplitudes=False)
+        phi = self.evaluate_mode(r, with_amplitudes=False)
         phi /= np.linalg.norm(phi)
         phi *= -1.0 if phi[0] < 0 else phi
 
@@ -113,7 +113,7 @@ class AlphaEigenfunction:
         ax: Axes = fig.add_subplot(1, 1, 1)
         ax.set_xlabel('r', fontsize=12)
         ax.set_ylabel(r'$f_{nm,g}$ $\varphi_{n}(r)$', fontsize=12)
-        title = f'Alpha Mode n={self.n-1}, m={self.m}\n' \
+        title = f'Alpha Mode n={self.n}, m={self.m}\n' \
                 f'$\\alpha$ = {self.alpha.real:.3e}{self.alpha.imag:+.5g}j'
         fig.suptitle(title, fontsize=12)
 

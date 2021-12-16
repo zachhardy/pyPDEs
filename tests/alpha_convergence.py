@@ -16,14 +16,14 @@ from modules.neutron_diffusion import *
 abs_path = os.path.dirname(os.path.abspath(__file__))
 
 # Determine the option to use
-option = int(sys.argv[1]) if len(sys.argv) > 0 else 0
+option = int(sys.argv[1]) if len(sys.argv) > 1 else 0
 if option > 1:
     raise AssertionError('Only option 0 and 1 are available.')
 
 # Analytic alpha functions
 if option == 0:
-    def analytic_alpha(n: List[int]) -> float:
-        Bn = (n + 1) * np.pi / r_b
+    def analytic_alpha(num: List[int]) -> float:
+        Bn = (num + 1) * np.pi / r_b
         a = xs.nu_sigma_f[0] - xs.sigma_a[0] - xs.D[0] * Bn ** 2
         return xs.velocity[0] * a
 else:
@@ -31,14 +31,14 @@ else:
     path += '/three_group_sphere/transient/sphere6cm.obj'
     ex: AnalyticSolution = load(path)
 
-    def analytic_alpha(n: List[int]) -> float:
-        return ex.get_mode(n, method='eig').alpha.real
+    def analytic_alpha(num: int) -> float:
+        return ex.get_mode(num, method='eig').alpha.real
 
 # Mesh parameters
 r_b = 10.0 if option == 0 else 6.0
 coord_sys = 'cartesian' if option == 0 else 'spherical'
 
-#Create cross sections
+# Create cross sections
 material = Material()
 xs = CrossSections()
 
@@ -67,11 +67,12 @@ solver.boundaries = boundaries
 if option == 0:
     ic_function = [lambda x: 1.0 - (x - 0.5*r_b)**2 / r_b**2]
 else:
-    ic_function = [lambda x: 1.0 - x**2 / r_b**2,
-                   lambda x: 1.0 - x**2 / r_b**2,
+    ic_function = [lambda x: 1.0 - x**2/r_b**2,
+                   lambda x: 0.0,
                    lambda x: 0.0]
+solver.initial_condition = ic_function
 
-n_cells = [20*2**i for i in range(7)]
+n_cells = [20 * 2**i for i in range(6)]
 
 errors = []
 for i in range(len(n_cells)):
@@ -81,7 +82,7 @@ for i in range(len(n_cells)):
     solver.discretization = FiniteVolume(solver.mesh)
 
     solver.initialize()
-    solver.eigendecomposition(ic_function)
+    solver.eigendecomposition(verbose=False)
 
     errors_i = []
     for n in range(solver.n_modes):
@@ -104,8 +105,6 @@ plt.legend()
 plt.tight_layout()
 plt.show()
 
-from matplotlib.figure import Figure
-from matplotlib.axes import Axes
 plt.figure()
 plt.title('$\\alpha$-Eigenvalue Convergence', fontsize=12)
 plt.xlabel('Number of Cells', fontsize=12)

@@ -5,6 +5,7 @@ from scipy.linalg import eig
 from typing import List
 
 from pyPDEs.spatial_discretization import *
+from ..steadystate_solver import SteadyStateSolver
 from ..keigenvalue_solver import KEigenvalueSolver
 
 
@@ -99,7 +100,7 @@ class AlphaEigenvalueSolver(KEigenvalueSolver):
         ndarray
         """
         fv: FiniteVolume = self.discretization
-        A = self.assemble_matrix().todense()
+        A = SteadyStateSolver.assemble_matrix(self).todense()
         for cell in self.mesh.cells:
             xs_id = self.matid_to_xs_map[cell.material_id]
             xs = self.material_xs[xs_id]
@@ -137,5 +138,9 @@ class AlphaEigenvalueSolver(KEigenvalueSolver):
         update(ref - eps)
         self.eigendecomposition()
         alpha_minus = np.copy(self.alphas)
+
+        # Reset
+        update(ref)
+        self.eigendecomposition()
 
         return (alpha_plus - alpha_minus) / (2.0 * eps)

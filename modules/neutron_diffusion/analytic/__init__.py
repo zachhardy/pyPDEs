@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from typing import List, Callable, Tuple
 
 from pyPDEs.material import CrossSections
-from .modes import AlphaEigenfunction
+from .modes import AlphaMode
 
 Eigenproblem = Tuple[ndarray, ndarray, ndarray]
 
@@ -41,7 +41,7 @@ class AnalyticSolution:
         self.tolerance: float = tolerance
         self.max_n_modes: int = max_n_modes
 
-        self.modes: List[AlphaEigenfunction] = []
+        self.modes: List[AlphaMode] = []
 
         self._rhs: Expr = None
         self._lhs: List[Expr] = None
@@ -66,6 +66,10 @@ class AnalyticSolution:
         else:
             coeff = n * pi / self.rf
             return sin(coeff * r) / (coeff * r)
+
+    @property
+    def dominant_mode(self) -> int:
+        return self._amplitude_order[0]
 
     def execute(self) -> None:
         """
@@ -101,31 +105,32 @@ class AnalyticSolution:
         self.modes.clear()
         mode_num, diff = 0, 1.0
         while diff > self.tolerance and mode_num < self.max_n_modes:
-            mode_num += 1
             decomp = self.solve_alpha_eigenproblem(mode_num)
             alphas, f_adjoint, f = decomp
             b = self.compute_amplitudes(mode_num, f, f_adjoint)
 
             # Construct n, m eigenfunctions
             for g in range(self.n_groups):
-                mode = AlphaEigenfunction(self, mode_num, g, alphas[g],
-                                          b[g], f[:, g], f_adjoint[:, g])
+                mode = AlphaMode(self, mode_num, g, alphas[g],
+                                 b[g], f[:, g], f_adjoint[:, g])
                 self.modes.append(mode)
 
-                fit += mode.evaluate_eigenfunction(r)
+                fit += mode.evaluate_mode(r)
                 diff = np.linalg.norm(fit - ic)
+
+            mode_num += 1
 
         # Sort by eigenvalue
         k = lambda i: abs(self.modes[i].alpha.real)
-        self._eigval_order = sorted(list(range(self.n_modes)), key=k)
+        eigval_order = sorted(list(range(self.n_modes)), key=k)
+        self.modes = [self.modes[i] for i in eigval_order]
 
         # Define amplitude sorting
         k = lambda i: abs(self.modes[i].b.real)
         self._amplitude_order = sorted(list(range(self.n_modes)),
                                        key=k, reverse=True)
 
-        ind = self._eigval_order.index(self._amplitude_order[0])
-        print(f'Dominant Mode:\t{ind}')
+        print(f'Dominant Mode:\t{self.dominant_mode}')
         print(f'# of Modes:\t{len(self.modes)}')
         print(f'IC Fit Error:\t{diff:.4e}\n')
 
@@ -152,11 +157,11 @@ class AnalyticSolution:
 
         phi = np.zeros((len(t), len(r)*self.n_groups), dtype=complex)
         for mode in self.modes:
-            phi += mode.evaluate_eigenfunction(r, t)
+            phi += mode.evaluate_mode(r, t)
         return phi.real if len(t) > 1 else phi.real.ravel()
 
     def get_mode(self, n: int, m: int = None,
-                 method: str = 'nm') -> AlphaEigenfunction:
+                 method: str = 'nm') -> AlphaMode:
         """
         Return the specified alpha-eigenfunction object.
 
@@ -173,31 +178,51 @@ class AnalyticSolution:
 
         Returns
         -------
-        AlphaEigenfunction
+        AlphaMode
         """
         if method == 'nm':
             for mode in self.modes:
                 if mode.n == n + 1 and mode.m == m:
                     return mode
         elif method == 'eig':
-            return self.modes[self._eigval_order[n]]
+            return self.modes[n]
         elif method == 'amp':
             return self.modes[self._amplitude_order[n]]
 
-    def plot_eigenfunction(self, n: int, m: int, r: ndarray) -> None:
+    def plot_mode(self, r: ndarray, n: int,
+                  m: int = 0, method: str = 'nm') -> None:
         """
         Plot the specified alpha-eigenfunction.
 
         Parameters
         ----------
+        r : ndarray
+            The grid to plot the eigenfunction on.
         n : int
             The spatial index.
         m : int
             The energy index.
-        r : ndarray
-            The grid to plot the eigenfunction on.
+        method : {'nm', 'eig', 'amp'}
+            Whether to get mode n, m, the mode with
+            the n'th largest eigenvalue, or the n'th largest
+            amplitude.
         """
-        self.get_eigenfunction(n, m).plot_eigenfunction(r)
+        self.get_mode(n, m, method).plot_mode(r)
+
+    def find_mode_index_from_alpha(self, alpha: float) -> int:
+        """
+        Find the nearest mode to the provided alpha.
+
+        Parameters
+        ----------
+        alpha : float
+
+        Returns
+        -------
+        AlphaMode
+        """
+        diff = [abs(mode.alpha.real - alpha) for mode in self.modes]
+        return np.argmin(diff)
 
     def solve_alpha_eigenproblem(self, mode_num: int) -> Eigenproblem:
         """
@@ -218,9 +243,9 @@ class AnalyticSolution:
             The energy-weight eigenvectors.
         """
         if self.coord_sys == 'cartesian':
-            Bn = 0.5 * mode_num * np.pi / self.rf
+            Bn = 0.5 * (mode_num + 1) * np.pi / self.rf
         else:
-            Bn = mode_num * np.pi / self.rf
+            Bn = (mode_num + 1) * np.pi / self.rf
 
         A = np.zeros((self.n_groups,) * 2)
         for g in range(self.n_groups):
@@ -257,8 +282,8 @@ class AnalyticSolution:
             The n_groups mode amplitudes for mode `mode_num`.
         """
         n = symbols('n')
-        rhs = self._rhs.subs(n, mode_num).evalf()
-        lhs = [lhs_g.subs(n, mode_num).evalf() for lhs_g in self._lhs]
+        rhs = self._rhs.subs(n, mode_num + 1).evalf()
+        lhs = [lhs_g.subs(n, mode_num + 1).evalf() for lhs_g in self._lhs]
 
         b = np.zeros(self.n_groups)
         for g in range(self.n_groups):

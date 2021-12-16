@@ -27,7 +27,7 @@ ex: AnalyticSolution = load(path)
 
 # Mesh parameters
 r_b = 6.0
-mesh = create_1d_mesh([0.0, 6.0], [100],
+mesh = create_1d_mesh([0.0, 6.0], [250],
                       coord_sys='spherical')
 discretization = FiniteVolume(mesh)
 
@@ -51,11 +51,12 @@ solver.discretization = discretization
 solver.materials = [material]
 solver.boundaries = boundaries
 solver.initial_condition = \
-    [lambda r: 1.0 - r ** 2 / r_b ** 2,
+    [lambda r: 1.0 - r**2/r_b**2,
      lambda r: 0.0,
      lambda r: 0.0]
 
-print(solver.compute_k_sensitivity())
-print(solver.compute_alpha_sensitivity()[:10].real)
+solver.initialize()
+solver.eigendecomposition()
 
-plt.show()
+da_dp = solver.compute_alpha_sensitivity()
+
