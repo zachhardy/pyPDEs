@@ -4,6 +4,7 @@ import numpy as np
 from numpy.linalg import norm
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
+from typing import Tuple
 
 from pyPDEs.spatial_discretization import *
 
@@ -129,3 +130,89 @@ class KEigenvalueSolver(SteadyStateSolver):
         if self.use_precursors:
             production += np.sum(self.Fd @ self.phi)
         return production
+
+    def compute_k_sensitivity(self, variable: str = 'density') -> float:
+        """
+        Compute the sensitivity of the k-eigenvalue with respect to
+        the provided variable.
+
+        Parameters
+        ----------
+        variable : str, default 'density'
+            The variable to modify.
+
+        Returns
+        -------
+        float
+        """
+        update, ref = self._get_update_functions(variable)
+
+        # Compute perturbation size
+        eps = (1.0 + ref) * np.sqrt(np.finfo(float).eps)
+
+        # Forward perturbation
+        update(ref + eps)
+        self.execute()
+        k_plus = self.k_eff
+
+        # Backward perturbation
+        update(ref - eps)
+        self.execute()
+        k_minus = self.k_eff
+
+        return (k_plus - k_minus) / (2.0 * eps)
+
+    def _get_update_functions(self, variable: str) -> Tuple[callable, float]:
+        """
+        Get the update function and reference value for a given variable.
+
+        Parameters
+        ----------
+        variable : str, default 'density'
+            The variable to modify.
+
+        Returns
+        -------
+        callable : A function to modify a solver parameter.
+        float : The reference value of the parameter.
+        """
+        if variable == 'density':
+            from pyPDEs.material import CrossSections
+
+            # Get first material's cross sections
+            xs = None
+            for material_property in self.materials[0].properties:
+                if isinstance(material_property, CrossSections):
+                    xs = material_property
+
+            # Get the reference density
+            ref = xs.density
+
+            # Define the update function
+            def update(v: float) -> None:
+                xs.density = v
+                self.initialize()
+
+        elif variable == 'radius':
+            from pyPDEs.mesh import create_1d_mesh
+            if self.mesh.dim != 1:
+                raise ValueError(
+                    'Radius can only be varied in 1D problems.')
+
+            # Get the last vertex coordinate
+            ref = self.mesh.vertices[-1].z
+
+            # Define the update function
+            def update(v: float) -> None:
+                n_cells = self.mesh.n_cells
+                coord_sys = self.mesh.coord_sys
+                self.mesh = create_1d_mesh([0.0, v], [n_cells],
+                                           coord_sys=coord_sys)
+                self.discretization = FiniteVolume(self.mesh)
+                self.initialize()
+
+        else:
+            raise NotImplementedError(
+                'The provided variable is not available.')
+
+        return update, ref

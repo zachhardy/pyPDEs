@@ -5,10 +5,10 @@ from scipy.linalg import eig
 from typing import List
 
 from pyPDEs.spatial_discretization import *
-from ..steadystate_solver import SteadyStateSolver
+from ..keigenvalue_solver import KEigenvalueSolver
 
 
-class AlphaEigenvalueSolver(SteadyStateSolver):
+class AlphaEigenvalueSolver(KEigenvalueSolver):
     """
     Implementation of an analytic alpha-eigenvalue solver.
     """
@@ -107,3 +107,35 @@ class AlphaEigenvalueSolver(SteadyStateSolver):
                 dof = fv.map_dof(cell, 0, self.phi_uk_man, 0, g)
                 A[dof] *= xs.velocity[g] / cell.volume
         return -A
+
+    def compute_alpha_sensitivity(
+            self, variable: str = 'density') -> ndarray:
+        """
+        Compute the sensitivity of the alpha-eigenvalue with respect to
+        the provided variable.
+
+        Parameters
+        ----------
+        variable : str, default 'density'
+            The variable to modify.
+
+        Returns
+        -------
+        ndarray
+        """
+        update, ref = self._get_update_functions(variable)
+
+        # Compute perturbation size
+        eps = (1.0 + ref) * np.sqrt(np.finfo(float).eps)
+
+        # Forward perturbation
+        update(ref + eps)
+        self.eigendecomposition()
+        alpha_plus = np.copy(self.alphas)
+
+        # Backward perturbation
+        update(ref - eps)
+        self.eigendecomposition()
+        alpha_minus = np.copy(self.alphas)
+
+        return (alpha_plus - alpha_minus) / (2.0 * eps)
