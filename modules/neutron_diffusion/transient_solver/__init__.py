@@ -223,6 +223,12 @@ class TransientSolver(KEigenvalueSolver):
         ----------
         verbose : int, default 0
         """
+        if self.adjoint:
+            raise NotImplementedError(
+                'Adjoint transients have not been implemented.')
+        if self._adjoint_matrices:
+            self._transpose_matrices()
+
         # Check output information
         if self.write_outputs:
             if not os.path.isdir(self.output_directory):
@@ -317,7 +323,8 @@ class TransientSolver(KEigenvalueSolver):
         """
         if self.has_functional_xs:
             eff_dt = self.effective_time_step(m)
-            if m == 1: eff_dt = self.dt
+            if m == 1:
+                eff_dt = self.dt
             self.update_cross_sections(self.time + eff_dt)
             self.L = self.diffusion_matrix()
 
@@ -394,6 +401,9 @@ class TransientSolver(KEigenvalueSolver):
         elif self.method == 'tbdf2' and m == 1:
             phi = self.phi_aux[0]
             b = self.M / self.dt @ (4.0 * phi - self.phi_old)
+        else:
+            raise NotImplementedError(
+                'Invalid method and step provided.')
 
         # Add old time step precursors
         if self.use_precursors:

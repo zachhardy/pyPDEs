@@ -41,9 +41,9 @@ class KEigenvalueSolver(SteadyStateSolver):
         ----------
         verbose : int, default 0
         """
-        uk_man = self.phi_uk_man
-        n_dofs = self.discretization.n_dofs(uk_man)
-        n_grps = self.n_groups
+        if (self.adjoint and not self._adjoint_matrices or
+                not self.adjoint and self._adjoint_matrices):
+            self._transpose_matrices()
 
         # Initialize with unit flux
         self.phi[:] = 1.0

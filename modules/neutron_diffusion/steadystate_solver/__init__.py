@@ -80,6 +80,9 @@ class SteadyStateSolver:
         # Precursor solution vector
         self.precursors: ndarray = None
 
+        self.adjoint: bool = False
+        self._adjoint_matrices: bool = False
+
     def initialize(self) -> None:
         """
         Initialize the solver.
@@ -114,6 +117,10 @@ class SteadyStateSolver:
         """
         Execute the steady-state multigroup diffusion solver.
         """
+        if (self.adjoint and not self._adjoint_matrices or
+                not self.adjoint and self._adjoint_matrices):
+            self._transpose_matrices()
+
         A = self.assemble_matrix()
         b = self.assemble_rhs()
         self.phi = spsolve(A, b)
@@ -243,6 +250,18 @@ class SteadyStateSolver:
             self._fv_compute_precursors()
         elif isinstance(self.discretization, PiecewiseContinuous):
             self._pwc_compute_precursors()
+
+    def _transpose_matrices(self) -> None:
+        # Transpose the matrices
+        self.L = self.L.transpose()
+        self.S = self.S.transpose()
+        self.Fp = self.Fp.transpose()
+        if self.use_precursors:
+            self.Fd = self.Fd.transpose()
+
+        # Set status flag
+        flag = False if self._adjoint_matrices else True
+        self._adjoint_matrices = flag
 
     def _check_inputs(self) -> None:
         self._check_mesh()
