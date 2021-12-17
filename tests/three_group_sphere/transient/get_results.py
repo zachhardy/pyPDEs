@@ -33,16 +33,17 @@ else:
 sim = NeutronicsSimulationReader(path)
 sim.read_simulation_data()
 
+sim.plot_flux_moments(0, -1, grouping='group')
+
 from rom.dmd import DMD
 from numpy.linalg import norm
 
 X = sim.create_simulation_matrix().T
-grid = [node.z for node in sim.nodes]
 times = sim.times
 
 t0, tf, dt = times[0], times[-1], times[1]-times[0]
 
-dmd = DMD(svd_rank=n, sort_method='amps')
+dmd = DMD(svd_rank=n)
 dmd.snapshot_time = {'t0': t0, 'tf': tf, 'dt': dt}
 dmd.fit(X)
 
@@ -64,10 +65,10 @@ plt.show()
 from modules.neutron_diffusion.analytic import *
 
 exact: AnalyticSolution = load(script_path + '/sphere6cm.obj')
-alphas = np.array([mode.alpha for mode in exact.modes[:n]])
-alphas = np.exp(alphas * dt)
+alphas = [exact.get_mode(i, 0, 'amp').alpha for i in range(n)]
+alphas = np.exp(np.array(alphas) * dt)
 
-eigs = dmd.eigenvalues
+eigs = dmd.eigs
 for i in range(len(eigs)):
     if eigs[i].imag != 0.0:
         omega = np.log(eigs[i])/dt

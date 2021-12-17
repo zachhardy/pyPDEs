@@ -36,8 +36,8 @@ solver.boundaries = boundaries
 rf = mesh.vertices[-1].z
 solver.initial_conditions = \
     [lambda r: 1.0 - r ** 2 / rf ** 2,
-     lambda r: 1.0 - r ** 2 / rf ** 2,
-     lambda r: 0.0 * r]
+     lambda r: 0.0,
+     lambda r: 0.0]
 
 # Set options
 solver.use_precursors = False
@@ -57,3 +57,5 @@ solver.output_directory = \
 # Run the problem
 solver.initialize(verbose=1)
 solver.execute(verbose=1)
+solver.plot_solution()
+plt.show()
