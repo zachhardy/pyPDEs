@@ -13,7 +13,9 @@ xs.read_from_xs_file('xs/three_grp_us.cxs', density=0.05)
 
 r_b = 6.0
 r = symbols('r')
-ics = Matrix([1.0 - r**2/r_b**2, 0.0, 0.0])
+ics = Matrix([1.0 - r**2/r_b**2,
+              1.0 - r**2/r_b**2,
+              0.0])
 
 dr = r_b / 100.0
 r = np.linspace(0.5 * dr, r_b - 0.5 * dr, 1001)
