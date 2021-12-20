@@ -1,11 +1,9 @@
 import os
-import numpy as np
 import matplotlib.pyplot as plt
 
 from pyPDEs.mesh import create_1d_mesh
 from pyPDEs.spatial_discretization import *
 from pyPDEs.material import *
-from pyPDEs.utilities.boundaries import *
 
 from modules.neutron_diffusion import *
 
