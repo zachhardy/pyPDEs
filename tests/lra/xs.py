@@ -15,7 +15,8 @@ def sigma_a_with_rod(g: int, x: List[float], sigma_a: float) -> float:
         return sigma_a * (1.0 + gamma*(np.sqrt(T) - np.sqrt(T0)))
     elif g == 1:
         if t <= 2.0:
-            return sigma_a * (1.0 - 0.0606184 * t)
+            return sigma_a * (1.0 + t/2.0*(0.8787631 - 1.0))
+            # return sigma_a * (1.0 - 0.0606184 * t)
         else:
             return sigma_a * 0.8787631
     else:
@@ -35,7 +36,7 @@ def sigma_a_without_rod(g: int, x: List[float], sigma_a: float) -> float:
 beta_i = [0.0054, 0.001087]
 beta = sum(beta_i)
 
-gamma = [b / beta for b in beta_i]
+yield_i = [b / beta for b in beta_i]
 
 decay = [0.0654, 1.35]
 
@@ -54,40 +55,40 @@ fuel_1_with_rod = \
     {'n_groups': 2, 'n_precursors': 2,
      'D': [1.255, 0.211], 'sigma_a': [0.008252, 0.1003],
      'buckling': buckling, 'sigma_f': [0.004602/nu, 0.1091/nu],
-     'transfer_matrix':[[0.0, 0.02533], [0.0, 0.0]],
+     'transfer_matrix': [[0.0, 0.02533], [0.0, 0.0]],
      'nu_prompt': nu_prompt, 'nu_delayed': nu_delayed,
      'chi_prompt': chi_prompt, 'chi_delayed': chi_delayed,
-     'precursor_lambda': decay, 'precursor_yield': gamma,
+     'precursor_lambda': decay, 'precursor_yield': yield_i,
      'velocity': velocity}
 
 fuel_1_without_rod = \
     {'n_groups': 2, 'n_precursors': 2,
      'D': [1.268, 0.1902], 'sigma_a': [0.007181, 0.07047],
      'buckling': buckling, 'sigma_f': [0.004609/nu, 0.08675/nu],
-     'transfer_matrix':[[0.0, 0.02767], [0.0, 0.0]],
+     'transfer_matrix': [[0.0, 0.02767], [0.0, 0.0]],
      'nu_prompt': nu_prompt, 'nu_delayed': nu_delayed,
      'chi_prompt': chi_prompt, 'chi_delayed': chi_delayed,
-     'precursor_lambda': decay, 'precursor_yield': gamma,
+     'precursor_lambda': decay, 'precursor_yield': yield_i,
      'velocity': velocity}
 
 fuel_2_with_rod = \
     {'n_groups': 2, 'n_precursors': 2,
      'D': [1.259, 0.2091], 'sigma_a': [0.008002, 0.08344],
      'buckling': buckling, 'sigma_f': [0.004663/nu, 0.1021/nu],
-     'transfer_matrix':[[0.0, 0.02617], [0.0, 0.0]],
+     'transfer_matrix': [[0.0, 0.02617], [0.0, 0.0]],
      'nu_prompt': nu_prompt, 'nu_delayed': nu_delayed,
      'chi_prompt': chi_prompt, 'chi_delayed': chi_delayed,
-     'precursor_lambda': decay, 'precursor_yield': gamma,
+     'precursor_lambda': decay, 'precursor_yield': yield_i,
      'velocity': velocity}
 
 fuel_2_without_rod = \
     {'n_groups': 2, 'n_precursors': 2,
      'D': [1.259, 0.2091], 'sigma_a': [0.008002, 0.073324],
      'buckling': buckling, 'sigma_f': [0.004663/nu, 0.1021/nu],
-     'transfer_matrix':[[0.0, 0.02617], [0.0, 0.0]],
+     'transfer_matrix': [[0.0, 0.02617], [0.0, 0.0]],
      'nu_prompt': nu_prompt, 'nu_delayed': nu_delayed,
      'chi_prompt': chi_prompt, 'chi_delayed': chi_delayed,
-     'precursor_lambda': decay, 'precursor_yield': gamma,
+     'precursor_lambda': decay, 'precursor_yield': yield_i,
      'velocity': velocity}
 
 reflector = \

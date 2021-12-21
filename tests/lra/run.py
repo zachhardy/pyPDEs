@@ -45,13 +45,12 @@ for cell in mesh.cells:
 discretization = FiniteVolume(mesh)
 
 # Create materials
-materials = []
-materials.append(Material('Fuel 1 with Rod'))
-materials.append(Material('Fuel 1 without Rod'))
-materials.append(Material('Fuel 2 with Rod'))
-materials.append(Material('Rod Ejection Region'))
-materials.append(Material('Fuel 2 without Rod'))
-materials.append(Material('Reflector'))
+materials = [Material('Fuel 1 with Rod'),
+             Material('Fuel 1 without Rod'),
+             Material('Fuel 2 with Rod'),
+             Material('Rod Ejection Region'),
+             Material('Fuel 2 without Rod'),
+             Material('Reflector')]
 
 xs = [CrossSections() for _ in range(len(materials))]
 data = [fuel_1_with_rod, fuel_1_without_rod,
