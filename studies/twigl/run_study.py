@@ -44,7 +44,7 @@ script_path = os.path.dirname(os.path.abspath(__file__))
 
 # Get inputs
 case = int(sys.argv[1]) if len(sys.argv) > 1 else 0
-if case > 6:
+if case > 2:
     raise AssertionError('Invalid case to run.')
 
 # Define parameter space

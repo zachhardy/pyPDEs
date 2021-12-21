@@ -16,7 +16,6 @@ def sigma_a_with_rod(g: int, x: List[float], sigma_a: float) -> float:
     elif g == 1:
         if t <= 2.0:
             return sigma_a * (1.0 + t/2.0*(0.8787631 - 1.0))
-            # return sigma_a * (1.0 - 0.0606184 * t)
         else:
             return sigma_a * 0.8787631
     else:
