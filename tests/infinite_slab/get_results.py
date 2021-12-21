@@ -66,21 +66,29 @@ plt.show()
 
 from rom.dmd import DMD
 
-X = sim.create_simulation_matrix('power_density')[::2]
-times = sim.times[::2]
+X = sim.create_simulation_matrix('power_density')
+times = sim.times
 
-dmd = DMD(svd_rank=10)
+dmd = DMD()
+
+errors = []
+for i in range(1, len(X)):
+    dmd.svd_rank = i
+    dmd.fit(X.T)
+    errors.append(dmd.reconstruction_error)
+
+svd_rank = int(np.argmin(errors) + 1)
+dmd.svd_rank = svd_rank
 dmd.fit(X.T)
+
+plt.figure()
+errors = dmd.snapshot_reconstruction_errors
+plt.semilogy(times, errors, '-*b')
+plt.show()
 
 msg = '===== DMD Summary ====='
 header = '=' * len(msg)
 print('\n'.join([header, msg, header]))
 print(f'# of Modes:\t\t{dmd.n_modes}')
 print(f'Reconstruction Error:\t{dmd.reconstruction_error:.3e}')
-
-dmd.plot_singular_values(logscale=True)
-
-plt.figure()
-errors = dmd.snapshot_reconstruction_errors
-plt.semilogy(times, errors, '-*b')
-plt.show()
+print(f'Max Snapshot Error:\t{np.max(errors):.3e}')
