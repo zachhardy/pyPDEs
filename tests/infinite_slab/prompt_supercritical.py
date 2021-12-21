@@ -1,14 +1,8 @@
 import os
-import numpy as np
-import matplotlib.pyplot as plt
-
-from copy import deepcopy
-from typing import List
 
 from pyPDEs.mesh import create_1d_mesh
 from pyPDEs.spatial_discretization import *
 from pyPDEs.material import *
-from pyPDEs.utilities.boundaries import *
 
 from modules.neutron_diffusion import *
 
@@ -24,10 +18,9 @@ mesh = create_1d_mesh(zones, n_cells, material_ids, coord_sys='cartesian')
 discretization = FiniteVolume(mesh)
 
 # Create materials
-materials = []
-materials.append(Material('Material 0'))
-materials.append(Material('Material 1'))
-materials.append(Material('Material 2'))
+materials = [Material('Material 0'),
+             Material('Material 1'),
+             Material('Material 2')]
 
 xs = [CrossSections() for _ in range(len(materials))]
 data = [xs_material_0_and_2, xs_material_1, xs_material_0_and_2]
@@ -58,7 +51,7 @@ solver.lag_precursors = False
 
 # Set time stepping options
 solver.t_final = 0.02
-solver.dt = 1.0e-4
+solver.dt = 2.0e-4
 solver.method = 'tbdf2'
 
 # Output informations

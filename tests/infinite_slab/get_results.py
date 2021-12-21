@@ -1,9 +1,12 @@
 import os
 import sys
+import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 
 from readers import NeutronicsSimulationReader
+
+warnings.filterwarnings('ignore')
 
 try:
     if len(sys.argv) != 2:
@@ -60,3 +63,24 @@ if arg == 2:
     ax.legend()
 plt.show()
 
+
+from rom.dmd import DMD
+
+X = sim.create_simulation_matrix('power_density')[::2]
+times = sim.times[::2]
+
+dmd = DMD(svd_rank=10)
+dmd.fit(X.T)
+
+msg = '===== DMD Summary ====='
+header = '=' * len(msg)
+print('\n'.join([header, msg, header]))
+print(f'# of Modes:\t\t{dmd.n_modes}')
+print(f'Reconstruction Error:\t{dmd.reconstruction_error:.3e}')
+
+dmd.plot_singular_values(logscale=True)
+
+plt.figure()
+errors = dmd.snapshot_reconstruction_errors
+plt.semilogy(times, errors, '-*b')
+plt.show()
