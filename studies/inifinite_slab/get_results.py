@@ -61,7 +61,7 @@ param_names = base.split('/')[-1].split('_')
 sim = NeutronicsSimulationReader(path)
 sim.read_simulation_data()
 
-sim.plot_flux_moments(0, 1, [0.0, 1.0, 2.0], grouping='time')
+sim.plot_flux_moments(0, [0, 1], [0.0, 1.0, 2.0], grouping='time')
 
 title = 'Reference'
 if sys.argv[2] != 'reference':

@@ -3,15 +3,13 @@ import itertools
 import sys
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 from copy import deepcopy
-from typing import List
 
+from matplotlib import pyplot as plt
 from pyPDEs.mesh import create_1d_mesh
 from pyPDEs.spatial_discretization import *
 from pyPDEs.material import *
-from pyPDEs.utilities.boundaries import *
 
 from modules.neutron_diffusion import *
 
@@ -53,7 +51,7 @@ if case == 0:
 elif case == 1:
     parameters['duration'] = np.linspace(0.75, 1.25, 21)
 elif case == 2:
-    parameters['interface'] = np.linspace(38.0, 42.0, 21)
+    parameters['interface'] = np.linspace(39.0, 41.0, 21)
 elif case == 3:
     parameters['multiplier'] = np.linspace(1.02, 1.04, 6)
     parameters['duration'] = np.linspace(0.9, 1.1, 6)
@@ -99,8 +97,8 @@ boundaries = [ZeroFluxBoundary(n_groups),
 
 # Initialize solver and attach objects
 solver = TransientSolver()
-solver.mesh = mesh
-solver.discretization = discretization
+solver.mesh = deepcopy(mesh)
+solver.discretization = deepcopy(discretization)
 solver.materials = deepcopy(materials)
 solver.boundaries = boundaries
 
@@ -174,7 +172,8 @@ for n, params in enumerate(values):
         x_int = params[keys.index('interface')]
         zones = [0.0, x_int, 200.0, 240.0]
         solver.mesh = create_1d_mesh(zones, n_cells, material_ids)
-        solver.discretization = FiniteVolume(mesh)
+        solver.discretization = FiniteVolume(solver.mesh)
+        solver.materials = deepcopy(materials)
 
     if 'multiplier' in keys or 'duration' in keys:
         solver.materials = deepcopy(materials)
@@ -184,4 +183,8 @@ for n, params in enumerate(values):
 
     # Run the problem
     solver.initialize()
+
+    print(solver.k_eff)
+    print(solver.material_xs[0].sigma_f)
+
     solver.execute()
