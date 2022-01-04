@@ -50,12 +50,12 @@ if case > 2:
 # Define parameter space
 parameters = {}
 if case == 0:
-    parameters['multiplier'] = np.linspace(0.96, 0.98, 21)
+    parameters['multiplier'] = np.linspace(0.97, 0.98, 21)
 elif case == 1:
-    parameters['duration'] = np.linspace(0.1, 0.3, 21)
+    parameters['duration'] = np.linspace(0.15, 0.25, 21)
 elif case == 2:
-    parameters['multiplier'] = np.linspace(0.97, 0.98, 6)
-    parameters['duration'] = np.linspace(0.18, 0.22, 6)
+    parameters['multiplier'] = np.linspace(0.9725, 0.9775, 6)
+    parameters['duration'] = np.linspace(0.175, 0.2225, 6)
 
 keys = list(parameters.keys())
 values = list(itertools.product(*parameters.values()))

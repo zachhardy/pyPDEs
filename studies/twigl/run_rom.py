@@ -1,6 +1,7 @@
-import os.path
+import os
 import sys
 import time
+import warnings
 
 import numpy as np
 from numpy.linalg import norm
@@ -12,6 +13,8 @@ from sklearn.model_selection import train_test_split
 from readers import NeutronicsDatasetReader
 from rom.pod import POD
 from rom.dmd import DMD
+
+warnings.filterwarnings('ignore')
 
 
 script_path = os.path.dirname(os.path.abspath(__file__))
@@ -62,19 +65,17 @@ for i in range(len(Y)):
     else:
         bndry += [i]
 
-splits = train_test_split(X[interior], Y[interior], train_size=0.6)
+splits = train_test_split(X[interior], Y[interior], train_size=0.7)
 X_train, X_test, Y_train, Y_test = splits
 X_train = np.vstack((X_train, X[bndry]))
 Y_train = np.vstack((Y_train, Y[bndry]))
 
 # Construct POD model, predict test data
 tstart = time.time()
-svd_rank = 7
+svd_rank = 1.0-1.0e-12
 pod = POD(svd_rank=svd_rank)
 pod.fit(X_train.T, Y_train)
 offline_time = time.time() - tstart
-
-pod.plot_singular_values()
 
 tstart = time.time()
 X_pred = pod.predict(Y_test, 'linear').T
@@ -91,18 +92,14 @@ print(f'Reconstruction Error:\t{pod.reconstruction_error:.3e}')
 X_pred = dataset.unstack_simulation_vector(X_pred)
 X_test = dataset.unstack_simulation_vector(X_test)
 
-errors = []
+errors = np.zeros(len(X_test))
 for i in range(len(X_test)):
-    error = norm(X_test[i]-X_pred[i]) / norm(X_test[i])
-    errors.append(error)
+    errors[i] = norm(X_test[i]-X_pred[i]) / norm(X_test[i])
 
 argmax = np.argmax(errors)
 x_pred, x_test = X_pred[argmax], X_test[argmax]
+timestep_errors = norm(x_test-x_pred, axis=1)/norm(x_test, axis=1)
 
-timestep_errors = []
-for t in range(len(x_test)):
-    error = norm(x_test[t]-x_pred[t]) / norm(x_test[t])
-    timestep_errors.append(error)
 
 # Print aggregated DMD results
 msg = f'===== Summary of {len(errors)} POD Models ====='
@@ -123,35 +120,35 @@ plt.grid(True)
 plt.tight_layout()
 plt.show()
 
-# # Construct DMD models, compute errors
-# errors = np.zeros(len(X_pred))
-# dmd_time = 0.0
-# for i in range(len(X_pred)):
-#     tstart = time.time()
-#     dmd = DMD(svd_rank=svd_rank)
-#     dmd.fit(X_test[i], times, verbose=False)
-#     dmd_time += time.time() - tstart
-#
-#     x_dmd = dmd.reconstructed_data.real
-#     errors[i] = norm(X_pred[i] - x_dmd) / norm(X_test[i])
-# query_time = predict_time + dmd_time
-#
-# # Print aggregated DMD results
-# msg = f'===== Summary of {errors.size} DMD Models ====='
-# header = '=' * len(msg)
-# print('\n'.join(['', header, msg, header]))
-# print(f'Average DMD Reconstruction Error:\t{np.mean(errors):.3e}')
-# print(f'Maximum DMD Reconstruction Error:\t{np.max(errors):.3e}')
-# print(f'Minimum DMD Reconstruction Error:\t{np.min(errors):.3e}')
-# print()
-#
-# msg = f'===== Summary of POD-DMD Model Cost ====='
-# header = '=' * len(msg)
-# print('\n'.join([header, msg, header]))
-# print(f'Construction:\t\t\t{offline_time:.3e} s')
-# print(f'Prediction:\t\t\t{predict_time:.3e} s')
-# print(f'Decomposition:\t\t\t{dmd_time:.3e} s')
-# print(f'Total query cost:\t\t{query_time:.3e} s')
-# print()
+# Construct DMD models, compute errors
+dmd_time = 0.0
+errors = np.zeros(len(X_pred))
+for i in range(len(X_pred)):
+    tstart = time.time()
+    dmd = DMD(svd_rank=svd_rank)
+    dmd.fit(X_test[i].T)
+    dmd_time += time.time() - tstart
+
+    x_dmd = dmd.reconstructed_data.real.T
+    errors[i] = norm(X_test[i] - x_dmd) / norm(X_test[i])
+query_time = predict_time + dmd_time
+
+# Print aggregated DMD results
+msg = f'===== Summary of {errors.size} DMD Models ====='
+header = '=' * len(msg)
+print('\n'.join(['', header, msg, header]))
+print(f'Average DMD Reconstruction Error:\t{np.mean(errors):.3e}')
+print(f'Maximum DMD Reconstruction Error:\t{np.max(errors):.3e}')
+print(f'Minimum DMD Reconstruction Error:\t{np.min(errors):.3e}')
+print()
+
+msg = f'===== Summary of POD-DMD Model Cost ====='
+header = '=' * len(msg)
+print('\n'.join([header, msg, header]))
+print(f'Construction:\t\t\t{offline_time:.3e} s')
+print(f'Prediction:\t\t\t{predict_time:.3e} s')
+print(f'Decomposition:\t\t\t{dmd_time:.3e} s')
+print(f'Total query cost:\t\t{query_time:.3e} s')
+print()
 
 plt.show()
