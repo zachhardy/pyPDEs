@@ -4,9 +4,8 @@ import time
 import warnings
 
 import numpy as np
-import matplotlib.pyplot as plt
-
 from numpy import ndarray
+import matplotlib.pyplot as plt
 
 from readers import NeutronicsSimulationReader
 
@@ -18,52 +17,82 @@ path = os.path.join(script_path, 'outputs')
 sim = NeutronicsSimulationReader(path)
 sim.read_simulation_data()
 
-sim.plot_flux_moments(0, 0, [0.0, 1.44])
-sim.plot_power(mode=1, log_scale=True)
-sim.plot_temperatures(mode=0)
-plt.show()
+# sim.plot_flux_moments(0, 0, [0.0, 1.44])
+# sim.plot_power(mode=1, log_scale=True)
+# sim.plot_temperatures(mode=0)
+# plt.show()
+
+# Get the data
+X = sim.create_simulation_matrix('power_density')
+times = sim.times
 
 from rom.dmd import DMD, PartitionedDMD
 from numpy.linalg import norm
 
-# Get the data
-X = sim.create_simulation_matrix(variables='power_density')
-times = sim.times
+partition_points = [136, 150, 200]
+svd_ranks = [15, 13, 0, 0]
+opts = [True, False, False, True]
+exacts = [False, False, False, False]
 
-partition_points = [136, 150]
-svd_ranks = [10, 13, 40]
-opts = [True, False, False]
+# partition_points = np.arange(25, 300, 25)
+# svd_ranks = [0]*(len(partition_points) + 1)
+# opts = [True]*(len(partition_points) + 1)
+# exacts = [False]*(len(partition_points) + 1)
 
-options = [None] * len(svd_ranks)
+options = [None]*(len(partition_points) + 1)
 for i in range(len(options)):
     options[i] = {'svd_rank': svd_ranks[i],
-                  'opt': opts[i]}
+                  'opt': opts[i],
+                  'exact': exacts[i]}
 
-dmd = DMD()
-pdmd = PartitionedDMD(dmd, partition_points, options)
-pdmd.fit(X.T)
+sub_dmd = DMD()
+dmd = PartitionedDMD(sub_dmd, partition_points, options)
+dmd.fit(X.T)
 
-Xdmd = pdmd.reconstructed_data
-print(f'Reconstruction Error:\t{pdmd.reconstruction_error:.3e}')
-for p in range(pdmd.n_partitions):
-    print(f'\tReconstruction Error Partition {p}:\t'
-          f'{pdmd.partial_reconstruction_error(p):.3e}')
-
-errors = pdmd.snapshot_reconstruction_errors
-print(f'Max Snapshot Error:\t{np.argmax(errors)}, {np.max(errors):.3e}')
-plt.semilogy(times, pdmd.snapshot_reconstruction_errors)
+print(f'*** Reconstruction Error per Partition ***')
+for p, dmd_ in enumerate(dmd):
+    dmd_: DMD = dmd_
+    dmd_.plot_eigs()
+    print(f'# of Modes:  {dmd_.n_modes}, '
+          f'Reconstruction Error:  {dmd_.reconstruction_error:.3e}')
+print()
 plt.show()
 
-# x = np.unique([node.x for node in sim.nodes])
-# y = np.unique([node.y for node in sim.nodes])
-# for dmd in [pdmd[0]]:
-#     dmd.plot_modes_2D(x=x, y=y)
-# plt.show()
+X_dmd = dmd.reconstructed_data.real.T
+reconstruction_error = norm(X - X_dmd) / norm(X)
+print(f'Reconstruction Error:\t{reconstruction_error:.3e}')
+
+errors = norm(X - X_dmd, axis=1) / norm(X, axis=1)
+argmax = np.argmax(errors)
+print(f'Max Snapshot Error:\t{argmax}, {errors[argmax]:.3e}')
+plt.semilogy(times, errors, '-*b')
+plt.show()
 
 P = np.sum(X, axis=1)
-plt.plot(times, P, '-k', label='Reference')
+plt.semilogy(times, P, '-b', label='Reference')
 
-Pdmd = np.sum(Xdmd.T, axis=1)
-plt.plot(times, Pdmd, '*b', label='DMD')
+P_dmd = np.sum(X_dmd, axis=1)
+plt.semilogy(times, P_dmd, '--+r', ms=5.0, label='DMD')
 
+plt.legend()
+plt.show()
+
+# from pydmd import DMD, MrDMD
+# from numpy.linalg import norm
+# sub_dmd = DMD(svd_rank=0, opt=True)
+# dmd = MrDMD(sub_dmd, max_level=6)
+# dmd.fit(np.array(X.T, dtype=complex))
+#
+# X_dmd = dmd.reconstructed_data.real.T
+#
+# reconstruction_error = norm(X - X_dmd) / norm(X)
+# print(f'Reconstruction Error:\t{reconstruction_error:.3e}')
+#
+# timestep_errors = norm(X - X_dmd, axis=1) / norm(X, axis=1)
+# plt.semilogy(times, timestep_errors)
+# plt.show()
+#
+# P, P_dmd = np.sum(X, axis=1), np.sum(X_dmd, axis=1)
+# plt.semilogy(times, P, '-b', label='Simulation')
+# plt.semilogy(times, P_dmd, '--+r', markersize=4.0, label='MrDMD')
 # plt.show()

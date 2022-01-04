@@ -1,15 +1,9 @@
 import os
-import sys
 import numpy as np
-import matplotlib.pyplot as plt
-
-from time import time
-from copy import deepcopy
 
 from pyPDEs.mesh import create_2d_mesh
 from pyPDEs.spatial_discretization import *
 from pyPDEs.material import *
-from pyPDEs.utilities.boundaries import *
 
 from modules.neutron_diffusion import *
 
@@ -92,7 +86,7 @@ solver.lag_precursors = False
 # Set feedback options
 solver.feedback_coeff = 3.034e-3
 solver.energy_per_fission = 3.204e-11
-solver.conversion_factor= 3.83e-11
+solver.conversion_factor = 3.83e-11
 
 # Initial power
 solver.initial_power = 1.0e-6
@@ -105,7 +99,7 @@ solver.method = 'tbdf2'
 
 solver.adaptivity = True
 solver.refine_level = 0.1
-solver.coarsen_level = 0.01
+solver.coarsen_level = 0.025
 
 # Output informations
 solver.write_outputs = True

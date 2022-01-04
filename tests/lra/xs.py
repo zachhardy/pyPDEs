@@ -3,7 +3,7 @@ from numpy import ndarray
 from typing import List
 
 __all__ = ['fuel_1_with_rod', 'fuel_1_without_rod',
-           'fuel_2_with_rod', 'fuel_2_without_rod',
+           'fuel_2_with_rod', 'fuel_2_without_rod', 'fuel_2_control',
            'reflector', 'sigma_a_with_rod', 'sigma_a_without_rod']
 
 
@@ -79,6 +79,11 @@ fuel_2_with_rod = \
      'chi_prompt': chi_prompt, 'chi_delayed': chi_delayed,
      'precursor_lambda': decay, 'precursor_yield': yield_i,
      'velocity': velocity}
+
+from copy import deepcopy
+fuel_2_control = deepcopy(fuel_2_with_rod)
+fuel_2_control['sigma_a'][1] *= 0.8787631
+
 
 fuel_2_without_rod = \
     {'n_groups': 2, 'n_precursors': 2,
