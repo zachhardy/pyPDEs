@@ -95,11 +95,7 @@ for i in range(len(X_test)):
 
 argmax = np.argmax(errors)
 x_pred, x_test = X_pred[argmax], X_test[argmax]
-
-timestep_errors = []
-for t in range(len(x_test)):
-    error = norm(x_test[t]-x_pred[t]) / norm(x_test[t])
-    timestep_errors.append(error)
+timestep_errors = norm(x_test-x_pred, axis=1)/norm(x_test, axis=1)
 
 # Print aggregated POD results
 msg = f'===== Summary of {len(errors)} POD Models ====='
@@ -136,87 +132,78 @@ dmd.snapshot_time = {'t0': times[0],
                      'tf': times[-1],
                      'dt': np.diff(times)[0]}
 
-# dmd.fit(x_pred.T)
-# x_dmd = dmd.reconstructed_data.T
-#
-# timestep_errors = []
-# for t in range(len(x_test)):
-#     error = norm(x_test[t]-x_dmd[t]) / norm(x_test[t])
-#     timestep_errors.append(error)
-#
-# plt.figure()
-# plt.xlabel(f'Time ($\mu$s)', fontsize=12)
-# plt.ylabel(f'$L^2$ Error', fontsize=12)
-# plt.semilogy(times, timestep_errors, '-b*')
-# plt.grid(True)
-#
+dmd.fit(x_pred.T)
+x_dmd = dmd.reconstructed_data.T
+timestep_errors = norm(x_test-x_dmd, axis=1)/norm(x_test, axis=1)
+
+plt.figure()
+plt.xlabel(f'Time ($\mu$s)', fontsize=12)
+plt.ylabel(f'$L^2$ Error', fontsize=12)
+plt.semilogy(times, timestep_errors, '-b*')
+plt.grid(True)
+
 # base = '/Users/zacharyhardy/Documents/phd/prelim'
 # # fname = base + '/figures/worst_dmd_reconstruction.pdf'
 # # plt.savefig(fname)
-#
-# # Interpolation and extrapolation on worst result
-# dmd.snapshot_time['tf'] /= 2.0
-# dmd.snapshot_time['dt'] *= 2.0
-#
-# mid = len(x_pred) // 2
-# x = x_pred[:mid + 1:2]
-# dmd.fit(x.T)
-#
-# dmd.plot_timestep_errors()
-#
-# dmd.dmd_time['tf'] *= 2
-# dmd.dmd_time['dt'] /= 2
-#
-# x_dmd = dmd.reconstructed_data.T
-#
-# timestep_errors = []
-# for t in range(len(x_test)):
-#     error = norm(x_test[t]-x_dmd[t]) / norm(x_test[t])
-#     timestep_errors.append(error)
-#
-# plt.figure()
-# plt.xlabel('Time ($\mu$s)', fontsize=12)
-# plt.ylabel('$L^2$ Error', fontsize=12)
-# plt.semilogy(times[:mid+1:2], timestep_errors[:mid+1:2],
-#              '-*b', markersize=3.0, label='Reconstuction')
-# plt.semilogy(times[1:mid+1:2], timestep_errors[1:mid+1:2],
-#              '--^r', markersize=3.0, label='Interpolation')
-# plt.semilogy(times[mid+1:], timestep_errors[mid+1:],
-#              '-.og', markersize=3.0, label='Extrapolation')
-# plt.legend()
-# plt.grid(True)
-#
-# # fname = base + '/figures/worst_dmd_interp_extrap.pdf'
-# # plt.savefig(fname)
-# # plt.show()
-#
-# # Construct DMD models, compute errors
-# dmd_time = 0.0
-# errors = np.zeros(len(X_pred))
-# for i in range(len(X_pred)):
-#     tstart = time.time()
-#     dmd = DMD(svd_rank=svd_rank)
-#     dmd.fit(X_pred[i].T, verbose=False)
-#     dmd_time += time.time() - tstart
-#
-#     x_dmd = dmd.reconstructed_data.real
-#     errors[i] = norm(X_test[i] - x_dmd.T) / norm(X_test[i])
-# query_time = predict_time + dmd_time
-#
-# # Print aggregated DMD results
-# msg = f'===== Summary of {errors.size} DMD Models ====='
-# header = '=' * len(msg)
-# print('\n'.join(['', header, msg, header]))
-# print(f'Average DMD Reconstruction Error:\t{np.mean(errors):.3e}')
-# print(f'Maximum DMD Reconstruction Error:\t{np.max(errors):.3e}')
-# print(f'Minimum DMD Reconstruction Error:\t{np.min(errors):.3e}')
-# print()
-#
-# msg = f'===== Summary of POD-DMD Model Cost ====='
-# header = '=' * len(msg)
-# print('\n'.join([header, msg, header]))
-# print(f'Construction:\t\t\t{offline_time:.3e} s')
-# print(f'Prediction:\t\t\t{predict_time:.3e} s')
-# print(f'Decomposition:\t\t\t{dmd_time:.3e} s')
-# print(f'Total query cost:\t\t{query_time:.3e} s')
-# print()
+
+# Interpolation and extrapolation on worst result
+dmd.original_time['tend'] /= 2.0
+dmd.original_time['dt'] *= 2.0
+
+mid = len(x_pred) // 2
+x = x_pred[:mid + 1:2]
+dmd.fit(x.T)
+
+dmd.dmd_time['tend'] *= 2.0
+dmd.dmd_time['dt'] /= 2.0
+x_dmd = dmd.reconstructed_data.T
+
+timestep_errors = norm(x_test-x_dmd, axis=1)/norm(x_test, axis=1)
+
+plt.figure()
+plt.xlabel('Time ($\mu$s)', fontsize=12)
+plt.ylabel('$L^2$ Error', fontsize=12)
+plt.semilogy(times[:mid+1:2], timestep_errors[:mid+1:2],
+             '-*b', markersize=3.0, label='Reconstuction')
+plt.semilogy(times[1:mid+1:2], timestep_errors[1:mid+1:2],
+             '--^r', markersize=3.0, label='Interpolation')
+plt.semilogy(times[mid+1:], timestep_errors[mid+1:],
+             '-.og', markersize=3.0, label='Extrapolation')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# fname = base + '/figures/worst_dmd_interp_extrap.pdf'
+# plt.savefig(fname)
+# plt.show()
+
+# Construct DMD models, compute errors
+dmd_time = 0.0
+errors = np.zeros(len(X_pred))
+for i in range(len(X_pred)):
+    tstart = time.time()
+    dmd = DMD(svd_rank=svd_rank)
+    dmd.fit(X_pred[i].T)
+    dmd_time += time.time() - tstart
+
+    x_dmd = dmd.reconstructed_data.real
+    errors[i] = norm(X_test[i] - x_dmd.T) / norm(X_test[i])
+query_time = predict_time + dmd_time
+
+# Print aggregated DMD results
+msg = f'===== Summary of {errors.size} DMD Models ====='
+header = '=' * len(msg)
+print('\n'.join(['', header, msg, header]))
+print(f'Average DMD Reconstruction Error:\t{np.mean(errors):.3e}')
+print(f'Maximum DMD Reconstruction Error:\t{np.max(errors):.3e}')
+print(f'Minimum DMD Reconstruction Error:\t{np.min(errors):.3e}')
+print()
+
+msg = f'===== Summary of POD-DMD Model Cost ====='
+header = '=' * len(msg)
+print('\n'.join([header, msg, header]))
+print(f'Construction:\t\t\t{offline_time:.3e} s')
+print(f'Prediction:\t\t\t{predict_time:.3e} s')
+print(f'Decomposition:\t\t\t{dmd_time:.3e} s')
+print(f'Total query cost:\t\t{query_time:.3e} s')
+print()
