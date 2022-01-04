@@ -82,8 +82,6 @@ pod = POD(svd_rank=svd_rank)
 pod.fit(X_train.T, Y_train)
 offline_time = time.time() - tstart
 
-pod.plot_singular_values()
-
 tstart = time.time()
 X_pred = pod.predict(Y_test, 'linear').T
 predict_time = time.time() - tstart
@@ -106,11 +104,7 @@ for i in range(len(X_test)):
 
 argmax = np.argmax(errors)
 x_pred, x_test = X_pred[argmax], X_test[argmax]
-
-timestep_errors = []
-for t in range(len(x_test)):
-    error = norm(x_test[t]-x_pred[t]) / norm(x_test[t])
-    timestep_errors.append(error)
+timestep_errors = norm(x_test-x_pred, axis=1)/norm(x_test, axis=1)
 
 # Print aggregated DMD results
 msg = f'===== Summary of {len(errors)} POD Interpolations ====='
@@ -131,35 +125,35 @@ plt.grid(True)
 plt.tight_layout()
 plt.show()
 
-# # Construct DMD models, compute errors
-# errors = np.zeros(len(X_pred))
-# dmd_time = 0.0
-# for i in range(len(X_pred)):
-#     tstart = time.time()
-#     dmd = DMD(svd_rank=svd_rank, exact=False, opt=True)
-#     dmd.fit(X_test[i], times, verbose=False)
-#     dmd_time += time.time() - tstart
-#
-#     x_dmd = dmd.reconstructed_data.real
-#     errors[i] = norm(X_pred[i] - x_dmd) / norm(X_test[i])
-# query_time = predict_time + dmd_time
-#
-# # Print aggregated DMD results
-# msg = f'===== Summary of {errors.size} DMD Models ====='
-# header = '=' * len(msg)
-# print('\n'.join(['', header, msg, header]))
-# print(f'Average DMD Reconstruction Error:\t{np.mean(errors):.3e}')
-# print(f'Maximum DMD Reconstruction Error:\t{np.max(errors):.3e}')
-# print(f'Minimum DMD Reconstruction Error:\t{np.min(errors):.3e}')
-# print()
-#
-# msg = f'===== Summary of POD-DMD Model Cost ====='
-# header = '=' * len(msg)
-# print('\n'.join([header, msg, header]))
-# print(f'Construction:\t\t\t{offline_time:.3e} s')
-# print(f'Prediction:\t\t\t{predict_time:.3e} s')
-# print(f'Decomposition:\t\t\t{dmd_time:.3e} s')
-# print(f'Total query cost:\t\t{query_time:.3e} s')
-# print()
+# Construct DMD models, compute errors
+errors = np.zeros(len(X_pred))
+dmd_time = 0.0
+for i in range(len(X_pred)):
+    tstart = time.time()
+    dmd = DMD(svd_rank=svd_rank)
+    dmd.fit(X_test[i].T)
+    dmd_time += time.time() - tstart
+
+    x_dmd = dmd.reconstructed_data.real.T
+    errors[i] = norm(X_test[i] - x_dmd) / norm(X_test[i])
+query_time = predict_time + dmd_time
+
+# Print aggregated DMD results
+msg = f'===== Summary of {errors.size} DMD Models ====='
+header = '=' * len(msg)
+print('\n'.join(['', header, msg, header]))
+print(f'Average DMD Reconstruction Error:\t{np.mean(errors):.3e}')
+print(f'Maximum DMD Reconstruction Error:\t{np.max(errors):.3e}')
+print(f'Minimum DMD Reconstruction Error:\t{np.min(errors):.3e}')
+print()
+
+msg = f'===== Summary of POD-DMD Model Cost ====='
+header = '=' * len(msg)
+print('\n'.join([header, msg, header]))
+print(f'Construction:\t\t\t{offline_time:.3e} s')
+print(f'Prediction:\t\t\t{predict_time:.3e} s')
+print(f'Decomposition:\t\t\t{dmd_time:.3e} s')
+print(f'Total query cost:\t\t{query_time:.3e} s')
+print()
 
 plt.show()
