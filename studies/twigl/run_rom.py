@@ -69,16 +69,23 @@ Y_train = np.vstack((Y_train, Y[bndry]))
 
 # Construct POD model, predict test data
 tstart = time.time()
-svd_rank = 1.0 - 1.0e-8
+svd_rank = 7
 pod = POD(svd_rank=svd_rank)
-pod.fit(X_train.T, Y_train, verbose=True)
+pod.fit(X_train.T, Y_train)
 offline_time = time.time() - tstart
 
-pod.plot_scree()
+pod.plot_singular_values()
 
 tstart = time.time()
-X_pred = pod.predict(Y_test, 'cubic').T
+X_pred = pod.predict(Y_test, 'linear').T
 predict_time = time.time() - tstart
+
+msg = '===== POD Model Summary ====='
+header = '=' * len(msg)
+print('\n'.join([header, msg, header]))
+print(f'# of Modes:\t\t{pod.n_modes}')
+print(f'# of Snapshots:\t\t{pod.n_snapshots}')
+print(f'Reconstruction Error:\t{pod.reconstruction_error:.3e}')
 
 # Format POD predictions for DMD
 X_pred = dataset.unstack_simulation_vector(X_pred)
@@ -107,8 +114,10 @@ print(f'Minimum POD Reconstruction Error:\t{np.min(errors):.3e}')
 print()
 
 plt.figure()
-plt.xlabel(r'Time [$\mu$s]', fontsize=12)
-plt.ylabel('Relative Error [arb. units]', fontsize=12)
+plt.title(f'Worst Result\n'
+          f'Error = {np.max(errors):.3e}')
+plt.xlabel('Time (sec)', fontsize=12)
+plt.ylabel('Relative Error', fontsize=12)
 plt.semilogy(times, timestep_errors, '-*b')
 plt.grid(True)
 plt.tight_layout()
