@@ -45,23 +45,24 @@ sim.plot_flux_moments(0, [0, 1], times, grouping='time')
 if arg == 2:
     from typing import List
     from matplotlib.pyplot import Axes, Line2D
-    ax: Axes = plt.gca()
-    lines: List[Line2D] = ax.get_lines()
+    for ax in plt.gcf().get_axes():
+        ax: Axes = ax
+        lines: List[Line2D] = ax.get_lines()
 
-    # Scale data
-    lines[0].set_ydata(lines[0].get_ydata() * 1.0e2)
-    lines[-1].set_ydata(lines[-1].get_ydata() * 1.0e-3)
+        # Scale data
+        lines[0].set_ydata(lines[0].get_ydata() * 1.0e2)
+        lines[-1].set_ydata(lines[-1].get_ydata() * 1.0e-3)
 
-    # Get max value, normalize
-    max_val = np.max(lines[0].get_ydata())
-    for line in lines:
-        line.set_ydata(line.get_ydata() / max_val)
+        # Get max value, normalize
+        max_val = np.max(lines[0].get_ydata())
+        for line in lines:
+            line.set_ydata(line.get_ydata() / max_val)
 
-    # Modify labels
-    lines[0].set_label(lines[0].get_label() + r' (x $10^{2}$)')
-    lines[-1].set_label(lines[-1].get_label() + r' (x $10^{-3}$)')
-    ax.legend()
-plt.show()
+        # Modify labels
+        lines[0].set_label(lines[0].get_label() + r' (x $10^{2}$)')
+        lines[-1].set_label(lines[-1].get_label() + r' (x $10^{-3}$)')
+        ax.legend()
+# plt.show()
 
 
 from rom.dmd import DMD
@@ -69,26 +70,14 @@ from rom.dmd import DMD
 X = sim.create_simulation_matrix('power_density')
 times = sim.times
 
-dmd = DMD()
-
-errors = []
-for i in range(1, len(X)):
-    dmd.svd_rank = i
-    dmd.fit(X.T)
-    errors.append(dmd.reconstruction_error)
-
-svd_rank = int(np.argmin(errors) + 1)
-dmd.svd_rank = svd_rank
+dmd = DMD(svd_rank=0, opt=True)
 dmd.fit(X.T)
+
+dmd.find_optimal_parameters()
+dmd.print_summary()
+
 
 plt.figure()
 errors = dmd.snapshot_reconstruction_errors
 plt.semilogy(times, errors, '-*b')
 plt.show()
-
-msg = '===== DMD Summary ====='
-header = '=' * len(msg)
-print('\n'.join([header, msg, header]))
-print(f'# of Modes:\t\t{dmd.n_modes}')
-print(f'Reconstruction Error:\t{dmd.reconstruction_error:.3e}')
-print(f'Max Snapshot Error:\t{np.max(errors):.3e}')
