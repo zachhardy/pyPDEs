@@ -1,6 +1,7 @@
-import os.path
+import os
 import sys
 import time
+import warnings
 
 import numpy as np
 from numpy.linalg import norm
@@ -13,6 +14,7 @@ from readers import NeutronicsDatasetReader
 from rom.pod import POD
 from rom.dmd import DMD
 
+warnings.filterwarnings('ignore')
 
 script_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -81,7 +83,7 @@ pod.fit(X_train.T, Y_train)
 offline_time = time.time() - tstart
 
 tstart = time.time()
-X_pred = pod.predict(Y_test, 'linear').T
+X_pred = pod.predict(Y_test, 'rbf').T
 predict_time = time.time() - tstart
 
 # Format POD predictions for DMD
