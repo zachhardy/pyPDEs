@@ -29,15 +29,15 @@ times = sim.times
 from rom.dmd import DMD, PartitionedDMD
 from numpy.linalg import norm
 
-partition_points = [136, 150, 200]
-svd_ranks = [15, 13, 0, 0]
-opts = [True, False, False, True]
-exacts = [False, False, False, False]
+# partition_points = [136, 150, 200]
+# svd_ranks = [15, 13, 40, 0]
+# opts = [True, False, False, True]
+# exacts = [False, False, False, False]
 
-# partition_points = np.arange(25, 300, 25)
-# svd_ranks = [0]*(len(partition_points) + 1)
-# opts = [True]*(len(partition_points) + 1)
-# exacts = [False]*(len(partition_points) + 1)
+partition_points = np.arange(30, 300, 30)
+svd_ranks = [0]*(len(partition_points) + 1)
+opts = [True]*(len(partition_points) + 1)
+exacts = [False]*(len(partition_points) + 1)
 
 options = [None]*(len(partition_points) + 1)
 for i in range(len(options)):
@@ -49,14 +49,7 @@ sub_dmd = DMD()
 dmd = PartitionedDMD(sub_dmd, partition_points, options)
 dmd.fit(X.T)
 
-print(f'*** Reconstruction Error per Partition ***')
-for p, dmd_ in enumerate(dmd):
-    dmd_: DMD = dmd_
-    dmd_.plot_eigs()
-    print(f'# of Modes:  {dmd_.n_modes}, '
-          f'Reconstruction Error:  {dmd_.reconstruction_error:.3e}')
-print()
-plt.show()
+dmd.find_optimal_parameters()
 
 X_dmd = dmd.reconstructed_data.real.T
 reconstruction_error = norm(X - X_dmd) / norm(X)
