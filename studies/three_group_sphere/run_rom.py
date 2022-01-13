@@ -178,8 +178,6 @@ dmd.dmd_time['tend'] *= 2
 dmd.dmd_time['dt'] /= 2
 x_dmd = dmd.reconstructed_data
 
-print(dmd.original_time, dmd.dmd_time)
-
 timestep_errors = norm(x_test-x_dmd, axis=1)/norm(x_test, axis=1)
 
 plt.figure()
@@ -194,38 +192,38 @@ plt.semilogy(times[mid+1:], timestep_errors[mid+1:],
 plt.legend()
 plt.grid(True)
 plt.show()
-#
+
 # # fname = base + '/figures/worst_dmd_interp_extrap.pdf'
 # # plt.savefig(fname)
 # # plt.show()
-#
-# # Construct DMD models, compute errors
-# dmd_time = 0.0
-# errors = np.zeros(len(X_pred))
-# for i in range(len(X_pred)):
-#     tstart = time.time()
-#     dmd = DMD(svd_rank=svd_rank)
-#     dmd.fit(X_pred[i].T)
-#     dmd_time += time.time() - tstart
-#
-#     x_dmd = dmd.reconstructed_data.real
-#     errors[i] = norm(X_test[i] - x_dmd.T) / norm(X_test[i])
-# query_time = predict_time + dmd_time
-#
-# # Print aggregated DMD results
-# msg = f'===== Summary of {errors.size} DMD Models ====='
-# header = '=' * len(msg)
-# print('\n'.join(['', header, msg, header]))
-# print(f'Average DMD Reconstruction Error:\t{np.mean(errors):.3e}')
-# print(f'Maximum DMD Reconstruction Error:\t{np.max(errors):.3e}')
-# print(f'Minimum DMD Reconstruction Error:\t{np.min(errors):.3e}')
-# print()
-#
-# msg = f'===== Summary of POD-DMD Model Cost ====='
-# header = '=' * len(msg)
-# print('\n'.join([header, msg, header]))
-# print(f'Construction:\t\t\t{offline_time:.3e} s')
-# print(f'Prediction:\t\t\t{predict_time:.3e} s')
-# print(f'Decomposition:\t\t\t{dmd_time:.3e} s')
-# print(f'Total query cost:\t\t{query_time:.3e} s')
-# print()
+
+# Construct DMD models, compute errors
+dmd_time = 0.0
+errors = np.zeros(len(X_pred))
+for i in range(len(X_pred)):
+    tstart = time.time()
+    dmd = DMD(svd_rank=svd_rank)
+    dmd.fit(X_pred[i].T)
+    dmd_time += time.time() - tstart
+
+    x_dmd = dmd.reconstructed_data.real
+    errors[i] = norm(X_test[i] - x_dmd.T) / norm(X_test[i])
+query_time = predict_time + dmd_time
+
+# Print aggregated DMD results
+msg = f'===== Summary of {errors.size} DMD Models ====='
+header = '=' * len(msg)
+print('\n'.join(['', header, msg, header]))
+print(f'Average DMD Reconstruction Error:\t{np.mean(errors):.3e}')
+print(f'Maximum DMD Reconstruction Error:\t{np.max(errors):.3e}')
+print(f'Minimum DMD Reconstruction Error:\t{np.min(errors):.3e}')
+print()
+
+msg = f'===== Summary of POD-DMD Model Cost ====='
+header = '=' * len(msg)
+print('\n'.join([header, msg, header]))
+print(f'Construction:\t\t\t{offline_time:.3e} s')
+print(f'Prediction:\t\t\t{predict_time:.3e} s')
+print(f'Decomposition:\t\t\t{dmd_time:.3e} s')
+print(f'Total query cost:\t\t{query_time:.3e} s')
+print()
