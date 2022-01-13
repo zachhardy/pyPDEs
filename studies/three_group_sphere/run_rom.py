@@ -11,32 +11,56 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 
 from readers import NeutronicsDatasetReader
-from rom.pod import POD
-from rom.dmd import DMD
+from pyROMs.pod import POD
+from pyROMs.dmd import DMD
 
 warnings.filterwarnings('ignore')
 
-script_path = os.path.dirname(os.path.abspath(__file__))
+path = os.path.dirname(os.path.abspath(__file__))
 
-# Get inputs
-case = 0
-with_ics = True
-for arg in sys.argv:
-    if 'case' in arg:
-        case = int(arg.split('=')[1])
-    if 'with_ics' in arg:
-        with_ics = bool(int(arg.split('=')[1]))
+########################################
+# Get the path to results
+########################################
+path = os.path.dirname(os.path.abspath(__file__))
 
-if case == 0:
-    study_name = 'density'
-elif case == 1:
-    study_name = 'size'
+if len(sys.argv) != 3:
+    raise AssertionError(
+        f'There must be a command line argument to point '
+        f'to the problem type, study, and simulation number.')
+
+problem = int(sys.argv[1])
+case = int(sys.argv[2])
+
+
+# Get problem name
+if problem == 0:
+    problem_name = 'keigenvalue'
+elif problem == 1:
+    problem_name = 'ics'
 else:
-    study_name = 'density_size'
-study_name += '_ics' if with_ics else '_k'
+    raise ValueError('Invalid problem provided..')
 
-# Parse the database
-dataset = NeutronicsDatasetReader(f'{script_path}/outputs/{study_name}')
+# Get parameter study name
+if case == 0:
+    case_name = 'density'
+elif case == 1:
+    case_name = 'size'
+elif case == 2:
+    case_name = 'density_size'
+else:
+    raise ValueError('Invalid case provided.')
+
+# Define path
+path = f'{path}/outputs/{problem_name}/{case_name}'
+
+# Check path
+if not os.path.isdir(path):
+    raise NotADirectoryError('Invalid path.')
+
+########################################
+# Parse the data
+########################################
+dataset = NeutronicsDatasetReader(path)
 dataset.read_dataset()
 
 # Get the domain information
@@ -69,7 +93,7 @@ for i in range(len(Y)):
     if not on_bndry:  interior += [i]
     else:  bndry += [i]
 
-splits = train_test_split(X[interior], Y[interior], train_size=0.6)
+splits = train_test_split(X[interior], Y[interior], test_size=0.2)
 X_train, X_test, Y_train, Y_test = splits
 X_train = np.vstack((X_train, X[bndry]))
 Y_train = np.vstack((Y_train, Y[bndry]))
@@ -79,22 +103,24 @@ Y_train = np.vstack((Y_train, Y[bndry]))
 tstart = time.time()
 svd_rank = 1.0-1.0e-8
 pod = POD(svd_rank=svd_rank)
-pod.fit(X_train.T, Y_train)
+pod.fit(X_train, Y_train, 'rbf')
 offline_time = time.time() - tstart
 
 tstart = time.time()
-X_pred = pod.predict(Y_test, 'rbf').T
+X_pred = pod.predict(Y_test)
 predict_time = time.time() - tstart
 
 # Format POD predictions for DMD
 X_pred = dataset.unstack_simulation_vector(X_pred)
 X_test = dataset.unstack_simulation_vector(X_test)
 
+# Compute simulation errors
 errors = []
 for i in range(len(X_test)):
     error = norm(X_test[i]-X_pred[i]) / norm(X_test[i])
     errors.append(error)
 
+# Get worst-case result
 argmax = np.argmax(errors)
 x_pred, x_test = X_pred[argmax], X_test[argmax]
 timestep_errors = norm(x_test-x_pred, axis=1)/norm(x_test, axis=1)
@@ -130,13 +156,8 @@ plt.show()
 # DMD on worst result
 dmd = DMD(svd_rank=svd_rank)
 
-dmd.snapshot_time = {'t0': times[0],
-                     'tf': times[-1],
-                     'dt': np.diff(times)[0]}
-
-dmd.fit(x_pred.T)
-x_dmd = dmd.reconstructed_data.T
-timestep_errors = norm(x_test-x_dmd, axis=1)/norm(x_test, axis=1)
+dmd.fit(x_pred)
+timestep_errors = dmd.snapshot_errors
 
 plt.figure()
 plt.xlabel(f'Time ($\mu$s)', fontsize=12)
@@ -149,16 +170,15 @@ plt.grid(True)
 # # plt.savefig(fname)
 
 # Interpolation and extrapolation on worst result
-dmd.original_time['tend'] /= 2.0
-dmd.original_time['dt'] *= 2.0
-
 mid = len(x_pred) // 2
 x = x_pred[:mid + 1:2]
-dmd.fit(x.T)
+dmd.fit(x)
 
-dmd.dmd_time['tend'] *= 2.0
-dmd.dmd_time['dt'] /= 2.0
-x_dmd = dmd.reconstructed_data.T
+dmd.dmd_time['tend'] *= 2
+dmd.dmd_time['dt'] /= 2
+x_dmd = dmd.reconstructed_data
+
+print(dmd.original_time, dmd.dmd_time)
 
 timestep_errors = norm(x_test-x_dmd, axis=1)/norm(x_test, axis=1)
 
@@ -174,38 +194,38 @@ plt.semilogy(times[mid+1:], timestep_errors[mid+1:],
 plt.legend()
 plt.grid(True)
 plt.show()
-
-# fname = base + '/figures/worst_dmd_interp_extrap.pdf'
-# plt.savefig(fname)
-# plt.show()
-
-# Construct DMD models, compute errors
-dmd_time = 0.0
-errors = np.zeros(len(X_pred))
-for i in range(len(X_pred)):
-    tstart = time.time()
-    dmd = DMD(svd_rank=svd_rank)
-    dmd.fit(X_pred[i].T)
-    dmd_time += time.time() - tstart
-
-    x_dmd = dmd.reconstructed_data.real
-    errors[i] = norm(X_test[i] - x_dmd.T) / norm(X_test[i])
-query_time = predict_time + dmd_time
-
-# Print aggregated DMD results
-msg = f'===== Summary of {errors.size} DMD Models ====='
-header = '=' * len(msg)
-print('\n'.join(['', header, msg, header]))
-print(f'Average DMD Reconstruction Error:\t{np.mean(errors):.3e}')
-print(f'Maximum DMD Reconstruction Error:\t{np.max(errors):.3e}')
-print(f'Minimum DMD Reconstruction Error:\t{np.min(errors):.3e}')
-print()
-
-msg = f'===== Summary of POD-DMD Model Cost ====='
-header = '=' * len(msg)
-print('\n'.join([header, msg, header]))
-print(f'Construction:\t\t\t{offline_time:.3e} s')
-print(f'Prediction:\t\t\t{predict_time:.3e} s')
-print(f'Decomposition:\t\t\t{dmd_time:.3e} s')
-print(f'Total query cost:\t\t{query_time:.3e} s')
-print()
+#
+# # fname = base + '/figures/worst_dmd_interp_extrap.pdf'
+# # plt.savefig(fname)
+# # plt.show()
+#
+# # Construct DMD models, compute errors
+# dmd_time = 0.0
+# errors = np.zeros(len(X_pred))
+# for i in range(len(X_pred)):
+#     tstart = time.time()
+#     dmd = DMD(svd_rank=svd_rank)
+#     dmd.fit(X_pred[i].T)
+#     dmd_time += time.time() - tstart
+#
+#     x_dmd = dmd.reconstructed_data.real
+#     errors[i] = norm(X_test[i] - x_dmd.T) / norm(X_test[i])
+# query_time = predict_time + dmd_time
+#
+# # Print aggregated DMD results
+# msg = f'===== Summary of {errors.size} DMD Models ====='
+# header = '=' * len(msg)
+# print('\n'.join(['', header, msg, header]))
+# print(f'Average DMD Reconstruction Error:\t{np.mean(errors):.3e}')
+# print(f'Maximum DMD Reconstruction Error:\t{np.max(errors):.3e}')
+# print(f'Minimum DMD Reconstruction Error:\t{np.min(errors):.3e}')
+# print()
+#
+# msg = f'===== Summary of POD-DMD Model Cost ====='
+# header = '=' * len(msg)
+# print('\n'.join([header, msg, header]))
+# print(f'Construction:\t\t\t{offline_time:.3e} s')
+# print(f'Prediction:\t\t\t{predict_time:.3e} s')
+# print(f'Decomposition:\t\t\t{dmd_time:.3e} s')
+# print(f'Total query cost:\t\t{query_time:.3e} s')
+# print()

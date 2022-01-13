@@ -7,50 +7,62 @@ import numpy as np
 from pyPDEs.mesh import create_1d_mesh
 from pyPDEs.spatial_discretization import *
 from pyPDEs.material import *
-from pyPDEs.utilities.boundaries import *
 
 from modules.neutron_diffusion import *
+from studies.utils import *
 
+########################################
+# Setup parameter study
+########################################
+path = os.path.dirname(os.path.abspath(__file__))
 
-def setup_directory(path: str):
-    if not os.path.isdir(path):
-        os.makedirs(path)
-    elif len(os.listdir(path)) > 0:
-        os.system(f'rm -r {path}/*')
+if len(sys.argv) != 3:
+    raise AssertionError(
+        f'There must be a command line argument for the '
+        f'problem description and parameter set.')
 
+problem = int(sys.argv[1])
+case = int(sys.argv[2])
 
-# Define current directory
-script_path = os.path.dirname(os.path.abspath(__file__))
-
-
-# Get inputs
-case = 0
-with_ics = True
-for arg in sys.argv:
-    if 'case' in arg:
-        case = int(arg.split('=')[1])
-    if 'with_ics' in arg:
-        with_ics = bool(int(arg.split('=')[1]))
-
-# Setup studies
+# Define all parametric combinations
 parameters = {}
 if case == 0:
-    parameters['density'] = np.linspace(0.048, 0.052, 26)
+    parameters['density'] = setup_range(0.0475, 0.1, 26)
 elif case == 1:
-    parameters['size'] = np.linspace(5.8, 6.2, 26)
+    parameters['size'] = setup_range(5.75, 0.1, 26)
 elif case == 2:
-    parameters['density'] = np.linspace(0.049, 0.051, 7)
-    parameters['size'] = np.linspace(5.9, 6.0, 7)
+    parameters['density'] = setup_range(0.05, 0.05, 7)
+    parameters['size'] = setup_range(5.75, 0.05, 7)
+else:
+    raise ValueError(f'Invalid case provided.')
 
 keys = list(parameters.keys())
 values = list(itertools.product(*parameters.values()))
 
+# Define the name of the problem
+if problem == 0:
+    problem_name = 'keigenvalue'
+elif problem == 1:
+    problem_name = 'ics'
+else:
+    raise ValueError(f'Invalid problem type provided')
+
+# Define the name of the parameter study
 study_name = ''
 for k, key in enumerate(keys):
     study_name = key if k == 0 else study_name + f'_{key}'
-study_name += '_ics' if with_ics else '_k'
 
+# Define the path to the output directory
+output_path = f'{path}/outputs/{problem_name}/{study_name}'
+setup_directory(output_path)
+
+# Save parameter sets
+param_filepath = f'{output_path}/params.txt'
+np.savetxt(param_filepath, np.array(values), fmt='%.8e')
+
+########################################
 # Setup the problem
+########################################
 mesh = create_1d_mesh([0.0, 6.0], [100], coord_sys='spherical')
 discretization = FiniteVolume(mesh)
 
@@ -73,25 +85,20 @@ rf = mesh.vertices[-1].z
 ics = [lambda r: 1.0 - r**2 / rf**2,
        lambda r: 1.0 - r**2 / rf**2,
        lambda r: 0.0]
-solver.initial_conditions = ics if with_ics else None
+solver.initial_conditions = ics if problem == 1 else None
+
 solver.normalize_fission = False
 solver.phi_norm_method = None
 
-solver.t_final = 0.1
-solver.dt = 1.0e-3
+solver.t_final = 0.01
+solver.dt = 2.5e-4
 solver.stepping_method = 'tbdf2'
 
 solver.write_outputs = True
 
-# Define output path
-output_path = os.path.join(script_path, 'outputs', study_name)
-setup_directory(output_path)
-
-# Save parameters
-param_filepath = os.path.join(output_path, 'params.txt')
-np.savetxt(param_filepath, np.array(values), fmt='%.8e')
-
+########################################
 # Run the reference problem
+########################################
 msg = '===== Running reference ====='
 head = '=' * len(msg)
 print()
@@ -103,7 +110,9 @@ solver.output_directory = simulation_path
 solver.initialize()
 solver.execute()
 
-# Run the study
+########################################
+# Run the parameter study
+########################################
 for n, params in enumerate(values):
 
     # Setup output path
