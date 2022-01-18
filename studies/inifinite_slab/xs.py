@@ -75,5 +75,5 @@ xs_material_1 = \
      'precursor_lambda': decay, 'precursor_yield': gamma_i,
      'velocity': velocity}
 
-tolerance = 1.0e-12
-max_iterations = int(1.0e4)
+tolerance = 1.0e-8
+max_iterations = int(5.0e3)

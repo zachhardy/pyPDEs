@@ -12,67 +12,103 @@ from pyPDEs.spatial_discretization import *
 from pyPDEs.material import *
 
 from modules.neutron_diffusion import *
-
 from xs import *
-
-
-def setup_directory(path: str):
-    if not os.path.isdir(path):
-        os.makedirs(path)
-    elif len(os.listdir(path)) > 0:
-        os.system(f'rm -r {path}/*')
+from studies.utils import *
 
 
 def function(g, x, sigma_a) -> float:
     t = x[0]
     if g == 1 and 0.0 < t <= t_ramp:
-        return sigma_a * (1.0 + t/t_ramp*(m - 1.0))
+        return sigma_a * (1.0 + t/t_ramp*m)
     elif g == 1 and t > t_ramp:
-        return m * sigma_a
+        return (1.0 + m) * sigma_a
     else:
         return sigma_a
 
+########################################
+# Setup parameter study
+########################################
+path = os.path.dirname(os.path.abspath(__file__))
 
-# Nominal function parameters
-m, t_ramp = 1.03, 1.0
+if len(sys.argv) != 3:
+    raise AssertionError(
+        f'There must be a command line argument for the '
+        f'problem description and parameter set.')
 
-# Define current directory
-script_path = os.path.dirname(os.path.abspath(__file__))
+problem = int(sys.argv[1])
+if problem > 2:
+    raise ValueError('Invalid problem number.')
 
-# Get inputs
-case = int(sys.argv[1]) if len(sys.argv) > 1 else 0
-if case > 6:
-    raise AssertionError('Invalid case to run.')
+study = int(sys.argv[2])
+if study > 6:
+    raise ValueError('Invalid study number.')
 
-# Define parameter space
+# Define nominal values for each problem
+if problem == 0:
+    ramp, duration = 0.03, 1.0
+    t_final, dt = 2.0, 0.04
+elif problem == 1:
+    ramp, duration = -0.01, 1.0
+    t_final, dt = 4.0, 0.08
+else:
+    ramp, duration = -0.05, 0.01
+    t_final, dt = 0.02, 4.0e-4
+
+m, t_ramp = ramp, duration
+
+# Define parameter spaces
 parameters = {}
-if case == 0:
-    parameters['multiplier'] = np.linspace(1.01, 1.05, 21)
-elif case == 1:
-    parameters['duration'] = np.linspace(0.75, 1.25, 21)
-elif case == 2:
-    parameters['interface'] = np.linspace(39.0, 41.0, 21)
-elif case == 3:
-    parameters['multiplier'] = np.linspace(1.02, 1.04, 6)
-    parameters['duration'] = np.linspace(0.9, 1.1, 6)
-elif case == 4:
-    parameters['multiplier'] = np.linspace(1.02, 1.04, 6)
-    parameters['interface'] = np.linspace(38.0, 42.0, 5)
-elif case == 5:
-    parameters['duration'] = np.linspace(0.9, 1.1, 6)
-    parameters['interface'] = np.linspace(38.0, 42.0, 5)
-elif case == 6:
-    parameters['multiplier'] = np.linspace(1.02, 1.04, 4)
-    parameters['duration'] = np.linspace(0.9, 1.1, 4)
-    parameters['interface'] = np.linspace(38.0, 42.0, 4)
+if study == 0:
+    parameters['magnitude'] = setup_range(ramp, 0.2, 21)
+elif study == 1:
+    parameters['duration'] = setup_range(duration, 0.2, 21)
+elif study == 2:
+    parameters['interface'] = setup_range(40.0, 0.05, 21)
+elif study == 3:
+    parameters['magnitude'] = setup_range(ramp, 0.1, 6)
+    parameters['duration'] = setup_range(duration, 0.1, 6)
+elif study == 4:
+    parameters['magnitude'] = setup_range(ramp, 0.1, 6)
+    parameters['interface'] = setup_range(40.0, 0.025, 6)
+elif study == 5:
+    parameters['duration'] = setup_range(duration, 0.1, 6)
+    parameters['interface'] = setup_range(40.0, 0.025, 6)
+elif study == 6:
+    parameters['magnitude'] = setup_range(ramp, 0.1, 4)
+    parameters['duration'] = setup_range(duration, 0.1, 4)
+    parameters['interface'] = setup_range(40.0, 0.025, 4)
+else:
+    raise ValueError(f'Invalid case provided.')
 
 keys = list(parameters.keys())
 values = list(itertools.product(*parameters.values()))
 
+# Define the name of the problem
+if problem == 0:
+    problem_name = 'subcritical'
+elif problem == 1:
+    problem_name = 'supercritical'
+elif problem == 2:
+    problem_name = 'prompt_supercritical'
+else:
+    raise ValueError(f'Invalid problem type provided')
+
+# Define the name of the parameter study
 study_name = ''
 for k, key in enumerate(keys):
     study_name = key if k == 0 else study_name + f'_{key}'
 
+# Define the path to the output directory
+output_path = f'{path}/outputs/{problem_name}/{study_name}'
+setup_directory(output_path)
+
+# Save parameter sets
+param_filepath = f'{output_path}/params.txt'
+np.savetxt(param_filepath, np.array(values), fmt='%.8e')
+
+########################################
+# Setup the problem
+########################################
 # Create mesh and discretization
 zones = [0.0, 40.0, 200.0, 240.0]
 n_cells = [20, 80, 20]
@@ -81,7 +117,9 @@ mesh = create_1d_mesh(zones, n_cells, material_ids)
 discretization = FiniteVolume(mesh)
 
 # Create cross sections and sources
-materials = [Material(f'Material {i + 1}') for i in range(3)]
+materials = [Material('Material 0'),
+             Material('Material 1'),
+             Material('Material 2')]
 xs = [CrossSections() for _ in range(len(materials))]
 data = [xs_material_0_and_2, xs_material_1, xs_material_0_and_2]
 fcts = [function, None, None]
@@ -110,8 +148,8 @@ solver.use_precursors = True
 solver.lag_precursors = False
 
 # Set time stepping options
-solver.t_final = 2.0
-solver.dt = 0.02
+solver.t_final = t_final
+solver.dt = dt
 solver.method = 'tbdf2'
 
 solver.max_iterations = max_iterations
@@ -120,16 +158,9 @@ solver.tolerance = tolerance
 # Output informations
 solver.write_outputs = True
 
-# Define output path
-output_path = os.path.join(script_path,
-                           f'outputs/subcritical/{study_name}')
-setup_directory(output_path)
-
-# Save parameters
-param_filepath = os.path.join(output_path, 'params.txt')
-np.savetxt(param_filepath, np.array(values), fmt='%.8e')
-
+########################################
 # Run the reference problem
+########################################
 msg = '===== Running reference ====='
 head = '=' * len(msg)
 print()
@@ -141,14 +172,10 @@ solver.output_directory = simulation_path
 solver.initialize()
 solver.execute()
 
-# Run the study
+########################################
+# Run the parameter study
+########################################
 for n, params in enumerate(values):
-    msg = f'===== Running simulation {n} ====='
-    head = '=' * len(msg)
-    print('\n'.join(['', head, msg, head]))
-    for p in range(len(params)):
-        pname = keys[p].capitalize()
-        print(f'{pname:<10}:\t{params[p]:<5.4g}')
 
     # Setup output path
     simulation_path = os.path.join(output_path, str(n).zfill(3))
@@ -156,16 +183,16 @@ for n, params in enumerate(values):
     solver.output_directory = simulation_path
 
     # Modify system parameters
-    if 'multiplier' in keys and 'duration' not in keys:
-        t_ramp = 1.0
-        m = params[keys.index('multiplier')]
+    if 'magnitude' in keys and 'duration' not in keys:
+        t_ramp = duration
+        m = params[keys.index('magnitude')]
 
-    if 'duration' in keys and 'multiplier' not in keys:
-        m = 1.03
+    if 'duration' in keys and 'magnitude' not in keys:
+        m = ramp
         t_ramp = params[keys.index('duration')]
 
-    if 'multiplier' in keys and 'duration' in keys:
-        m = params[keys.index('multiplier')]
+    if 'magnitude' in keys and 'duration' in keys:
+        m = params[keys.index('magnitude')]
         t_ramp = params[keys.index('duration')]
 
     if 'interface' in keys:
@@ -175,7 +202,7 @@ for n, params in enumerate(values):
         solver.discretization = FiniteVolume(solver.mesh)
         solver.materials = deepcopy(materials)
 
-    if 'multiplier' in keys or 'duration' in keys:
+    if 'magnitude' in keys or 'duration' in keys:
         solver.materials = deepcopy(materials)
         for material_property in solver.materials[0].properties:
             if isinstance(material_property, CrossSections):
@@ -184,7 +211,12 @@ for n, params in enumerate(values):
     # Run the problem
     solver.initialize()
 
-    print(solver.k_eff)
-    print(solver.material_xs[0].sigma_f)
+    msg = f'===== Running simulation {n} ====='
+    head = '=' * len(msg)
+    print('\n'.join(['', head, msg, head]))
+    for p in range(len(params)):
+        pname = keys[p].capitalize()
+        print(f'{pname:<10}:\t{params[p]:<5.3e}')
+    print(f"{'k_eff':<10}:\t{solver.k_eff:<8.5f}")
 
     solver.execute()
