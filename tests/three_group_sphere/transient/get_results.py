@@ -5,23 +5,17 @@ import matplotlib.pyplot as plt
 
 from readers import NeutronicsSimulationReader
 
-try:
-    if len(sys.argv) != 2:
-        raise AssertionError(
-            'There must be a command line argument to point to '
-            'the test case.\n'
-            'Options are:\n '
-            '\t0 = Finite Volume\n'
-            '\t1 = Piecewise Continuous')
+if len(sys.argv) != 2:
+    raise AssertionError(
+        'There must be a command line argument to point to '
+        'the test case.\n'
+        'Options for the test case are:\n '
+        '\t0 = Finite Volume\n'
+        '\t1 = Piecewise Continuous')
 
-    arg = int(sys.argv[1])
-    if arg > 1:
-        raise ValueError('Unrecognized result index.')
-except BaseException as err:
-    print(); print(err.args[0]); print()
-    sys.exit()
-
-n = 4
+arg = int(sys.argv[1])
+if arg > 1:
+    raise ValueError('Unrecognized result index.')
 
 script_path = os.path.dirname(os.path.abspath(__file__))
 base = os.path.join(script_path, 'outputs')
@@ -33,42 +27,35 @@ else:
 sim = NeutronicsSimulationReader(path)
 sim.read_simulation_data()
 
-sim.plot_flux_moments(0, -1, grouping='group')
-
-from rom.dmd import DMD
+from pyROMs.dmd import DMD
 from numpy.linalg import norm
 
-X = sim.create_simulation_matrix().T
+X = sim.create_simulation_matrix()
 times = sim.times
 
 t0, tf, dt = times[0], times[-1], times[1]-times[0]
 
-dmd = DMD(svd_rank=n)
-dmd.snapshot_time = {'t0': t0, 'tf': tf, 'dt': dt}
+dmd = DMD(svd_rank=4)
 dmd.fit(X)
 
 Xdmd = dmd.reconstructed_data
-
-step_errors = []
-for t in range(len(times)):
-    x, xdmd = norm(X[:, t]), norm(Xdmd[:, t])
-    error = norm(x - xdmd) / norm(x)
-    step_errors.append(error)
+timestep_errors = dmd.snapshot_errors
 
 plt.figure()
 plt.xlabel('Time [sec]', fontsize=14)
 plt.ylabel(r'Relative $L^2$ Error', fontsize=14)
-plt.semilogy(times, step_errors, 'b*-')
+plt.semilogy(times, timestep_errors, 'b*-')
 plt.grid(True)
+plt.tight_layout()
 plt.show()
 
 from modules.neutron_diffusion.analytic import *
 
 exact: AnalyticSolution = load(script_path + '/sphere6cm.obj')
-alphas = [exact.get_mode(i, 0, 'amp').alpha for i in range(n)]
+alphas = [exact.get_mode(i, 0, 'amp').alpha for i in range(dmd.n_modes)]
 alphas = np.exp(np.array(alphas) * dt)
 
-eigs = dmd.eigs
+eigs = dmd.eigvals
 for i in range(len(eigs)):
     if eigs[i].imag != 0.0:
         omega = np.log(eigs[i])/dt
