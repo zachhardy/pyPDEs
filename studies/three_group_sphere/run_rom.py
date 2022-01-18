@@ -16,8 +16,6 @@ from pyROMs.dmd import DMD
 
 warnings.filterwarnings('ignore')
 
-path = os.path.dirname(os.path.abspath(__file__))
-
 ########################################
 # Get the path to results
 ########################################
@@ -97,7 +95,6 @@ splits = train_test_split(X[interior], Y[interior], test_size=0.2)
 X_train, X_test, Y_train, Y_test = splits
 X_train = np.vstack((X_train, X[bndry]))
 Y_train = np.vstack((Y_train, Y[bndry]))
-
 
 # Construct POD model, predict test data
 start_time = time.time()
