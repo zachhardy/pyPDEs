@@ -22,19 +22,22 @@ if len(sys.argv) != 3:
         f'problem description and parameter set.')
 
 problem = int(sys.argv[1])
-case = int(sys.argv[2])
+if problem > 1:
+    raise ValueError('Invalid problem number.')
+
+study = int(sys.argv[2])
+if study > 2:
+    raise ValueError('Invalid study number.')
 
 # Define all parametric combinations
 parameters = {}
-if case == 0:
-    parameters['density'] = setup_range(0.0475, 0.1, 26)
-elif case == 1:
-    parameters['size'] = setup_range(5.75, 0.1, 26)
-elif case == 2:
-    parameters['density'] = setup_range(0.05, 0.05, 7)
-    parameters['size'] = setup_range(5.75, 0.05, 7)
+if study == 0:
+    parameters['density'] = setup_range(0.05, 0.025, 26)
+elif study == 1:
+    parameters['size'] = setup_range(6.0, 0.025, 26)
 else:
-    raise ValueError(f'Invalid case provided.')
+    parameters['density'] = setup_range(0.05, 0.0125, 6)
+    parameters['size'] = setup_range(6.0, 0.0125, 6)
 
 keys = list(parameters.keys())
 values = list(itertools.product(*parameters.values()))
@@ -42,10 +45,8 @@ values = list(itertools.product(*parameters.values()))
 # Define the name of the problem
 if problem == 0:
     problem_name = 'keigenvalue'
-elif problem == 1:
-    problem_name = 'ics'
 else:
-    raise ValueError(f'Invalid problem type provided')
+    problem_name = 'ics'
 
 # Define the name of the parameter study
 study_name = ''
@@ -90,8 +91,8 @@ solver.initial_conditions = ics if problem == 1 else None
 solver.normalize_fission = False
 solver.phi_norm_method = None
 
-solver.t_final = 0.01
-solver.dt = 2.5e-4
+solver.t_final = 0.1
+solver.dt = 1.25e-3
 solver.stepping_method = 'tbdf2'
 
 solver.write_outputs = True
