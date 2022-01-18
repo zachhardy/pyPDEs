@@ -19,7 +19,7 @@ path = os.path.dirname(os.path.abspath(__file__))
 if len(sys.argv) != 3:
     raise AssertionError(
         f'There must be a command line argument for the '
-        f'problem description and parameter set.')
+        f'problem type and parameter study.')
 
 problem = int(sys.argv[1])
 if problem > 1:
@@ -36,8 +36,8 @@ if study == 0:
 elif study == 1:
     parameters['size'] = setup_range(6.0, 0.025, 26)
 else:
-    parameters['density'] = setup_range(0.05, 0.0125, 6)
-    parameters['size'] = setup_range(6.0, 0.0125, 6)
+    parameters['density'] = setup_range(0.05, 0.0125, 7)
+    parameters['size'] = setup_range(6.0, 0.0125, 7)
 
 keys = list(parameters.keys())
 values = list(itertools.product(*parameters.values()))
