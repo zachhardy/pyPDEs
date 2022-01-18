@@ -65,7 +65,7 @@ if arg == 2:
 # plt.show()
 
 
-from rom.dmd import DMD
+from pyROMs.dmd import DMD
 
 X = sim.create_simulation_matrix('power_density')
 times = sim.times
@@ -78,6 +78,6 @@ dmd.print_summary()
 
 
 plt.figure()
-errors = dmd.snapshot_reconstruction_errors
+errors = dmd.snapshot_errors
 plt.semilogy(times, errors, '-*b')
 plt.show()

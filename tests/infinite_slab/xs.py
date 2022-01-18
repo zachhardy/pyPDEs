@@ -19,7 +19,7 @@ def sigma_a_ramp_up(g: int, x: List[float], sigma_a: float) -> float:
 def sigma_a_ramp_down(g: int, x: List[float], sigma_a: float) -> float:
     t = x[0]
     if g == 1 and 0.0 < t <= 1.0:
-        return sigma_a * (1.0 - t * 0.01)
+        return sigma_a * (1.0 + t/1.0*(0.99 - 1.0))
     elif g == 1 and t > 1.0:
         return 0.99 * sigma_a
     else:
@@ -29,7 +29,7 @@ def sigma_a_ramp_down(g: int, x: List[float], sigma_a: float) -> float:
 def sigma_a_fast_ramp_down(g: int, x: List[float], sigma_a: float) -> float:
     t = x[0]
     if g == 1 and 0.0 <= t <= 0.01:
-        return sigma_a * (1.0 - t/0.01 * 0.05)
+        return sigma_a * (1.0 + t/0.01*(0.95 - 1.0))
     elif g == 1 and t > 0.01:
         return 0.95 * sigma_a
     else:
