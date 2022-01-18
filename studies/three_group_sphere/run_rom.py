@@ -26,32 +26,32 @@ path = os.path.dirname(os.path.abspath(__file__))
 if len(sys.argv) != 3:
     raise AssertionError(
         f'There must be a command line argument to point '
-        f'to the problem type, study, and simulation number.')
+        f'to the problem type and study.')
 
 problem = int(sys.argv[1])
-case = int(sys.argv[2])
+if problem > 1:
+    raise ValueError('Invalid problem number.')
 
+study = int(sys.argv[2])
+if study > 2:
+    raise ValueError('Invalid study number')
 
 # Get problem name
 if problem == 0:
     problem_name = 'keigenvalue'
-elif problem == 1:
-    problem_name = 'ics'
 else:
-    raise ValueError('Invalid problem provided..')
+    problem_name = 'ics'
 
 # Get parameter study name
-if case == 0:
-    case_name = 'density'
-elif case == 1:
-    case_name = 'size'
-elif case == 2:
-    case_name = 'density_size'
+if study == 0:
+    study_name = 'density'
+elif study == 1:
+    study_name = 'size'
 else:
-    raise ValueError('Invalid case provided.')
+    study_name = 'density_size'
 
 # Define path
-path = f'{path}/outputs/{problem_name}/{case_name}'
+path = f'{path}/outputs/{problem_name}/{study_name}'
 
 # Check path
 if not os.path.isdir(path):
@@ -100,25 +100,27 @@ Y_train = np.vstack((Y_train, Y[bndry]))
 
 
 # Construct POD model, predict test data
-tstart = time.time()
-svd_rank = 1.0-1.0e-8
+start_time = time.time()
+svd_rank = 1.0-1.0e-12
 pod = POD(svd_rank=svd_rank)
 pod.fit(X_train, Y_train, 'rbf')
-offline_time = time.time() - tstart
+construction_time = time.time() - start_time
 
-tstart = time.time()
-X_pred = pod.predict(Y_test)
-predict_time = time.time() - tstart
+X_pred, avg_predict_time = [], 0.0
+for y_test in Y_test:
+    start_time = time.time()
+    X_pred.append(pod.predict(y_test))
+    avg_predict_time += time.time() - start_time
+avg_predict_time /= len(Y_test)
 
 # Format POD predictions for DMD
 X_pred = dataset.unstack_simulation_vector(X_pred)
 X_test = dataset.unstack_simulation_vector(X_test)
 
 # Compute simulation errors
-errors = []
+errors = np.zeros(len(X_test))
 for i in range(len(X_test)):
-    error = norm(X_test[i]-X_pred[i]) / norm(X_test[i])
-    errors.append(error)
+    errors[i] = norm(X_test[i]-X_pred[i]) / norm(X_test[i])
 
 # Get worst-case result
 argmax = np.argmax(errors)
@@ -130,6 +132,7 @@ msg = f'===== Summary of {len(errors)} POD Models ====='
 header = '=' * len(msg)
 print('\n'.join(['', header, msg, header]))
 print(f'Number of Training Snapshots:\t\t{len(X_train)}')
+print(f'Number of POD Modes:\t\t\t{pod.n_modes}')
 print(f'Average POD Reconstruction Error:\t{np.mean(errors):.3e}')
 print(f'Maximum POD Reconstruction Error:\t{np.max(errors):.3e}')
 print(f'Minimum POD Reconstruction Error:\t{np.min(errors):.3e}')
@@ -137,11 +140,11 @@ print()
 
 # Worst POD result
 title = 'Worst Result\n'
-if case in [0, 2]:
+if study in [0, 2]:
     title += f'$\\rho$ = {Y[argmax][0]:.3g} $\\frac{{atoms}}{{b-cm}}$'
-    title += ', ' if case == 2 else '\n'
-if case in [1, 2]:
-    title += f'Size = {Y[argmax][case-1]:.3g} $cm$\n'
+    title += ', ' if study == 2 else '\n'
+if study in [1, 2]:
+    title += f'Size = {Y[argmax][study - 1]:.3g} $cm$\n'
 title += f'Error = {np.max(errors):.3e}'
 
 plt.figure()
@@ -155,15 +158,16 @@ plt.show()
 
 # DMD on worst result
 dmd = DMD(svd_rank=svd_rank)
-
 dmd.fit(x_pred)
+dmd.print_summary()
 timestep_errors = dmd.snapshot_errors
 
 plt.figure()
 plt.xlabel(f'Time ($\mu$s)', fontsize=12)
-plt.ylabel(f'$L^2$ Error', fontsize=12)
+plt.ylabel(f'$Relative L^2$ Error', fontsize=12)
 plt.semilogy(times, timestep_errors, '-b*')
 plt.grid(True)
+plt.show()
 
 # base = '/Users/zacharyhardy/Documents/phd/prelim'
 # # fname = base + '/figures/worst_dmd_reconstruction.pdf'
@@ -172,6 +176,7 @@ plt.grid(True)
 # Interpolation and extrapolation on worst result
 mid = len(x_pred) // 2
 x = x_pred[:mid + 1:2]
+dmd = DMD(svd_rank=svd_rank)
 dmd.fit(x)
 
 dmd.dmd_time['tend'] *= 2
@@ -183,12 +188,13 @@ timestep_errors = norm(x_test-x_dmd, axis=1)/norm(x_test, axis=1)
 plt.figure()
 plt.xlabel('Time ($\mu$s)', fontsize=12)
 plt.ylabel('$L^2$ Error', fontsize=12)
-plt.semilogy(times[:mid+1:2], timestep_errors[:mid+1:2],
+plt.semilogy(times[:mid + 1:2], timestep_errors[:mid + 1:2],
              '-*b', markersize=3.0, label='Reconstuction')
-plt.semilogy(times[1:mid+1:2], timestep_errors[1:mid+1:2],
+plt.semilogy(times[1:mid + 1:2], timestep_errors[1:mid + 1:2],
              '--^r', markersize=3.0, label='Interpolation')
-plt.semilogy(times[mid+1:], timestep_errors[mid+1:],
-             '-.og', markersize=3.0, label='Extrapolation')
+plt.semilogy(times[mid + 1:], timestep_errors[mid + 1:],
+             '-.+g', markersize=3.0, label='Extrapolation')
+
 plt.legend()
 plt.grid(True)
 plt.show()
@@ -198,17 +204,20 @@ plt.show()
 # # plt.show()
 
 # Construct DMD models, compute errors
-dmd_time = 0.0
+avg_dmd_time = 0.0
+dmd = DMD(svd_rank=svd_rank)
 errors = np.zeros(len(X_pred))
 for i in range(len(X_pred)):
+    # Fit DMD model
     tstart = time.time()
-    dmd = DMD(svd_rank=svd_rank)
-    dmd.fit(X_pred[i].T)
-    dmd_time += time.time() - tstart
+    dmd.fit(X_pred[i])
+    avg_dmd_time += time.time() - tstart
 
+    # Compute error
     x_dmd = dmd.reconstructed_data.real
-    errors[i] = norm(X_test[i] - x_dmd.T) / norm(X_test[i])
-query_time = predict_time + dmd_time
+    errors[i] = norm(X_test[i]-x_dmd) / norm(X_test[i])
+avg_dmd_time /= len(X_pred)
+avg_query_time = avg_predict_time + avg_dmd_time
 
 # Print aggregated DMD results
 msg = f'===== Summary of {errors.size} DMD Models ====='
@@ -219,11 +228,12 @@ print(f'Maximum DMD Reconstruction Error:\t{np.max(errors):.3e}')
 print(f'Minimum DMD Reconstruction Error:\t{np.min(errors):.3e}')
 print()
 
+# Print cost
 msg = f'===== Summary of POD-DMD Model Cost ====='
 header = '=' * len(msg)
 print('\n'.join([header, msg, header]))
-print(f'Construction:\t\t\t{offline_time:.3e} s')
-print(f'Prediction:\t\t\t{predict_time:.3e} s')
-print(f'Decomposition:\t\t\t{dmd_time:.3e} s')
-print(f'Total query cost:\t\t{query_time:.3e} s')
+print(f'Construction:\t\t\t{construction_time:.3e} s')
+print(f'Average Prediction:\t\t{avg_predict_time:.3e} s')
+print(f'Average Decomposition:\t\t{avg_dmd_time:.3e} s')
+print(f'Average Query Cost:\t\t{avg_query_time:.3e} s')
 print()
