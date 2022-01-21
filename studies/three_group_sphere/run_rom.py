@@ -78,19 +78,20 @@ for p in range(n_parameters):
     bounds[p] = [min(Y[:, p]), max(Y[:, p])]
 
 # Determine interior and boundary indices
-interior, bndry = [], []
+bndry = []
 for i in range(len(Y)):
     y = Y[i]
 
+    # Determine if on boundary
     on_bndry = False
     for p in range(n_parameters):
         if any([y[p] == bounds[p][m] for m in [0, 1]]):
             on_bndry = True
             break
+    bndry.append(on_bndry)
+interior = [not b for b in bndry]
 
-    if not on_bndry:  interior += [i]
-    else:  bndry += [i]
-
+# Split into test and training set
 splits = train_test_split(X[interior], Y[interior], test_size=0.2)
 X_train, X_test, Y_train, Y_test = splits
 X_train = np.vstack((X_train, X[bndry]))
@@ -100,10 +101,11 @@ Y_train = np.vstack((Y_train, Y[bndry]))
 start_time = time.time()
 svd_rank = 1.0-1.0e-12
 pod = POD(svd_rank=svd_rank)
-pod.fit(X_train, Y_train, 'rbf')
+pod.fit(X_train, Y_train, 'rbf_gaussian', epsilon=100.0)
 construction_time = time.time() - start_time
 
-X_pred, avg_predict_time = [], 0.0
+X_pred = []
+avg_predict_time = 0.0
 for y_test in Y_test:
     start_time = time.time()
     X_pred.append(pod.predict(y_test))
@@ -117,7 +119,7 @@ X_test = dataset.unstack_simulation_vector(X_test)
 # Compute simulation errors
 errors = np.zeros(len(X_test))
 for i in range(len(X_test)):
-    errors[i] = norm(X_test[i]-X_pred[i]) / norm(X_test[i])
+    errors[i] = norm(X_test[i]-X_pred[i])/norm(X_test[i])
 
 # Get worst-case result
 argmax = np.argmax(errors)
@@ -127,7 +129,7 @@ timestep_errors = norm(x_test-x_pred, axis=1)/norm(x_test, axis=1)
 # Print aggregated POD results
 msg = f'===== Summary of {len(errors)} POD Models ====='
 header = '=' * len(msg)
-print('\n'.join(['', header, msg, header]))
+print('\n'.join([header, msg, header]))
 print(f'Number of Training Snapshots:\t\t{len(X_train)}')
 print(f'Number of POD Modes:\t\t\t{pod.n_modes}')
 print(f'Average POD Reconstruction Error:\t{np.mean(errors):.3e}')
@@ -156,8 +158,9 @@ plt.show()
 # DMD on worst result
 dmd = DMD(svd_rank=svd_rank)
 dmd.fit(x_pred)
-dmd.print_summary()
-timestep_errors = dmd.snapshot_errors
+
+x_dmd = dmd.reconstructed_data
+timestep_errors = norm(x_test-x_dmd, axis=1)/norm(x_test, axis=1)
 
 plt.figure()
 plt.xlabel(f'Time ($\mu$s)', fontsize=12)
@@ -165,40 +168,6 @@ plt.ylabel(f'$Relative L^2$ Error', fontsize=12)
 plt.semilogy(times, timestep_errors, '-b*')
 plt.grid(True)
 plt.show()
-
-# base = '/Users/zacharyhardy/Documents/phd/prelim'
-# # fname = base + '/figures/worst_dmd_reconstruction.pdf'
-# # plt.savefig(fname)
-
-# Interpolation and extrapolation on worst result
-mid = len(x_pred) // 2
-x = x_pred[:mid + 1:2]
-dmd = DMD(svd_rank=svd_rank)
-dmd.fit(x)
-
-dmd.dmd_time['tend'] *= 2
-dmd.dmd_time['dt'] /= 2
-x_dmd = dmd.reconstructed_data
-
-timestep_errors = norm(x_test-x_dmd, axis=1)/norm(x_test, axis=1)
-
-plt.figure()
-plt.xlabel('Time ($\mu$s)', fontsize=12)
-plt.ylabel('$L^2$ Error', fontsize=12)
-plt.semilogy(times[:mid + 1:2], timestep_errors[:mid + 1:2],
-             '-*b', markersize=3.0, label='Reconstuction')
-plt.semilogy(times[1:mid + 1:2], timestep_errors[1:mid + 1:2],
-             '--^r', markersize=3.0, label='Interpolation')
-plt.semilogy(times[mid + 1:], timestep_errors[mid + 1:],
-             '-.+g', markersize=3.0, label='Extrapolation')
-
-plt.legend()
-plt.grid(True)
-plt.show()
-
-# # fname = base + '/figures/worst_dmd_interp_extrap.pdf'
-# # plt.savefig(fname)
-# # plt.show()
 
 # Construct DMD models, compute errors
 avg_dmd_time = 0.0
@@ -219,7 +188,7 @@ avg_query_time = avg_predict_time + avg_dmd_time
 # Print aggregated DMD results
 msg = f'===== Summary of {errors.size} DMD Models ====='
 header = '=' * len(msg)
-print('\n'.join(['', header, msg, header]))
+print('\n'.join([header, msg, header]))
 print(f'Average DMD Reconstruction Error:\t{np.mean(errors):.3e}')
 print(f'Maximum DMD Reconstruction Error:\t{np.max(errors):.3e}')
 print(f'Minimum DMD Reconstruction Error:\t{np.min(errors):.3e}')
