@@ -32,9 +32,9 @@ if study > 2:
 # Define all parametric combinations
 parameters = {}
 if study == 0:
-    parameters['density'] = setup_range(0.05, 0.025, 26)
+    parameters['density'] = setup_range(0.05, 0.025, 31)
 elif study == 1:
-    parameters['size'] = setup_range(6.0, 0.025, 26)
+    parameters['size'] = setup_range(6.0, 0.025, 31)
 else:
     parameters['density'] = setup_range(0.05, 0.0125, 7)
     parameters['size'] = setup_range(6.0, 0.0125, 7)
