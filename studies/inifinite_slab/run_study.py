@@ -59,24 +59,24 @@ m, t_ramp = ramp, duration
 # Define parameter spaces
 parameters = {}
 if study == 0:
-    parameters['magnitude'] = setup_range(ramp, 0.2, 21)
+    parameters['magnitude'] = setup_range(ramp, 0.2, 31)
 elif study == 1:
-    parameters['duration'] = setup_range(duration, 0.2, 21)
+    parameters['duration'] = setup_range(duration, 0.2, 31)
 elif study == 2:
-    parameters['interface'] = setup_range(40.0, 0.05, 21)
+    parameters['interface'] = setup_range(40.0, 0.05, 31)
 elif study == 3:
-    parameters['magnitude'] = setup_range(ramp, 0.1, 6)
-    parameters['duration'] = setup_range(duration, 0.1, 6)
+    parameters['magnitude'] = setup_range(ramp, 0.1, 7)
+    parameters['duration'] = setup_range(duration, 0.1, 7)
 elif study == 4:
-    parameters['magnitude'] = setup_range(ramp, 0.1, 6)
-    parameters['interface'] = setup_range(40.0, 0.025, 6)
+    parameters['magnitude'] = setup_range(ramp, 0.1, 7)
+    parameters['interface'] = setup_range(40.0, 0.025, 7)
 elif study == 5:
-    parameters['duration'] = setup_range(duration, 0.1, 6)
-    parameters['interface'] = setup_range(40.0, 0.025, 6)
+    parameters['duration'] = setup_range(duration, 0.1, 7)
+    parameters['interface'] = setup_range(40.0, 0.025, 7)
 elif study == 6:
-    parameters['magnitude'] = setup_range(ramp, 0.1, 4)
-    parameters['duration'] = setup_range(duration, 0.1, 4)
-    parameters['interface'] = setup_range(40.0, 0.025, 4)
+    parameters['magnitude'] = setup_range(ramp, 0.1, 5)
+    parameters['duration'] = setup_range(duration, 0.1, 5)
+    parameters['interface'] = setup_range(40.0, 0.025, 5)
 else:
     raise ValueError(f'Invalid case provided.')
 
