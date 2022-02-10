@@ -43,7 +43,7 @@ def get_data(problem_name: str, *args) -> NeutronicsDatasetReader:
                 f"Invalid case argument for {problem_name}.")
 
     # Check study argument
-    study_arg_limit = [2, 6, 2, 2]
+    study_arg_limit = [3, 6, 2, 2]
     study = int(args[1]) if idx < 3 else int(args[0])
     if study > study_arg_limit[idx]:
         raise ValueError(
@@ -60,8 +60,10 @@ def get_data(problem_name: str, *args) -> NeutronicsDatasetReader:
             study_name = 'density'
         elif study == 1:
             study_name = 'size'
-        else:
+        elif study == 2:
             study_name = 'density_size'
+        else:
+            study_name = 'density_size_down_scatter'
 
     # Handle infinite slab
     if problem_name == 'infinite_slab':
