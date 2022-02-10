@@ -10,8 +10,9 @@ from sympy import integrate, lambdify, symbols
 from sympy import Matrix, Expr
 
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import Figure, Axes
 
-from typing import List, Callable, Tuple
+from typing import List, Tuple
 
 from pyPDEs.material import CrossSections
 from .modes import AlphaMode
@@ -78,20 +79,20 @@ class AnalyticSolution:
         self._check_inputs()
 
         # Print header
-        msg = '===== Computing alpha-eigenfunction expansion ====='
-        msg = '\n'.join(['', '='*len(msg), msg, '='*len(msg)])
+        msg = "===== Computing alpha-eigenfunction expansion ====="
+        msg = "\n".join(["", "="*len(msg), msg, "="*len(msg)])
         print(msg)
 
         # Precompute spatial integrals. Results are function of n
         import time
-        print(f'Starting integrations...')
+        print(f"Starting integrations...")
         t_start = time.time()
         self._rhs = self._integrate_volume(self.varphi_n**2)
         self._lhs = []
         for g in range(self.n_groups):
             ic = self.initial_conditions[g]
             self._lhs += [self._integrate_volume(self.varphi_n * ic)]
-        print(f'Integrations took {time.time() - t_start:.3g} sec\n')
+        print(f"Integrations took {time.time() - t_start:.3g} sec\n")
 
         # Defne the reference grid
         n_pts = int(1.0e4)
@@ -208,6 +209,23 @@ class AnalyticSolution:
             amplitude.
         """
         self.get_mode(n, m, method).plot_mode(r)
+
+    def plot_expansion(self, r: ndarray, t: float) -> None:
+        r = np.array(r)
+        phi = self.evaluate_expansion(r, t)
+
+        # Initialize the figure
+        fig: Figure = plt.figure()
+        ax: Axes = fig.add_subplot(1, 1, 1)
+        ax.set_title(f"Time = {t:.3e} $\\mu$s")
+        ax.set_xlabel("r (cm)", fontsize=12)
+        ax.set_ylabel(r"$\phi_g(r)$", fontsize=12)
+
+        # Plot the profiles
+        for g in range(self.n_groups):
+            ax.plot(phi[g::self.n_groups], label=f'Group {g}')
+        ax.legend()
+        ax.grid(True)
 
     def find_mode_index_from_alpha(self, alpha: float) -> int:
         """
