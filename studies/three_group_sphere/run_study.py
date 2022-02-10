@@ -2,6 +2,7 @@ import os
 import sys
 import itertools
 import time
+from copy import deepcopy
 
 import numpy as np
 
@@ -27,7 +28,7 @@ if problem > 1:
     raise ValueError('Invalid problem number.')
 
 study = int(sys.argv[2])
-if study > 2:
+if study > 3:
     raise ValueError('Invalid study number.')
 
 # Define all parametric combinations
@@ -36,9 +37,13 @@ if study == 0:
     parameters['density'] = setup_range(0.05, 0.025, 31)
 elif study == 1:
     parameters['size'] = setup_range(6.0, 0.025, 31)
-else:
+elif study == 2:
     parameters['density'] = setup_range(0.05, 0.0125, 7)
     parameters['size'] = setup_range(6.0, 0.0125, 7)
+else:
+    parameters['density'] = setup_range(0.05, 0.01, 5)
+    parameters['size'] = setup_range(6.0, 0.01, 5)
+    parameters['down_scatter'] = setup_range(1.46, 0.02, 5)
 
 keys = list(parameters.keys())
 values = list(itertools.product(*parameters.values()))
@@ -72,6 +77,7 @@ material = Material()
 xs = CrossSections()
 xs.read_from_xs_file('xs/three_grp_us.cxs', density=0.05)
 material.add_properties(xs)
+materials = [material]
 
 boundaries = [ReflectiveBoundary(np.zeros(xs.n_groups)),
               ZeroFluxBoundary(np.zeros(xs.n_groups))]
@@ -80,7 +86,7 @@ solver = TransientSolver()
 solver.mesh = mesh
 solver.discretization = discretization
 solver.boundaries = boundaries
-solver.materials = [material]
+solver.materials = materials
 solver.use_precursors = False
 
 r_b = mesh.vertices[-1].z
@@ -133,6 +139,12 @@ for n, params in enumerate(values):
         solver.mesh = create_1d_mesh([0.0, params[ind]], [mesh.n_cells],
                                      coord_sys=mesh.coord_sys)
         solver.discretization = FiniteVolume(mesh)
+    if 'down_scatter' in keys:
+        ind = keys.index('down_scatter')
+        solver.materials = deepcopy(materials)
+        for material_property in solver.materials[0].properties:
+            if isinstance(material_property, CrossSections):
+                material_property._transfer_matrix[0][0][1] = params[ind]
 
     # Run the problem
     init_time = time.time()
