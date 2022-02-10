@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
+from numpy import ndarray
 
 from pyPDEs.spatial_discretization import *
 
@@ -58,10 +59,10 @@ def plot_flux(self: 'SteadyStateSolver',
 
     if self.mesh.dim == 1:
         grid = [p.z for p in grid]
-        ax.set_xlabel('Location')
-        ax.set_ylabel(r'$\phi(r)$')
+        ax.set_xlabel("r (cm)", fontsize=12)
+        ax.set_ylabel(r"$\phi(r)$", fontsize=12)
         for g in range(self.n_groups):
-            label = f'Group {g}'
+            label = f"Group {g}"
             phi = self.phi[g::self.n_groups]
             ax.plot(grid, phi, label=label)
         ax.legend()
@@ -97,10 +98,10 @@ def plot_precursors(self: 'SteadyStateSolver',
 
     if self.mesh.dim == 1:
         grid = [cell.centroid.z for cell in self.mesh.cells]
-        ax.set_xlabel('Location')
-        ax.set_ylabel('Precursor Family')
+        ax.set_xlabel("r (cm)")
+        ax.set_ylabel("C$_j$")
         for j in range(self.n_precursors):
-            label = f'Family {j}'
+            label = f"Precursor {j}"
             c = self.precursors[j::self.n_precursors]
             ax.plot(grid, c, label=label)
         ax.legend()
