@@ -10,7 +10,7 @@ from modules.neutron_diffusion import *
 abs_path = os.path.dirname(os.path.abspath(__file__))
 
 # Create mesh and discretization
-mesh = create_1d_mesh([0.0, 6.0], [100], coord_sys='spherical')
+mesh = create_1d_mesh([0.0, 6.1612], [100], coord_sys='spherical')
 discretization = FiniteVolume(mesh)
 
 # Create cross sections and sources
