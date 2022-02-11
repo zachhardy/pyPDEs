@@ -60,7 +60,7 @@ def plot_flux(self: 'SteadyStateSolver',
     if self.mesh.dim == 1:
         grid = [p.z for p in grid]
         ax.set_xlabel("r (cm)", fontsize=12)
-        ax.set_ylabel(r"$\phi(r)$", fontsize=12)
+        ax.set_ylabel(r"$\phi_g(r)$", fontsize=12)
         for g in range(self.n_groups):
             label = f"Group {g}"
             phi = self.phi[g::self.n_groups]
