@@ -18,41 +18,31 @@ from studies.utils import *
 ########################################
 path = os.path.dirname(os.path.abspath(__file__))
 
-if len(sys.argv) != 3:
+if len(sys.argv) != 2:
     raise AssertionError(
         f'There must be a command line argument for the '
         f'problem type and parameter study.')
 
-problem = int(sys.argv[1])
-if problem > 1:
-    raise ValueError('Invalid problem number.')
-
-study = int(sys.argv[2])
+study = int(sys.argv[1])
 if study > 3:
     raise ValueError('Invalid study number.')
 
 # Define all parametric combinations
 parameters = {}
 if study == 0:
-    parameters['density'] = setup_range(0.05, 0.025, 31)
+    parameters['size'] = setup_range(6.1612, 0.025, 31)
 elif study == 1:
-    parameters['size'] = setup_range(6.0, 0.025, 31)
+    parameters['density'] = setup_range(0.05134325, 0.025, 31)
 elif study == 2:
-    parameters['density'] = setup_range(0.05, 0.0125, 7)
-    parameters['size'] = setup_range(6.0, 0.0125, 7)
+    parameters['size'] = setup_range(6.0, 0.01, 6)
+    parameters['density'] = setup_range(0.05, 0.01, 6)
 else:
-    parameters['density'] = setup_range(0.05, 0.01, 5)
-    parameters['size'] = setup_range(6.0, 0.01, 5)
-    parameters['down_scatter'] = setup_range(1.46, 0.02, 5)
+    parameters['size'] = setup_range(6.0, 0.02, 5)
+    parameters['density'] = setup_range(0.05, 0.005, 5)
+    parameters['down_scatter'] = setup_range(1.46, 0.1, 5)
 
 keys = list(parameters.keys())
 values = list(itertools.product(*parameters.values()))
-
-# Define the name of the problem
-if problem == 0:
-    problem_name = 'keigenvalue'
-else:
-    problem_name = 'ics'
 
 # Define the name of the parameter study
 study_name = ''
@@ -60,7 +50,7 @@ for k, key in enumerate(keys):
     study_name = key if k == 0 else study_name + f'_{key}'
 
 # Define the path to the output directory
-output_path = f'{path}/outputs/{problem_name}/{study_name}'
+output_path = f'{path}/outputs/{study_name}'
 setup_directory(output_path)
 
 # Save parameter sets
@@ -90,10 +80,10 @@ solver.materials = materials
 solver.use_precursors = False
 
 r_b = mesh.vertices[-1].z
-ics = [lambda r: 1.0 - r**2/r_b**2,
-       lambda r: 1.0 - r**2/r_b**2,
-       lambda r: 0.0]
-solver.initial_conditions = ics if problem == 1 else None
+solver.initial_conditions = \
+    [lambda r: 1.0 - r**2/r_b**2,
+     lambda r: 1.0 - r**2/r_b**2,
+     lambda r: 0.0]
 
 solver.t_final = 0.1
 solver.dt = 2.0e-3
