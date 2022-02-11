@@ -10,19 +10,28 @@ from sklearn.model_selection import RepeatedKFold
 
 from studies.utils import *
 from pyROMs.pod import POD
-from pyROMs.dmd import DMD
 
 warnings.filterwarnings('ignore')
-
-only_interior = False
 
 ########################################
 # Parse the data
 ########################################
-case, study = int(sys.argv[1]), int(sys.argv[2])
-dataset = get_data('three_group_sphere', case, study)
+study = int(sys.argv[1])
+dataset = get_data('three_group_sphere', study)
 
-X = dataset.create_dataset_matrix('power_density')
+var = 'power_density'
+n_splits = 5 if study == 0 else 2
+n_repeats = 500 // n_splits
+interior_only = True
+tau = 1.0e-8
+interp = 'rbf_gaussian' if study == 0 else 'rbf_cubic'
+eps = 1.0 if study == 0 else 200.0
+if interior_only and study == 3:
+    n_splits = 4
+    n_repeats = 100
+    interp = 'rbf'
+
+X = dataset.create_dataset_matrix(var)
 Y = dataset.parameters
 
 # KFold cross validation
@@ -31,15 +40,15 @@ cv = {'mean': [], 'std': [],
       'max': [], 'min': [],
       'construction': [], 'query': []}
 
-cross_validator = RepeatedKFold(n_splits=10, n_repeats=50)
-if only_interior:
+cross_validator = RepeatedKFold(n_splits=n_splits, n_repeats=n_repeats)
+if interior_only:
     interior = dataset.interior_map
     iterator = cross_validator.split(X[interior], Y[interior])
 else:
     iterator = cross_validator.split(X, Y)
 
 for train, test in iterator:
-    if only_interior:
+    if interior_only:
         boundary = dataset.boundary_map
         X_train, Y_train = X[interior][train], Y[interior][train]
         X_test, Y_test = X[interior][test], Y[interior][test]
@@ -51,9 +60,9 @@ for train, test in iterator:
 
     # Construct POD model, predict test data
     start_time = time.time()
-    svd_rank = 1.0 - 1.0e-10
+    svd_rank = 1.0 - tau
     pod = POD(svd_rank=svd_rank)
-    pod.fit(X_train, Y_train, 'rbf_gaussian', epsilon=100.0)
+    pod.fit(X_train, Y_train, interp, epsilon=eps)
     contruction_time = time.time() - start_time
     cv['construction'].append(contruction_time)
 
@@ -79,39 +88,41 @@ for train, test in iterator:
     cv['min'].append(np.min(errors))
     cv['max'].append(np.max(errors))
 
-# Print aggregated POD results
-msg = f"===== Summary of {len(cv['mean'])} CV Sets ====="
-header = '=' * len(msg)
-print('\n'.join(['', header, msg, header]))
-print(f"Number of Snapshots:\t\t{pod.n_snapshots}")
-print(f"Number of Validations:\t\t{len(X_test)}")
-print(f"Number of POD Modes:\t\t{pod.n_modes}")
-print()
-print(f"Mean of Mean Prediction Error:\t\t{np.mean(cv['mean']):.3e}")
-print(f"Max of Mean Prediction Error:\t\t{np.max(cv['mean']):.3e}")
-print(f"Min of Mean Prediction Error:\t\t{np.min(cv['mean']):.3e}")
-print()
-print(f"Mean of Max Prediction Error:\t\t{np.mean(cv['max']):.3e}")
-print(f"Max of Max Prediction Error:\t\t{np.max(cv['max']):.3e}")
-print(f"Min of Max Prediction Error:\t\t{np.min(cv['max']):.3e}")
-print()
-print(f"Mean of Min Prediction Error:\t\t{np.mean(cv['min']):.3e}")
-print(f"Max of Min Prediction Error:\t\t{np.max(cv['min']):.3e}")
-print(f"Min of Min Prediction Error:\t\t{np.min(cv['min']):.3e}")
-print()
-print(f"Construction Time:\t{np.mean(cv['construction']):.3e} s")
-print(f"Average Query Time:\t{np.mean(cv['query']):.3e} s")
-
 import seaborn as sb
+from typing import List
+from matplotlib.pyplot import Figure, Axes
 
-plt.figure()
-plt.subplot(121)
-plt.title("Mean Error")
-sb.histplot(cv['mean'], bins=20, stat='probability',
-            kde=True, log_scale=True)
-plt.subplot(122)
-plt.title("Maximum Error")
-sb.histplot(cv['max'], bins=20, stat='probability',
-            kde=True, log_scale=True)
+fig, axs = plt.subplots(1, 2, figsize=(8, 4))
+fig: Figure = fig
+axs: List[Axes] = axs.ravel()
+
+for i, ax in enumerate(axs):
+    data = cv['mean'] if i == 0 else cv['max']
+    title = "Mean Error" if i == 0 else "Maximum Error"
+    ylabel = "Probability" if i == 0 else ""
+    sb.histplot(data, bins=10, stat='probability',
+                kde=True, log_scale=True, ax=ax)
+    ax.set_title(title, fontsize=12)
+    ax.set_xlabel("Relative $L^2$ Error", fontsize=12)
+    ax.set_ylabel(ylabel, fontsize=12)
+    ax.grid(True)
 plt.tight_layout()
 plt.show()
+
+msg = "\\begin{tabular}{|c|c|c|c|}" \
+      "\n\t\hline" \
+      "\n\t\\textbf{Quantity} & \\textbf{Value} \\\\ \hline"
+msg += f"\n\t \hline Mean of Set Means & {np.mean(cv['mean']):.3e}"
+msg += f"\n\t \hline Maximum of Set Means & {np.max(cv['mean']):.3e}"
+msg += f"\n\t \hline Minimum of Set Means & {np.min(cv['mean']):.3e}"
+msg += f"\n\t \hline Maximum of Set Maximums & {np.max(cv['max']):.3e}"
+msg += f"\n\t \hline Minimum of Set Minimums & {np.min(cv['min']):.3e}"
+msg += f"\n\t \hline \end{{tabular}}"
+print(msg)
+
+print()
+print(f"Number of POD Modes:\t\t{pod.n_modes}")
+print(f"Number of Snapshots:\t\t{pod.n_snapshots}")
+print(f"Number of Validations:\t\t{len(X_test)}")
+print(f"Average Construction Time:\t{np.mean(cv['construction']):.3e} s")
+print(f"Average Query Time:\t\t{np.mean(cv['query']):.3e} s")
