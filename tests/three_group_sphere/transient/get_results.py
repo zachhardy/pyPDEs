@@ -1,7 +1,70 @@
 import os
 import sys
+import warnings
 import numpy as np
+from numpy.linalg import norm
 import matplotlib.pyplot as plt
+
+from pyROMs import DMD
+from readers import NeutronicsSimulationReader
+
+warnings.filterwarnings('ignore')
+
+
+def plot_reconstruction_errors(dmd: DMD):
+    tau_error = {'mean_error': [],
+                 'max_error': [],
+                 'min_error': [],
+                 'tau': [10.0 ** i for i in range(-18, 0)]}
+    for tau in tau_error['tau']:
+        dmd.fit(X, svd_rank=1.0 - tau)
+        errors = dmd.snapshot_errors
+        tau_error['mean_error'].append(np.mean(errors))
+        tau_error['max_error'].append(np.max(errors))
+        tau_error['min_error'].append(np.min(errors))
+
+    mode_error = {'mean_error': [],
+                  'max_error': [],
+                  'min_error': [],
+                  'n': list(range(1, len(X)))}
+    for m in mode_error['n']:
+        dmd.fit(X, svd_rank=m)
+        errors = dmd.snapshot_errors
+        mode_error['mean_error'].append(np.mean(errors))
+        mode_error['max_error'].append(np.max(errors))
+        mode_error['min_error'].append(np.min(errors))
+
+    from typing import List
+    from matplotlib.pyplot import Figure, Axes
+
+    fig, axs = plt.subplots(1, 2, figsize=(8, 4))
+    fig: Figure = fig
+    axs: List[Axes] = axs.ravel()
+
+    for i, ax in enumerate(axs):
+        if i == 0:
+            n = mode_error['n']
+            ax.set_xlabel(f"# of Modes", fontsize=12)
+            ax.set_ylabel(f"Relative $L^2$ Error", fontsize=12)
+            ax.semilogy(n, mode_error['mean_error'],
+                        '-b*', label="Mean Error")
+            ax.semilogy(n, mode_error['max_error'],
+                        '-ro', label="Max Error")
+            ax.semilogy(n, mode_error['min_error'],
+                        '-k+', label="Min Error")
+            ax.legend()
+            ax.grid(True)
+        else:
+            tau = tau_error['tau']
+            ax.set_xlabel(f"$\\tau$", fontsize=12)
+            ax.loglog(tau, tau_error['mean_error'], '-b*', label="Mean Error")
+            ax.loglog(tau, tau_error['max_error'], '-ro', label="Max Error")
+            ax.loglog(tau, tau_error['min_error'], '-k+', label="Min Error")
+            ax.legend()
+            ax.grid(True)
+    plt.tight_layout()
+    plt.show()
+
 
 ########################################
 # Parse the command line
@@ -28,10 +91,35 @@ else:
 ########################################
 # Get the data
 ########################################
-from readers import NeutronicsSimulationReader
 sim = NeutronicsSimulationReader(path)
 sim.read_simulation_data()
 
-times = [0.0, sim.times[-1]]
-sim.plot_flux_moments(0, times=times)
+times = sim.times
+sim.plot_flux_moments(0, times=[0.0, times[-1]])
+plt.show()
+
+r = [p.z for p in sim.nodes]
+X = sim.create_simulation_matrix()
+plot_reconstruction_errors(DMD())
+plt.show()
+
+idx = len(X)//4 + 1
+dmd = DMD(svd_rank=10).fit(X[:idx])
+dmd.print_summary()
+
+recon_error = dmd.snapshot_errors
+
+dmd.dmd_time["tend"] *= 4.0
+X_dmd = dmd.reconstructed_data
+errors = norm(X-X_dmd, axis=1) / norm(X, axis=1)
+
+plt.figure()
+plt.xlabel("Time ($\mu$s)", fontsize=12)
+plt.ylabel("Relative $L^2$ Error", fontsize=12)
+plt.semilogy(times[:idx], recon_error, '-*b',
+             ms=3.0, label=f"Reconstruction")
+plt.semilogy(times[idx:], errors[idx:], '-ro',
+             ms=3.0, label=f"Extrapolation")
+plt.grid(True)
+plt.legend()
 plt.show()

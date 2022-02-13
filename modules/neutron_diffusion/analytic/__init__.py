@@ -123,13 +123,14 @@ class AnalyticSolution:
 
         # Sort by eigenvalue
         k = lambda i: abs(self.modes[i].alpha.real)
-        eigval_order = sorted(list(range(self.n_modes)), key=k)
-        self.modes = [self.modes[i] for i in eigval_order]
+        self._eigval_order = sorted(list(range(self.n_modes)), key=k)
+        self.modes = [self.modes[i] for i in self._eigval_order]
 
         # Define amplitude sorting
         k = lambda i: abs(self.modes[i].b.real)
         self._amplitude_order = sorted(list(range(self.n_modes)),
                                        key=k, reverse=True)
+
 
         print(f'Dominant Mode:\t{self.dominant_mode}')
         print(f'# of Modes:\t{len(self.modes)}')

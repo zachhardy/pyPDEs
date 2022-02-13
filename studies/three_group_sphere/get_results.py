@@ -36,4 +36,3 @@ if parameters.ndim == 1:
     parameters = parameters.reshape(-1, 1)
 
 plot_minmax_power()
-

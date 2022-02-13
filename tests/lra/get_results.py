@@ -26,7 +26,7 @@ sim.read_simulation_data()
 X = sim.create_simulation_matrix('power_density')
 times = sim.times
 
-from rom.dmd import DMD, PartitionedDMD
+from pyROMs import DMD, PartitionedDMD
 from numpy.linalg import norm
 
 # partition_points = [136, 150, 200]
@@ -47,11 +47,11 @@ for i in range(len(options)):
 
 sub_dmd = DMD()
 dmd = PartitionedDMD(sub_dmd, partition_points, options)
-dmd.fit(X.T)
+dmd.fit(X)
 
 dmd.find_optimal_parameters()
 
-X_dmd = dmd.reconstructed_data.real.T
+X_dmd = dmd.reconstructed_data.real
 reconstruction_error = norm(X - X_dmd) / norm(X)
 print(f'Reconstruction Error:\t{reconstruction_error:.3e}')
 
@@ -70,22 +70,23 @@ plt.semilogy(times, P_dmd, '--+r', ms=5.0, label='DMD')
 plt.legend()
 plt.show()
 
-# from pydmd import DMD, MrDMD
-# from numpy.linalg import norm
-# sub_dmd = DMD(svd_rank=0, opt=True)
-# dmd = MrDMD(sub_dmd, max_level=6)
-# dmd.fit(np.array(X.T, dtype=complex))
-#
-# X_dmd = dmd.reconstructed_data.real.T
-#
-# reconstruction_error = norm(X - X_dmd) / norm(X)
-# print(f'Reconstruction Error:\t{reconstruction_error:.3e}')
-#
-# timestep_errors = norm(X - X_dmd, axis=1) / norm(X, axis=1)
-# plt.semilogy(times, timestep_errors)
-# plt.show()
-#
-# P, P_dmd = np.sum(X, axis=1), np.sum(X_dmd, axis=1)
-# plt.semilogy(times, P, '-b', label='Simulation')
-# plt.semilogy(times, P_dmd, '--+r', markersize=4.0, label='MrDMD')
-# plt.show()
+from pydmd import DMD, MrDMD
+from numpy.linalg import norm
+sub_dmd = DMD(svd_rank=-1, opt=True)
+dmd = MrDMD(sub_dmd, max_level=8)
+dmd.fit(np.array(X.T, dtype=complex))
+
+X_dmd = dmd.reconstructed_data.real.T
+
+reconstruction_error = norm(X - X_dmd) / norm(X)
+print(f'Reconstruction Error:\t{reconstruction_error:.3e}')
+
+timestep_errors = norm(X - X_dmd, axis=1) / norm(X, axis=1)
+plt.semilogy(times, timestep_errors)
+plt.show()
+
+P, P_dmd = np.sum(X, axis=1), np.sum(X_dmd, axis=1)
+plt.plot(times, P, '-b', label='Simulation')
+plt.plot(times, P_dmd, '--+r', markersize=4.0, label='MrDMD')
+plt.show()
+
