@@ -1,5 +1,6 @@
 import os
 
+from matplotlib import pyplot as plt
 from pyPDEs.mesh import create_1d_mesh
 from pyPDEs.spatial_discretization import *
 from pyPDEs.material import *
@@ -51,7 +52,7 @@ solver.lag_precursors = False
 
 # Set time stepping options
 solver.t_final = 4.0
-solver.dt = 0.05
+solver.dt = 0.08
 solver.method = 'tbdf2'
 
 # Output informations

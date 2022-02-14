@@ -62,7 +62,7 @@ if arg == 2:
         lines[0].set_label(lines[0].get_label() + r' (x $10^{2}$)')
         lines[-1].set_label(lines[-1].get_label() + r' (x $10^{-3}$)')
         ax.legend()
-# plt.show()
+plt.show()
 
 
 from pyROMs.dmd import DMD, PartitionedDMD
@@ -70,14 +70,23 @@ from pyROMs.dmd import DMD, PartitionedDMD
 X = sim.create_simulation_matrix('power_density')
 times = sim.times
 
-dmd = PartitionedDMD(DMD(svd_rank=1.0e-6, opt=False), [25])
+dmd = PartitionedDMD(DMD(svd_rank=1.0e-8, opt=True), [25, 51])
 dmd.fit(X)
 dmd.print_summary()
-print()
-dmd.print_partition_summaries()
-print()
+dmd.print_partition_summaries(skip_line=True)
 
-dmd = DMD(svd_rank=sum(dmd.n_modes), opt=False)
-dmd.fit(X)
-dmd.print_summary()
+plt.figure()
+snapshot_errors = dmd.snapshot_errors
+plt.xlabel(f"Time (s)", fontsize=12)
+plt.ylabel(f"Relative $L^2$ Error", fontsize=12)
+plt.semilogy(times, snapshot_errors, '-*b')
+plt.grid(True)
+
+# dmd.find_optimal_parameters()
+#
+# plt.figure()
+# snapshot_errors = dmd.snapshot_errors
+# plt.semilogy(times, snapshot_errors, '-*b')
+# plt.show()
+
 
