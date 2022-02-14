@@ -215,6 +215,9 @@ class TransientSolver(KEigenvalueSolver):
         # Precompute matrices
         self.M = self.mass_matrix()
 
+        # Compute initial values
+        self.compute_initial_values()
+
     def execute(self, verbose: int = 0) -> None:
         """
         Execute the transient multigroup diffusion solver.
@@ -236,8 +239,7 @@ class TransientSolver(KEigenvalueSolver):
             elif len(os.listdir(self.output_directory)) > 0:
                 os.system(f'rm -r {self.output_directory}/*')
 
-        # Evaluate initial conditions
-        self.compute_initial_values()
+        # Store initial conditions
         self.write_snapshot(0)
 
         # Initialize auxilary vectors

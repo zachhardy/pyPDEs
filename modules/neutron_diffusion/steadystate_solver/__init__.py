@@ -96,7 +96,7 @@ class SteadyStateSolver:
         self.phi = np.zeros(sd.n_dofs(self.phi_uk_man))
 
         if self.use_precursors:
-            n_dofs = self.n_precursors * self.mesh.n_cells
+            n_dofs = self.max_precursors * self.mesh.n_cells
             self.precursors = np.zeros(n_dofs)
 
         # Initialize cell-wise cross sections

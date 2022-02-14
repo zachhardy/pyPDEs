@@ -23,6 +23,7 @@ def plot_solution(self: 'SteadyStateSolver', title: str = None) -> None:
     """
     fig: Figure = plt.figure()
     if self.use_precursors:
+        fig.set_size_inches(8, 4)
         if title:
             fig.suptitle(title)
 
@@ -98,12 +99,24 @@ def plot_precursors(self: 'SteadyStateSolver',
 
     if self.mesh.dim == 1:
         grid = [cell.centroid.z for cell in self.mesh.cells]
-        ax.set_xlabel("r (cm)")
-        ax.set_ylabel("C$_j$")
-        for j in range(self.n_precursors):
+
+        lambdas = [xs.precursor_lambda for xs in self.material_xs]
+        lambdas = list(np.unique(np.ravel(lambdas)))
+
+        c = np.zeros((len(lambdas), len(grid)))
+        for cell in self.mesh.cells:
+            xs_id = self.matid_to_xs_map[cell.material_id]
+            xs = self.material_xs[xs_id]
+            for p in range(xs.n_precursors):
+                j = lambdas.index(xs.precursor_lambda[p])
+                idx = self.max_precursors*cell.id + p
+                c[j, cell.id] = self.precursors[idx]
+
+        for j in range(len(lambdas)):
             label = f"Precursor {j}"
-            c = self.precursors[j::self.n_precursors]
-            ax.plot(grid, c, label=label)
+            ax.set_xlabel("r (cm)")
+            ax.set_ylabel("C$_j$")
+            ax.plot(grid, c[j], label=label)
         ax.legend()
         ax.grid(True)
     else:
