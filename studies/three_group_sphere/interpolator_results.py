@@ -1,13 +1,9 @@
-import os
 import sys
 import time
 import warnings
 
 import numpy as np
 from numpy.linalg import norm
-import matplotlib.pyplot as plt
-
-from sklearn.model_selection import train_test_split
 
 from studies.utils import *
 from pyROMs.pod import POD
