@@ -97,29 +97,3 @@ sim.read_simulation_data()
 times = sim.times
 sim.plot_flux_moments(0, times=[0.0, times[-1]])
 plt.show()
-
-r = [p.z for p in sim.nodes]
-X = sim.create_simulation_matrix()
-plot_reconstruction_errors(DMD())
-plt.show()
-
-idx = len(X)//4 + 1
-dmd = DMD(svd_rank=10).fit(X[:idx])
-dmd.print_summary()
-
-recon_error = dmd.snapshot_errors
-
-dmd.dmd_time["tend"] *= 4.0
-X_dmd = dmd.reconstructed_data
-errors = norm(X-X_dmd, axis=1) / norm(X, axis=1)
-
-plt.figure()
-plt.xlabel("Time ($\mu$s)", fontsize=12)
-plt.ylabel("Relative $L^2$ Error", fontsize=12)
-plt.semilogy(times[:idx], recon_error, '-*b',
-             ms=3.0, label=f"Reconstruction")
-plt.semilogy(times[idx:], errors[idx:], '-ro',
-             ms=3.0, label=f"Extrapolation")
-plt.grid(True)
-plt.legend()
-plt.show()

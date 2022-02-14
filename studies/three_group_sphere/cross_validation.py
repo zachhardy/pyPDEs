@@ -82,7 +82,7 @@ for train, test in iterator:
     # Compute simulation errors
     errors = np.zeros(len(X_test))
     for i in range(len(X_test)):
-        errors[i] = norm(X_test[i] - X_pred[i]) / norm(X_test[i])
+        errors[i] = norm(X_test[i]-X_pred[i])/ norm(X_test[i])
 
     cv['mean'].append(np.mean(errors))
     cv['min'].append(np.min(errors))
