@@ -57,7 +57,7 @@ velocity = [1.0e7, 3.0e5]
 
 xs_material_0_and_2 = \
     {'n_groups': 2, 'n_precursors': 6,
-     'D': [1.5, 0.5], 'sigma_t': [0.026, 0.18],
+     'D': [1.5, 0.5], 'sigma_a': [0.026, 0.18],
      'sigma_f': [0.01, 0.2],
      'transfer_matrix': [[0.0, 0.015], [0.0, 0.0]],
      'nu_prompt': nu_prompt, 'nu_delayed': nu_delayed,
@@ -67,7 +67,7 @@ xs_material_0_and_2 = \
 
 xs_material_1 = \
     {'n_groups': 2, 'n_precursors': 6,
-     'D': [1.0, 0.5], 'sigma_t': [0.02, 0.08],
+     'D': [1.0, 0.5], 'sigma_a': [0.02, 0.08],
      'sigma_f': [0.005, 0.099],
      'transfer_matrix': [[0.0, 0.01], [0.0, 0.0]],
      'nu_prompt': nu_prompt, 'nu_delayed': nu_delayed,

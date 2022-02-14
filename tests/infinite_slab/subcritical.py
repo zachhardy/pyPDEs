@@ -1,5 +1,6 @@
 import os
 
+from matplotlib import pyplot as plt
 from pyPDEs.mesh import create_1d_mesh
 from pyPDEs.spatial_discretization import *
 from pyPDEs.material import *
@@ -65,3 +66,4 @@ solver.output_directory = \
 # Run the problem
 solver.initialize(verbose=1)
 solver.execute(verbose=1)
+plt.show()

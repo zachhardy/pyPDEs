@@ -65,19 +65,19 @@ if arg == 2:
 # plt.show()
 
 
-from pyROMs.dmd import DMD
+from pyROMs.dmd import DMD, PartitionedDMD
 
 X = sim.create_simulation_matrix('power_density')
 times = sim.times
 
-dmd = DMD(svd_rank=0, opt=True)
-dmd.fit(X.T)
+dmd = PartitionedDMD(DMD(svd_rank=1.0e-6, opt=False), [25])
+dmd.fit(X)
+dmd.print_summary()
+print()
+dmd.print_partition_summaries()
+print()
 
-dmd.find_optimal_parameters()
+dmd = DMD(svd_rank=sum(dmd.n_modes), opt=False)
+dmd.fit(X)
 dmd.print_summary()
 
-
-plt.figure()
-errors = dmd.snapshot_errors
-plt.semilogy(times, errors, '-*b')
-plt.show()

@@ -1,12 +1,11 @@
 import os
-import itertools
 import sys
+import time
+import itertools
 
 import numpy as np
-
 from copy import deepcopy
 
-from matplotlib import pyplot as plt
 from pyPDEs.mesh import create_1d_mesh
 from pyPDEs.spatial_discretization import *
 from pyPDEs.material import *
@@ -24,6 +23,7 @@ def function(g, x, sigma_a) -> float:
         return (1.0 + m) * sigma_a
     else:
         return sigma_a
+
 
 ########################################
 # Setup parameter study
@@ -175,6 +175,7 @@ solver.execute()
 ########################################
 # Run the parameter study
 ########################################
+t_avg = 0.0
 for n, params in enumerate(values):
 
     # Setup output path
@@ -208,15 +209,22 @@ for n, params in enumerate(values):
             if isinstance(material_property, CrossSections):
                 material_property.sigma_a_function = function
 
-    # Run the problem
-    solver.initialize()
+        # Run the problem
+        init_time = time.time()
+        solver.initialize()
+        init_time = time.time() - init_time
 
-    msg = f'===== Running simulation {n} ====='
-    head = '=' * len(msg)
-    print('\n'.join(['', head, msg, head]))
-    for p in range(len(params)):
-        pname = keys[p].capitalize()
-        print(f'{pname:<10}:\t{params[p]:<5.3e}')
-    print(f"{'k_eff':<10}:\t{solver.k_eff:<8.5f}")
+        msg = f'===== Running simulation {n} ====='
+        head = '=' * len(msg)
+        print('\n'.join(['', head, msg, head]))
+        for p in range(len(params)):
+            pname = keys[p].capitalize()
+            print(f'{pname:<10}:\t{params[p]:<5.3e}')
+        print(f"{'k_eff':<10}:\t{solver.k_eff:<8.5f}")
 
-    solver.execute()
+        run_time = time.time()
+        solver.execute()
+        run_time = time.time() - run_time
+        t_avg += (init_time + run_time) / len(values)
+
+print(f'\nAverage simulation time: {t_avg:.3e} s')
