@@ -40,10 +40,9 @@ for cell in mesh.cells:
 discretization = FiniteVolume(mesh)
 
 # Create materials
-materials = []
-materials.append(Material('Fuel 0'))
-materials.append(Material('Fuel 1'))
-materials.append(Material('Fuel 2'))
+materials = [Material('Fuel 1'),
+             Material('Fuel 2'),
+             Material('Fuel 3')]
 
 xs = [CrossSections() for _ in range(len(materials))]
 data = [xs_material_0, xs_material_0, xs_material_1]
@@ -79,6 +78,10 @@ solver.t_final = 0.5
 solver.dt = 1.0e-2
 solver.method = 'tbdf2'
 
+solver.adaptivity = True
+solver.refine_level = 0.05
+solver.coarsen_level = 0.01
+
 # Output informations
 solver.write_outputs = True
 solver.output_directory = \
@@ -87,3 +90,5 @@ solver.output_directory = \
 # Run the problem
 solver.initialize(verbose=1)
 solver.execute(verbose=1)
+solver.plot_flux()
+plt.show()

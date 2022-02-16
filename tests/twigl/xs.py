@@ -10,9 +10,10 @@ def sigma_a_ramp(g: int, x: List[float], sigma_a: float) -> float:
     t = x[0]
     if g == 1:
         if 0.0 <= t <= 0.2:
-            return sigma_a * (1.0 - 0.11667 * t)
+            return sigma_a*(1.0 + t/0.2*(0.97667 - 1.0))
+
         else:
-            return sigma_a * 0.97666
+            return 0.97667*sigma_a
     else:
         return sigma_a
 
@@ -20,7 +21,7 @@ def sigma_a_ramp(g: int, x: List[float], sigma_a: float) -> float:
 def sigma_a_step(g: int, x: List[float], sigma_a: float) -> float:
     t = x[0]
     if g == 1 and t > 0.0:
-        return 0.97666 * sigma_a
+        return 0.97667*sigma_a
     else:
         return sigma_a
 
