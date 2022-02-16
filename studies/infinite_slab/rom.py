@@ -15,7 +15,6 @@ from pyROMs.dmd import PartitionedDMD, DMD
 
 warnings.filterwarnings('ignore')
 
-
 ########################################
 # Parse the data
 ########################################
@@ -59,7 +58,7 @@ modes = dataset.unstack_simulation_vector(pod.modes.T)
 # Compute POD errors
 pod_errors = np.zeros(len(X_test))
 for i in range(len(X_test)):
-    pod_errors[i] = norm(X_test[i]-X_pod[i]) / norm(X_test[i])
+    pod_errors[i] = norm(X_test[i]-X_pod[i])/norm(X_test[i])
 
 # Apply DMD to POD results
 X_dmd = []
@@ -70,7 +69,7 @@ for i in range(len(X_pod)):
     t_start = time.time()
     dmd = PartitionedDMD(DMD(svd_rank=1.0e-8, opt=True), [13, 26])
     dmd.fit(np.array(X_pod[i], complex))
-    avg_dmd_time += (time.time()-t_start)/len(X_pod)
+    avg_dmd_time += (time.time() - t_start) / len(X_pod)
 
     X_dmd.append(dmd.reconstructed_data)
     dmd_errors[i] = norm(X_test[i]-X_dmd[i])/norm(X_dmd[i])
@@ -92,8 +91,8 @@ for i in range(len(X_pod)):
 # Find worst POD prediction
 argmax = np.argmax(pod_errors)
 x_pod, x_dmd, x_test = X_pod[argmax], X_dmd[argmax], X_test[argmax]
-pod_step_errors = norm(x_test-x_pod, axis=1)/norm(x_test, axis=1)
-dmd_step_errors = norm(x_test-x_dmd, axis=1)/norm(x_test, axis=1)
+pod_step_errors = norm(x_test - x_pod, axis=1) / norm(x_test, axis=1)
+dmd_step_errors = norm(x_test - x_dmd, axis=1) / norm(x_test, axis=1)
 
 # ic_recon, opt_recon = [], []
 # for m in range(1, dmd_worst.n_snapshots):
@@ -109,13 +108,12 @@ dmd_step_errors = norm(x_test-x_dmd, axis=1)/norm(x_test, axis=1)
 # plt.gca().semilogy(opt_recon, '-+k', label="Optimal Fit")
 # plt.gca().legend()
 
-# dmd_worst.find_optimal_parameters()
 try:
     reconstruction = dmd_worst.snapshot_errors
 except:
     x = dmd_worst.snapshots.T
     x_dmd = dmd_worst.reconstructed_data.T
-    reconstruction = norm(x-x_dmd, axis=1)/norm(x, axis=1)
+    reconstruction = norm(x - x_dmd, axis=1) / norm(x, axis=1)
 
 plt.figure()
 r_b = dataset.parameters[argmax][0]
@@ -160,10 +158,5 @@ print(f"Construction Time:\t{contruction_time:.3e} s")
 print(f"Query Time:\t\t{avg_predict_time:.3e} s")
 print(f"DMD Time:\t\t{avg_dmd_time:.3e} s")
 print(f"Total Prediction Time:\t{avg_cost:.3e} s")
-
-# if dataset.n_parameters == 1:
-#     pod.plot_coefficients([0, 1, -2, -1])
-#     plot_mode_ics()
-#     plot_mode_evoloutions([0.0, 0.01, 0.05, 0.1])
 
 plt.show()
