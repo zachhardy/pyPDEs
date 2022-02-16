@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from studies.utils import *
-from readers import NeutronicsDatasetReader
 
 
 def plot_minmax_power():
@@ -23,9 +22,6 @@ def plot_minmax_power():
     plt.tight_layout()
     plt.show()
 
-
-if len(sys.argv) == 2:
-    sim = ""
 
 study = int(sys.argv[1])
 dataset = get_data('three_group_sphere', study)

@@ -40,7 +40,6 @@ decay = [0.0124, 0.0305, 0.111, 0.301, 1.14, 3.01]
 
 beta_i = [2.5e-4, 1.64e-3, 1.47e-3, 2.96e-3, 8.6e-4, 3.2e-4]
 beta_tot = sum(beta_i)
-print(beta_tot)
 
 nu = 1.0
 nu_prompt = (1.0 - beta_tot) * nu
@@ -58,7 +57,7 @@ velocity = [1.0e7, 3.0e5]
 
 xs_material_0_and_2 = \
     {'n_groups': 2, 'n_precursors': 6,
-     'D': [1.5, 0.5], 'sigma_a': [0.026, 0.18],
+     'D': [1.5, 0.5], 'sigma_t': [0.026, 0.18],
      'sigma_f': [0.01, 0.2],
      'transfer_matrix': [[0.0, 0.015], [0.0, 0.0]],
      'nu_prompt': nu_prompt, 'nu_delayed': nu_delayed,
@@ -68,7 +67,7 @@ xs_material_0_and_2 = \
 
 xs_material_1 = \
     {'n_groups': 2, 'n_precursors': 6,
-     'D': [1.0, 0.5], 'sigma_a': [0.02, 0.08],
+     'D': [1.0, 0.5], 'sigma_t': [0.02, 0.08],
      'sigma_f': [0.005, 0.099],
      'transfer_matrix': [[0.0, 0.01], [0.0, 0.0]],
      'nu_prompt': nu_prompt, 'nu_delayed': nu_delayed,
@@ -77,4 +76,4 @@ xs_material_1 = \
      'velocity': velocity}
 
 tolerance = 1.0e-8
-max_iterations = int(5.0e3)
+max_iterations = int(1e4)

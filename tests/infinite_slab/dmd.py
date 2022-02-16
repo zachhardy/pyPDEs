@@ -41,7 +41,7 @@ from pydmd import MrDMD
 X = sim.create_simulation_matrix('power_density')
 times = sim.times
 
-dmd = DMD(svd_rank=1.0e-8, opt=True).fit(X)
+dmd = DMD(svd_rank=13, opt=True).fit(X)
 dmd.print_summary()
 dmd_errors = dmd.snapshot_errors
 
@@ -67,6 +67,10 @@ plt.semilogy(times, pdmd_errors, '-or', label="Partitioned DMD")
 plt.semilogy(times, mrdmd_errors, '-+k', label="MrDMD")
 plt.legend()
 plt.grid(True)
+
+for subdmd in pdmd:
+    omegas = np.log(subdmd.omegas)/np.diff(times)[0]
+    print(omegas)
 
 
 print("===== Comparison of DMD Methods =====")

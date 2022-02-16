@@ -11,7 +11,7 @@ from typing import List
 
 from studies.utils import *
 from pyROMs.pod import POD
-from pyROMs.dmd import DMD
+from pyROMs.dmd import PartitionedDMD, DMD
 
 warnings.filterwarnings('ignore')
 
@@ -21,15 +21,14 @@ warnings.filterwarnings('ignore')
 ########################################
 problem, study = int(sys.argv[1]), int(sys.argv[2])
 dataset = get_data('infinite_slab', problem, study)
+n_params = dataset.n_parameters
 
 var = 'power_density'
-test_size = 0.2 if study in [0, 1, 2] else 0.5
-interior_only = True
+interior_only = False
+test_size = 0.2 if n_params == 1 or not interior_only else 0.5
 tau = 1.0e-8
 interp = 'rbf_gaussian'
-eps = 5.0
-if not interior_only:
-    test_size = 0.2
+eps = 5.0 if n_params == 1 else 10.0
 
 splits = dataset.train_test_split(variables=var,
                                   test_size=test_size, seed=12,
@@ -69,7 +68,8 @@ dmd_worst: DMD = None
 avg_dmd_time = 0.0
 for i in range(len(X_pod)):
     t_start = time.time()
-    dmd = DMD(svd_rank=tau, opt=True).fit(X_pod[i])
+    dmd = PartitionedDMD(DMD(svd_rank=1.0e-8, opt=True), [13, 26])
+    dmd.fit(np.array(X_pod[i], complex))
     avg_dmd_time += (time.time()-t_start)/len(X_pod)
 
     X_dmd.append(dmd.reconstructed_data)
@@ -77,25 +77,49 @@ for i in range(len(X_pod)):
     if i == np.argmax(pod_errors):
         dmd_worst = copy.deepcopy(dmd)
 
+# from pydmd import DMD as PyDMD
+# from pydmd import MrDMD
+# for i in range(len(X_pod)):
+#     t_start = time.time()
+#     dmd = MrDMD(PyDMD(opt=True), max_level=2)
+#     dmd.fit(np.array(X_pod[i].T, dtype=complex))
+#     avg_dmd_time += (time.time()-t_start)/len(X_pod)
+#     X_dmd.append(dmd.reconstructed_data.T)
+#     dmd_errors[i] = norm(X_test[i]-X_dmd[i])/norm(X_dmd[i])
+#     if i == np.argmax(pod_errors):
+#         dmd_worst = copy.deepcopy(dmd)
+
 # Find worst POD prediction
 argmax = np.argmax(pod_errors)
 x_pod, x_dmd, x_test = X_pod[argmax], X_dmd[argmax], X_test[argmax]
 pod_step_errors = norm(x_test-x_pod, axis=1)/norm(x_test, axis=1)
 dmd_step_errors = norm(x_test-x_dmd, axis=1)/norm(x_test, axis=1)
 
-recon = []
-for m in range(1, dmd_worst.n_snapshots):
-    dmd = DMD(svd_rank=m, opt=True).fit(x_pod)
-    recon.append(dmd.reconstruction_error)
-dmd.plot_singular_values(show_rank=True)
-plt.gca().semilogy(recon, '-ro')
+# ic_recon, opt_recon = [], []
+# for m in range(1, dmd_worst.n_snapshots):
+#     dmd = DMD(svd_rank=m, opt=False).fit(x_pod)
+#     ic_recon.append(dmd.reconstruction_error)
+#
+#     dmd.fit(x_pod, opt=True)
+#     opt_recon.append(dmd.reconstruction_error)
+#
+# dmd.plot_singular_values(show_rank=False)
+# plt.gca().set_ylabel(f"Relative $L^2$ Error", fontsize=12)
+# plt.gca().semilogy(ic_recon, '-or', label="IC Fit")
+# plt.gca().semilogy(opt_recon, '-+k', label="Optimal Fit")
+# plt.gca().legend()
 
 # dmd_worst.find_optimal_parameters()
-reconstruction = dmd_worst.snapshot_errors
+try:
+    reconstruction = dmd_worst.snapshot_errors
+except:
+    x = dmd_worst.snapshots.T
+    x_dmd = dmd_worst.reconstructed_data.T
+    reconstruction = norm(x-x_dmd, axis=1)/norm(x, axis=1)
 
 plt.figure()
 r_b = dataset.parameters[argmax][0]
-plt.xlabel("Time ($\mu$s)", fontsize=12)
+plt.xlabel("Time (s)", fontsize=12)
 plt.ylabel("Relative $L^2$ Error", fontsize=12)
 plt.semilogy(dataset.times, pod_step_errors, '-b*', label="POD")
 plt.semilogy(dataset.times, dmd_step_errors, '-ro', label="DMD")
@@ -119,7 +143,10 @@ msg = f"===== Summary of {len(pod_errors)} DMD Models ====="
 header = "=" * len(msg)
 print("\n".join(["", header, msg, header]))
 print(f"Number of Snapshots:\t{len(X_pod[0])}")
-print(f"Number of DMD Modes:\t{dmd_worst.n_modes}")
+try:
+    print(f"Number of DMD Modes:\t{dmd_worst.n_modes}")
+except:
+    print(f"Number of DMD Modes:\t{dmd_worst.modes.shape[1]}")
 print(f"Average DMD Error:\t{np.mean(dmd_errors):.3e}")
 print(f"Maximum DMD Error:\t{np.max(dmd_errors):.3e}")
 print(f"Minimum DMD Error:\t{np.min(dmd_errors):.3e}")

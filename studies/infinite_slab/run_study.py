@@ -3,6 +3,7 @@ import sys
 import time
 import itertools
 
+import matplotlib.pyplot as plt
 import numpy as np
 from copy import deepcopy
 
@@ -45,37 +46,37 @@ if study > 6:
 
 # Define nominal values for each problem
 if problem == 0:
-    ramp, duration = 0.03, 1.0
+    m_ref, t_ramp_ref = 0.03, 1.0
     t_final, dt = 2.0, 0.04
 elif problem == 1:
-    ramp, duration = -0.01, 1.0
-    t_final, dt = 4.0, 0.08
+    m_ref, t_ramp_ref = -0.01, 1.0
+    t_final, dt = 2.0, 0.04
 else:
-    ramp, duration = -0.05, 0.01
+    m_ref, t_ramp_ref = -0.05, 0.01
     t_final, dt = 0.02, 4.0e-4
 
-m, t_ramp = ramp, duration
+m, t_ramp = m_ref, t_ramp_ref
 
 # Define parameter spaces
 parameters = {}
 if study == 0:
-    parameters['magnitude'] = setup_range(ramp, 0.2, 31)
+    parameters['magnitude'] = setup_range(m_ref, 0.2, 31)
 elif study == 1:
-    parameters['duration'] = setup_range(duration, 0.2, 31)
+    parameters['duration'] = setup_range(t_ramp_ref, 0.2, 31)
 elif study == 2:
     parameters['interface'] = setup_range(40.0, 0.05, 31)
 elif study == 3:
-    parameters['magnitude'] = setup_range(ramp, 0.1, 7)
-    parameters['duration'] = setup_range(duration, 0.1, 7)
+    parameters['magnitude'] = setup_range(m_ref, 0.1, 7)
+    parameters['duration'] = setup_range(t_ramp_ref, 0.1, 7)
 elif study == 4:
-    parameters['magnitude'] = setup_range(ramp, 0.1, 7)
+    parameters['magnitude'] = setup_range(m_ref, 0.1, 7)
     parameters['interface'] = setup_range(40.0, 0.025, 7)
 elif study == 5:
-    parameters['duration'] = setup_range(duration, 0.1, 7)
+    parameters['duration'] = setup_range(t_ramp_ref, 0.1, 7)
     parameters['interface'] = setup_range(40.0, 0.025, 7)
 elif study == 6:
-    parameters['magnitude'] = setup_range(ramp, 0.1, 5)
-    parameters['duration'] = setup_range(duration, 0.1, 5)
+    parameters['magnitude'] = setup_range(m_ref, 0.05, 5)
+    parameters['duration'] = setup_range(t_ramp_ref, 0.05, 5)
     parameters['interface'] = setup_range(40.0, 0.025, 5)
 else:
     raise ValueError(f'Invalid case provided.')
@@ -185,11 +186,11 @@ for n, params in enumerate(values):
 
     # Modify system parameters
     if 'magnitude' in keys and 'duration' not in keys:
-        t_ramp = duration
+        t_ramp = t_ramp_ref
         m = params[keys.index('magnitude')]
 
     if 'duration' in keys and 'magnitude' not in keys:
-        m = ramp
+        m = m_ref
         t_ramp = params[keys.index('duration')]
 
     if 'magnitude' in keys and 'duration' in keys:
@@ -209,22 +210,22 @@ for n, params in enumerate(values):
             if isinstance(material_property, CrossSections):
                 material_property.sigma_a_function = function
 
-        # Run the problem
-        init_time = time.time()
-        solver.initialize()
-        init_time = time.time() - init_time
+    # Run the problem
+    init_time = time.time()
+    solver.initialize()
+    init_time = time.time() - init_time
 
-        msg = f'===== Running simulation {n} ====='
-        head = '=' * len(msg)
-        print('\n'.join(['', head, msg, head]))
-        for p in range(len(params)):
-            pname = keys[p].capitalize()
-            print(f'{pname:<10}:\t{params[p]:<5.3e}')
-        print(f"{'k_eff':<10}:\t{solver.k_eff:<8.5f}")
+    msg = f'===== Running simulation {n} ====='
+    head = '=' * len(msg)
+    print('\n'.join(['', head, msg, head]))
+    for p in range(len(params)):
+        pname = keys[p].capitalize()
+        print(f'{pname:<10}:\t{params[p]:<5.3e}')
+    print(f"{'k_eff':<10}:\t{solver.k_eff:<8.5f}")
 
-        run_time = time.time()
-        solver.execute()
-        run_time = time.time() - run_time
-        t_avg += (init_time + run_time) / len(values)
+    run_time = time.time()
+    solver.execute()
+    run_time = time.time() - run_time
+    t_avg += (init_time + run_time) / len(values)
 
 print(f'\nAverage simulation time: {t_avg:.3e} s')
