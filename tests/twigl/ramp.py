@@ -90,5 +90,3 @@ solver.output_directory = \
 # Run the problem
 solver.initialize(verbose=1)
 solver.execute(verbose=1)
-solver.plot_flux()
-plt.show()

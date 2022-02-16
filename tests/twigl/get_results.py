@@ -32,6 +32,5 @@ sim.plot_flux_moments(0, [0, 1], [0.0, 0.5], grouping='group')
 plt.gcf().suptitle("")
 for g, ax in enumerate(plt.gcf().get_axes()[::2]):
     ax.set_title(f"Group {g}", fontsize=12)
-
 sim.plot_power()
 plt.show()
