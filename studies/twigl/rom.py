@@ -1,3 +1,4 @@
+import copy
 import os
 import sys
 import time
@@ -5,150 +6,149 @@ import warnings
 
 import numpy as np
 from numpy.linalg import norm
-
 import matplotlib.pyplot as plt
-
 from sklearn.model_selection import train_test_split
 
+from studies.utils import *
 from readers import NeutronicsDatasetReader
-from rom.pod import POD
-from rom.dmd import DMD
+from pyROMs import POD, DMD, PartitionedDMD
 
 warnings.filterwarnings('ignore')
 
+########################################
+# Parse the data
+########################################
+study = int(sys.argv[1])
+dataset = get_data('twigl', study)
+n_params = dataset.n_parameters
+print(dataset.parameters)
 
-script_path = os.path.dirname(os.path.abspath(__file__))
+var = 'power_density'
+interior_only = False
+test_size = 0.2 if n_params == 1 or not interior_only else 0.5
+tau = 1.0e-8
+interp = 'rbf_gaussian'
+eps = 5.0 if n_params == 1 else 10.0
 
-# Get inputs
-case = int(sys.argv[1]) if len(sys.argv) > 1 else 0
-if case == 0:
-    study_name = 'multiplier'
-elif case == 1:
-    study_name = 'duration'
-elif case == 2:
-    study_name = 'multiplier_duration'
-else:
-    raise AssertionError('Invalid case index.')
-
-# Parse the database
-path = f'{script_path}/outputs/{study_name}'
-dataset = NeutronicsDatasetReader(path)
-dataset.read_dataset()
-
-# Get the domain information
-n_groups = dataset.n_groups
-grid = np.array([p.z for p in dataset.nodes])
-times = dataset.times
-
-X = dataset.create_dataset_matrix()
-Y = dataset.parameters
-n_parameters = dataset.n_parameters
-
-# Get parameter bounds
-bounds = np.zeros((n_parameters, 2))
-for p in range(n_parameters):
-    bounds[p] = [min(Y[:, p]), max(Y[:, p])]
-
-# Determine interior and boundary indices
-interior, bndry = [], []
-for i in range(len(Y)):
-    y = Y[i]
-
-    on_bndry = False
-    for p in range(n_parameters):
-        if any([y[p] == bounds[p][m] for m in [0, 1]]):
-            on_bndry = True
-            break
-
-    if not on_bndry:
-        interior += [i]
-    else:
-        bndry += [i]
-
-splits = train_test_split(X[interior], Y[interior], train_size=0.7)
+splits = dataset.train_test_split(variables=var,
+                                  test_size=test_size, seed=12,
+                                  interior_only=interior_only)
 X_train, X_test, Y_train, Y_test = splits
-X_train = np.vstack((X_train, X[bndry]))
-Y_train = np.vstack((Y_train, Y[bndry]))
 
+########################################
+# Run the ROM
+########################################
 # Construct POD model, predict test data
-tstart = time.time()
-svd_rank = 1.0-1.0e-12
-pod = POD(svd_rank=svd_rank)
-pod.fit(X_train.T, Y_train)
-offline_time = time.time() - tstart
+start_time = time.time()
+pod = POD(svd_rank=1.0-tau)
+pod.fit(X_train, Y_train, interp, epsilon=eps)
+contruction_time = time.time() - start_time
+pod.print_summary()
 
-tstart = time.time()
-X_pred = pod.predict(Y_test, 'linear').T
-predict_time = time.time() - tstart
+pod.plot_singular_values()
 
-msg = '===== POD Model Summary ====='
-header = '=' * len(msg)
-print('\n'.join([header, msg, header]))
-print(f'# of Modes:\t\t{pod.n_modes}')
-print(f'# of Snapshots:\t\t{pod.n_snapshots}')
-print(f'Reconstruction Error:\t{pod.reconstruction_error:.3e}')
+# Predict results
+X_pod = []
+avg_predict_time = 0.0
+for y_test in Y_test:
+    start_time = time.time()
+    X_pod.append(pod.predict(y_test))
+    avg_predict_time += time.time() - start_time
+avg_predict_time /= len(Y_test)
 
-# Format POD predictions for DMD
-X_pred = dataset.unstack_simulation_vector(X_pred)
+# Format datasets
+X_pod = dataset.unstack_simulation_vector(X_pod)
 X_test = dataset.unstack_simulation_vector(X_test)
+modes = dataset.unstack_simulation_vector(pod.modes.T)
 
-errors = np.zeros(len(X_test))
+# Compute POD errors
+pod_errors = np.zeros(len(X_test))
 for i in range(len(X_test)):
-    errors[i] = norm(X_test[i]-X_pred[i]) / norm(X_test[i])
+    pod_errors[i] = norm(X_test[i]-X_pod[i]) / norm(X_test[i])
 
-argmax = np.argmax(errors)
-x_pred, x_test = X_pred[argmax], X_test[argmax]
-timestep_errors = norm(x_test-x_pred, axis=1)/norm(x_test, axis=1)
+# Apply DMD to POD results
+X_dmd = []
+dmd_errors = np.zeros(len(X_pod))
+dmd_worst: DMD = None
+avg_dmd_time = 0.0
+for i in range(len(X_pod)):
+    t_start = time.time()
+    dmd = PartitionedDMD(DMD(svd_rank=tau, opt=True), [10, 21])
+    dmd.fit(np.array(X_pod[i], complex))
+    avg_dmd_time += (time.time()-t_start)/len(X_pod)
 
+    X_dmd.append(dmd.reconstructed_data)
+    dmd_errors[i] = norm(X_test[i]-X_dmd[i])/norm(X_dmd[i])
+    if i == np.argmax(pod_errors):
+        dmd_worst = copy.deepcopy(dmd)
 
-# Print aggregated DMD results
-msg = f'===== Summary of {len(errors)} POD Models ====='
-header = '=' * len(msg)
-print('\n'.join(['', header, msg, header]))
-print(f'Average POD Reconstruction Error:\t{np.mean(errors):.3e}')
-print(f'Maximum POD Reconstruction Error:\t{np.max(errors):.3e}')
-print(f'Minimum POD Reconstruction Error:\t{np.min(errors):.3e}')
-print()
+# from pydmd import DMD as PyDMD
+# from pydmd import MrDMD
+# for i in range(len(X_pod)):
+#     t_start = time.time()
+#     dmd = MrDMD(PyDMD(opt=True), max_level=2)
+#     dmd.fit(np.array(X_pod[i].T, dtype=complex))
+#     avg_dmd_time += (time.time()-t_start)/len(X_pod)
+#     X_dmd.append(dmd.reconstructed_data.T)
+#     dmd_errors[i] = norm(X_test[i]-X_dmd[i])/norm(X_dmd[i])
+#     if i == np.argmax(pod_errors):
+#         dmd_worst = copy.deepcopy(dmd)
+
+# Find worst POD prediction
+argmax = np.argmax(pod_errors)
+x_pod, x_dmd, x_test = X_pod[argmax], X_dmd[argmax], X_test[argmax]
+pod_step_errors = norm(x_test-x_pod, axis=1)/norm(x_test, axis=1)
+dmd_step_errors = norm(x_test-x_dmd, axis=1)/norm(x_test, axis=1)
+
+try:
+    reconstruction = dmd_worst.snapshot_errors
+except:
+    x = dmd_worst.snapshots.T
+    x_dmd = dmd_worst.reconstructed_data.T
+    reconstruction = norm(x - x_dmd, axis=1) / norm(x, axis=1)
 
 plt.figure()
-plt.title(f'Worst Result\n'
-          f'Error = {np.max(errors):.3e}')
-plt.xlabel('Time (sec)', fontsize=12)
-plt.ylabel('Relative Error', fontsize=12)
-plt.semilogy(times, timestep_errors, '-*b')
+r_b = dataset.parameters[argmax][0]
+plt.xlabel("Time (s)", fontsize=12)
+plt.ylabel("Relative $L^2$ Error", fontsize=12)
+plt.semilogy(dataset.times, pod_step_errors, '-b*', label="POD")
+plt.semilogy(dataset.times, dmd_step_errors, '-ro', label="DMD")
+plt.semilogy(dataset.times, reconstruction, '-k+', label="DMD Reconstruction")
+plt.legend()
 plt.grid(True)
 plt.tight_layout()
-plt.show()
 
-# Construct DMD models, compute errors
-dmd_time = 0.0
-errors = np.zeros(len(X_pred))
-for i in range(len(X_pred)):
-    tstart = time.time()
-    dmd = DMD(svd_rank=svd_rank)
-    dmd.fit(X_test[i].T)
-    dmd_time += time.time() - tstart
+# Print aggregated POD results
+msg = f"===== Summary of {len(pod_errors)} POD Queries ====="
+header = "=" * len(msg)
+print("\n".join(["", header, msg, header]))
+print(f"Number of Snapshots:\t{len(X_train)}")
+print(f"Number of POD Modes:\t{pod.n_modes}")
+print(f"Average POD Error:\t{np.mean(pod_errors):.3e}")
+print(f"Maximum POD Error:\t{np.max(pod_errors):.3e}")
+print(f"Minimum POD Error:\t{np.min(pod_errors):.3e}")
 
-    x_dmd = dmd.reconstructed_data.real.T
-    errors[i] = norm(X_test[i] - x_dmd) / norm(X_test[i])
-query_time = predict_time + dmd_time
+# Print DMD results
+msg = f"===== Summary of {len(pod_errors)} DMD Models ====="
+header = "=" * len(msg)
+print("\n".join(["", header, msg, header]))
+print(f"Number of Snapshots:\t{len(X_pod[0])}")
+try:
+    print(f"Number of DMD Modes:\t{dmd_worst.n_modes}")
+except:
+    print(f"Number of DMD Modes:\t{dmd_worst.modes.shape[1]}")
+print(f"Average DMD Error:\t{np.mean(dmd_errors):.3e}")
+print(f"Maximum DMD Error:\t{np.max(dmd_errors):.3e}")
+print(f"Minimum DMD Error:\t{np.min(dmd_errors):.3e}")
 
-# Print aggregated DMD results
-msg = f'===== Summary of {errors.size} DMD Models ====='
-header = '=' * len(msg)
-print('\n'.join(['', header, msg, header]))
-print(f'Average DMD Reconstruction Error:\t{np.mean(errors):.3e}')
-print(f'Maximum DMD Reconstruction Error:\t{np.max(errors):.3e}')
-print(f'Minimum DMD Reconstruction Error:\t{np.min(errors):.3e}')
-print()
-
-msg = f'===== Summary of POD-DMD Model Cost ====='
-header = '=' * len(msg)
-print('\n'.join([header, msg, header]))
-print(f'Construction:\t\t\t{offline_time:.3e} s')
-print(f'Prediction:\t\t\t{predict_time:.3e} s')
-print(f'Decomposition:\t\t\t{dmd_time:.3e} s')
-print(f'Total query cost:\t\t{query_time:.3e} s')
-print()
+# Print cost summary
+avg_cost = avg_predict_time + avg_dmd_time
+msg = f"===== Summary of Computational Cost ====="
+header = "=" * len(msg)
+print("\n".join(["", header, msg, header]))
+print(f"Construction Time:\t{contruction_time:.3e} s")
+print(f"Query Time:\t\t{avg_predict_time:.3e} s")
+print(f"DMD Time:\t\t{avg_dmd_time:.3e} s")
+print(f"Total Prediction Time:\t{avg_cost:.3e} s")
 
 plt.show()

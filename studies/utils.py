@@ -29,22 +29,22 @@ def get_data(problem_name: str, *args) -> NeutronicsDatasetReader:
     idx = options.index(problem_name)
 
     # Have the correct number of arguments been supplied?
-    n_args = [1, 2, 2, 1]
+    n_args = [1, 2, 1, 1]
     if len(args) != n_args[idx]:
         raise ValueError(
             f"Invalid number of arguments for {problem_name}.")
 
     # Check case argument
     case = int(args[0])
-    case_arg_limit = [None, 2, 1, None]
+    case_arg_limit = [None, 2, None, None]
     if case_arg_limit[idx] is not None:
         if case > case_arg_limit[idx]:
             raise ValueError(
                 f"Invalid case argument for {problem_name}.")
 
     # Check study argument
-    study_arg_limit = [3, 6, 2, 2]
-    study = int(args[1]) if idx in [1, 2] else int(args[0])
+    study_arg_limit = [3, 6, 6, 2]
+    study = int(args[1]) if idx == 1 else int(args[0])
     if study > study_arg_limit[idx]:
         raise ValueError(
             f"Invalid study argument for {problem_name}.")
@@ -87,7 +87,24 @@ def get_data(problem_name: str, *args) -> NeutronicsDatasetReader:
         else:
             study_name = 'magnitude_duration_interface'
 
-    # Define the path to the case and study\
+    # Handle TWIGL
+    if problem_name == 'twigl':
+        if study == 0:
+            study_name = 'magnitude'
+        elif study == 1:
+            study_name = 'duration'
+        elif study == 2:
+            study_name = 'scatter'
+        elif study == 3:
+            study_name = 'magnitude_duration'
+        elif study == 4:
+            study_name = 'magnitude_scatter'
+        elif study == 5:
+            study_name = 'duration_scatter'
+        else:
+            study_name = 'magnitude_duration_scatter'
+
+    # Define the path to the case and study
     path = f"{path}/{problem_name}/outputs/"
     if case_arg_limit[idx] is not None:
         path += f"{case_name}/"

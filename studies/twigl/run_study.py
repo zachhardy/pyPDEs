@@ -1,6 +1,8 @@
 import os
 import sys
 import itertools
+import time
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -10,18 +12,10 @@ from typing import List
 from pyPDEs.mesh import create_2d_mesh
 from pyPDEs.spatial_discretization import *
 from pyPDEs.material import *
-from pyPDEs.utilities.boundaries import *
 
+from studies.utils import *
 from modules.neutron_diffusion import *
-
 from xs import *
-
-
-def setup_directory(path: str):
-    if not os.path.isdir(path):
-        os.makedirs(path)
-    elif len(os.listdir(path)) > 0:
-        os.system(f'rm -r {path}/*')
 
 
 def function(g: int, x: List[float], sigma_a: float) -> float:
@@ -35,35 +29,64 @@ def function(g: int, x: List[float], sigma_a: float) -> float:
         return sigma_a
 
 
-# Nominal parameters
-m = 0.97667
-t_ramp = 0.2
+########################################
+# Setup parameter study
+########################################
+path = os.path.dirname(os.path.abspath(__file__))
 
-# Define current directory
-script_path = os.path.dirname(os.path.abspath(__file__))
+if len(sys.argv) != 2:
+    raise AssertionError(
+        f"There must be a command line argument for the "
+        f"parameter set.")
 
-# Get inputs
-case = int(sys.argv[1]) if len(sys.argv) > 1 else 0
-if case > 2:
-    raise AssertionError('Invalid case to run.')
+study = int(sys.argv[1])
+if study > 6:
+    raise ValueError("Invalid study number.")
+
+m_ref, t_ramp_ref = 0.97667, 0.2
+m, t_ramp = m_ref, t_ramp_ref
 
 # Define parameter space
 parameters = {}
-if case == 0:
-    parameters['multiplier'] = np.linspace(0.97, 0.98, 21)
-elif case == 1:
-    parameters['duration'] = np.linspace(0.15, 0.25, 21)
-elif case == 2:
-    parameters['multiplier'] = np.linspace(0.9725, 0.9775, 6)
-    parameters['duration'] = np.linspace(0.175, 0.2225, 6)
+if study == 0:
+    parameters['magnitude'] = setup_range(0.98, 0.02, 21)
+elif study == 1:
+    parameters['duration'] = setup_range(t_ramp_ref, 0.2, 21)
+elif study == 2:
+    parameters['scatter'] = setup_range(0.01, 0.2, 21)
+elif study == 3:
+    parameters['magnitude'] = setup_range(0.98, 0.01, 6)
+    parameters['duration'] = setup_range(t_ramp_ref, 0.1, 6)
+elif study == 4:
+    parameters['magnitude'] = setup_range(0.98, 0.01, 6)
+    parameters['scatter'] = setup_range(0.01, 0.1, 6)
+elif study == 5:
+    parameters['duration'] = setup_range(t_ramp_ref, 0.1, 6)
+    parameters['scatter'] = setup_range(0.01, 0.1, 6)
+else:
+    parameters['magnitude'] = setup_range(0.98, 0.01, 4)
+    parameters['duration'] = setup_range(t_ramp_ref, 0.1, 4)
+    parameters['scatter'] = setup_range(0.01, 0.1, 4)
 
 keys = list(parameters.keys())
 values = list(itertools.product(*parameters.values()))
 
+# Define the name of the parameter study
 study_name = ''
 for k, key in enumerate(keys):
     study_name = key if k == 0 else study_name + f'_{key}'
 
+# Define the path to the output directory
+output_path = f'{path}/outputs/{study_name}'
+setup_directory(output_path)
+
+# Save parameter sets
+param_filepath = f'{output_path}/params.txt'
+np.savetxt(param_filepath, np.array(values), fmt='%.8e')
+
+########################################
+# Setup the problem
+########################################
 # Create mesh, assign material IDs
 x_verts = np.linspace(0.0, 80.0, 21)
 y_verts = np.linspace(0.0, 80.0, 21)
@@ -123,18 +146,16 @@ solver.t_final = 0.5
 solver.dt = 1.0e-2
 solver.method = 'tbdf2'
 
+solver.adaptivity = True
+solver.refine_level = 0.05
+solver.coarsen_level = 0.01
+
 # Output informations
 solver.write_outputs = True
 
-# Define output path
-output_path = os.path.join(script_path, f'outputs/{study_name}')
-setup_directory(output_path)
-
-# Save parameters
-param_filepath = os.path.join(output_path, 'params.txt')
-np.savetxt(param_filepath, np.array(values), fmt='%.8e')
-
+########################################
 # Run the reference problem
+########################################
 msg = '===== Running reference ====='
 head = '=' * len(msg)
 print()
@@ -143,20 +164,14 @@ print('\n'.join([head, msg, head]))
 simulation_path = os.path.join(output_path, 'reference')
 setup_directory(simulation_path)
 solver.output_directory = simulation_path
-
 solver.initialize()
-print(f'Initial Power:\t{solver.power:.3e} W')
 solver.execute()
-print(f'Final Power:\t{solver.power:.3e} W')
 
-# Run the study
+########################################
+# Run the parameter study
+########################################
+t_avg = 0.0
 for n, params in enumerate(values):
-    msg = f'===== Running simulation {n} ====='
-    head = '=' * len(msg)
-    print('\n'.join(['', head, msg, head]))
-    for p in range(len(params)):
-        pname = keys[p].capitalize()
-        print(f'{pname:<10}:\t{params[p]:<5g}')
 
     # Setup output path
     simulation_path = os.path.join(output_path, str(n).zfill(3))
@@ -164,14 +179,9 @@ for n, params in enumerate(values):
     solver.output_directory = simulation_path
 
     # Modify system parameters
-    if 'multiplier' in keys and 'duration' not in keys:
-        t_ramp = 0.2
-        m = params[keys.index('multiplier')]
-    if 'duration' in keys and 'multiplier' not in keys:
-        m = 0.97667
-        t_ramp = params[keys.index('duration')]
-    if 'multiplier' in keys and 'duration' in keys:
-        m = params[keys.index('multiplier')]
+    if 'magnitude' in keys:
+        m = params[keys.index('magnitude')]
+    if 'duration' in keys:
         t_ramp = params[keys.index('duration')]
 
     solver.materials = deepcopy(materials)
@@ -179,8 +189,31 @@ for n, params in enumerate(values):
         if isinstance(material_property, CrossSections):
             material_property.sigma_a_function = function
 
+    if 'scatter' in keys:
+        sig_s = params[keys.index('scatter')]
+        for material_property in solver.materials[2].properties:
+            if isinstance(material_property, CrossSections):
+                material_property._transfer_matrix[0][0][1] = sig_s
+
     # Run the problem
+    init_time = time.time()
     solver.initialize()
-    print(f'Initial Power:\t{solver.power:.3e} W')
+    init_time = time.time() - init_time
+
+    msg = f'===== Running simulation {n} ====='
+    head = '=' * len(msg)
+    print('\n'.join(['', head, msg, head]))
+    for p in range(len(params)):
+        pname = keys[p].capitalize()
+        print(f'{pname:<10}:\t{params[p]:<5.3e}')
+    print(f"Initial Power:\t{solver.initial_power:.3f}")
+
+    run_time = time.time()
     solver.execute()
-    print(f'Final Power:\t{solver.power:.3e} W')
+    run_time = time.time() - run_time
+    t_avg += (init_time + run_time) / len(values)
+
+    print(f"Final Power:\t{solver.power:.3f}")
+
+print(f'\nAverage simulation time: {t_avg:.3e} s')
+
