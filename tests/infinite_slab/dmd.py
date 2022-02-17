@@ -37,7 +37,6 @@ sim.read_simulation_data()
 from pyROMs.dmd import DMD, PartitionedDMD
 from pydmd import DMD as PyDMD
 from pydmd import MrDMD
-
 X = sim.create_simulation_matrix('power_density')
 times = sim.times
 
@@ -92,3 +91,4 @@ print(f"Max Snapshot Error:\n"
       f"\t{'MRDMD:':<20}\t{np.max(mrdmd_errors):.3e}")
 
 plt.show()
+
