@@ -1,9 +1,16 @@
 import os
 import sys
+import warnings
 import numpy as np
 import matplotlib.pyplot as plt
+from numpy.linalg import norm
 
 from readers import NeutronicsSimulationReader
+from pyROMs.dmd import DMD, PartitionedDMD
+from pydmd import DMD as PyDMD
+from pydmd import MrDMD
+
+warnings.filterwarnings('ignore')
 
 if len(sys.argv) != 2:
     raise AssertionError(
@@ -27,10 +34,6 @@ else:
 
 sim = NeutronicsSimulationReader(path)
 sim.read_simulation_data()
-
-sim.plot_flux_moments(0, [0, 1], [0.0, 0.5], grouping='group')
-plt.gcf().suptitle("")
-for g, ax in enumerate(plt.gcf().get_axes()[::2]):
-    ax.set_title(f"Group {g}", fontsize=12)
 sim.plot_power()
+
 plt.show()
