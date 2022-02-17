@@ -48,7 +48,7 @@ pdmd_errors = pdmd.snapshot_errors
 pdmd.print_summary(skip_line=True)
 pdmd.print_partition_summaries(skip_line=True)
 
-mrdmd = MrDMD(PyDMD(opt=True), max_level=4, max_cycles=1)
+mrdmd = MrDMD(PyDMD(opt=True), max_level=1, max_cycles=1)
 mrdmd.fit(np.array(X, dtype=complex).T)
 X_dmd = mrdmd.reconstructed_data.T
 mrdmd_reconstruction_error = norm(X-X_dmd)/norm(X)
@@ -58,9 +58,9 @@ plt.figure()
 snapshot_errors = pdmd.snapshot_errors
 plt.xlabel(f"Time (s)", fontsize=12)
 plt.ylabel(f"Relative $L^2$ Error", fontsize=12)
-plt.semilogy(times, dmd_errors, '-*b', label="DMD")
-plt.semilogy(times, pdmd_errors, '-or', label="Partitioned DMD")
-plt.semilogy(times, mrdmd_errors, '-+k', label="MrDMD")
+plt.semilogy(times, dmd_errors, '-*b', label=f"DMD: {dmd.n_modes} Modes")
+plt.semilogy(times, pdmd_errors, '-or', label=f"Partitioned DMD: {sum(pdmd.n_modes)} Modes")
+plt.semilogy(times, mrdmd_errors, '-+k', label=f"MrDMD: {mrdmd.modes.shape[1]} Modes")
 plt.legend()
 plt.grid(True)
 

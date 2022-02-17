@@ -21,14 +21,13 @@ warnings.filterwarnings('ignore')
 study = int(sys.argv[1])
 dataset = get_data('twigl', study)
 n_params = dataset.n_parameters
-print(dataset.parameters)
 
 var = 'power_density'
 interior_only = False
 test_size = 0.2 if n_params == 1 or not interior_only else 0.5
 tau = 1.0e-8
 interp = 'rbf_gaussian'
-eps = 5.0 if n_params == 1 else 10.0
+eps = 5.0 if n_params == 1 else 20.0
 
 splits = dataset.train_test_split(variables=var,
                                   test_size=test_size, seed=12,
@@ -100,6 +99,14 @@ x_pod, x_dmd, x_test = X_pod[argmax], X_dmd[argmax], X_test[argmax]
 pod_step_errors = norm(x_test-x_pod, axis=1)/norm(x_test, axis=1)
 dmd_step_errors = norm(x_test-x_dmd, axis=1)/norm(x_test, axis=1)
 
+plt.figure()
+plt.title(f"Worst Result\nError = {pod_errors[argmax]:.3e}")
+plt.xlabel("Time (s)", fontsize=12)
+plt.ylabel("Relative $L^2$ Error", fontsize=12)
+plt.semilogy(dataset.times, pod_step_errors, '-*b')
+plt.grid(True)
+
+
 try:
     reconstruction = dmd_worst.snapshot_errors
 except:
@@ -108,7 +115,6 @@ except:
     reconstruction = norm(x - x_dmd, axis=1) / norm(x, axis=1)
 
 plt.figure()
-r_b = dataset.parameters[argmax][0]
 plt.xlabel("Time (s)", fontsize=12)
 plt.ylabel("Relative $L^2$ Error", fontsize=12)
 plt.semilogy(dataset.times, pod_step_errors, '-b*', label="POD")
