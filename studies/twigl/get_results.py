@@ -16,6 +16,5 @@ simulations = [dataset.simulations[0],
                dataset.simulations[-1]]
 
 for simulation in simulations:
-    simulation.plot_flux_moments(0, [0, 1], [0.0, 0.5], 'group')
     simulation.plot_power()
 plt.show()
