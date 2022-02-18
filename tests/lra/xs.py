@@ -6,25 +6,29 @@ __all__ = ['fuel_1_with_rod', 'fuel_1_without_rod',
            'fuel_2_with_rod', 'fuel_2_without_rod', 'fuel_2_control',
            'reflector', 'sigma_a_with_rod', 'sigma_a_without_rod']
 
+m = 0.8787631*0.975
+t_ramp = 2.0
+gamma = 3.034e-3
+
 
 def sigma_a_with_rod(g: int, x: List[float], sigma_a: float) -> float:
     assert len(x) == 4, 'There must be 4 variables in `x` input.'
-    t, T, T0, gamma = x[0], x[1], x[2], x[3]
+    t, T, T0 = x[0], x[1], x[2]
 
     if g == 0:
         return sigma_a * (1.0 + gamma*(np.sqrt(T) - np.sqrt(T0)))
     elif g == 1:
-        if t <= 2.0:
-            return sigma_a * (1.0 + t/2.0*(0.8787631 - 1.0))
+        if t <= t_ramp:
+            return sigma_a * (1.0 + t/t_ramp*(m - 1.0))
         else:
-            return sigma_a * 0.8787631
+            return sigma_a * m
     else:
         return sigma_a
 
 
 def sigma_a_without_rod(g: int, x: List[float], sigma_a: float) -> float:
     assert len(x) == 4, 'There must be 4 variables in `x` input.'
-    t, T, T0, gamma = x[0], x[1], x[2], x[3]
+    t, T, T0 = x[0], x[1], x[2]
 
     if g == 0:
         return sigma_a * (1.0 + gamma*(np.sqrt(T) - np.sqrt(T0)))

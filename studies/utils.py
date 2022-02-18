@@ -10,10 +10,10 @@ from readers import NeutronicsDatasetReader
 from typing import List, Tuple
 
 
-def setup_directory(path: str):
+def setup_directory(path: str, clear: bool = False):
     if not os.path.isdir(path):
         os.makedirs(path)
-    elif len(os.listdir(path)) > 0:
+    elif len(os.listdir(path)) > 0 and clear:
         os.system(f'rm -r {path}/*')
 
 
@@ -43,7 +43,7 @@ def get_data(problem_name: str, *args) -> NeutronicsDatasetReader:
                 f"Invalid case argument for {problem_name}.")
 
     # Check study argument
-    study_arg_limit = [3, 6, 6, 2]
+    study_arg_limit = [3, 6, 6, 6]
     study = int(args[1]) if idx == 1 else int(args[0])
     if study > study_arg_limit[idx]:
         raise ValueError(
@@ -103,6 +103,23 @@ def get_data(problem_name: str, *args) -> NeutronicsDatasetReader:
             study_name = 'duration_scatter'
         else:
             study_name = 'magnitude_duration_scatter'
+
+    # Hande LRA
+    if problem_name == 'lra':
+        if study == 0:
+            study_name = 'magnitude'
+        elif study == 1:
+            study_name = 'duration'
+        elif study == 2:
+            study_name = 'feedback'
+        elif study == 3:
+            study_name = 'magnitude_duration'
+        elif study == 4:
+            study_name = 'magnitude_feedback'
+        elif study == 5:
+            study_name = 'duration_feedback'
+        else:
+            study_name = 'magnitude_duration_feedback'
 
     # Define the path to the case and study
     path = f"{path}/{problem_name}/outputs/"

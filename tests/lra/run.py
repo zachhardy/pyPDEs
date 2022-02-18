@@ -77,7 +77,7 @@ solver.max_iterations = int(1.0e4)
 
 solver.is_nonlinear = True
 solver.nonlinear_tolerance = 1.0e-8
-solver.nonlinear_max_iterations = 20
+solver.nonlinear_max_iterations = 50
 
 # Set precursor options
 solver.use_precursors = True
