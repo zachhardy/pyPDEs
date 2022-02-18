@@ -63,8 +63,7 @@ def solve_time_step(self: 'TransientSolver', m: int = 0) -> None:
                 break
 
         if not converged:
-            print('\n!!! WARNING: Nonlinear iterations '
-                  'did not converge !!!\n')
+            print("!!! WARNING: Nonlinear iterations did not converge !!!")
 
     if self.use_precursors:
         self.update_precursors(m)
