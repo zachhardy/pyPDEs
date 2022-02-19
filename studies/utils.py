@@ -21,7 +21,8 @@ def setup_range(ref: float, var: float, N: int):
     return ref * (1.0 + var*np.linspace(-1.0, 1.0, N))
 
 
-def get_data(problem_name: str, *args) -> NeutronicsDatasetReader:
+def get_data(problem_name: str, *args,
+             skip: int = 1) -> NeutronicsDatasetReader:
     # Is this a valid problem name?
     options = ['three_group_sphere', 'infinite_slab', 'twigl', 'lra']
     if problem_name not in options:
@@ -131,5 +132,5 @@ def get_data(problem_name: str, *args) -> NeutronicsDatasetReader:
 
     # Create the data set
     dataset = NeutronicsDatasetReader(path)
-    dataset.read_dataset()
+    dataset.read_dataset(skip=skip)
     return dataset
