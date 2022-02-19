@@ -49,24 +49,24 @@ m, t_ramp = m_ref, t_ramp_ref
 # Define parameter space
 parameters = {}
 if study == 0:
-    parameters['magnitude'] = setup_range(0.98, 0.02, 21)
+    parameters['magnitude'] = 1.0 + setup_range(m_ref-1.0, 0.2, 21)[::-1]
 elif study == 1:
     parameters['duration'] = setup_range(t_ramp_ref, 0.2, 21)
 elif study == 2:
-    parameters['scatter'] = setup_range(0.01, 0.2, 21)
+    parameters['scatter'] = setup_range(0.01, 0.25, 21)
 elif study == 3:
-    parameters['magnitude'] = setup_range(0.98, 0.01, 6)
-    parameters['duration'] = setup_range(t_ramp_ref, 0.1, 6)
+    parameters['magnitude'] = 1.0 + setup_range(m_ref-1.0, 0.2, 6)[::-1]
+    parameters['duration'] = setup_range(t_ramp_ref, 0.2, 6)
 elif study == 4:
-    parameters['magnitude'] = setup_range(0.98, 0.01, 6)
-    parameters['scatter'] = setup_range(0.01, 0.1, 6)
+    parameters['magnitude'] = 1.0 + setup_range(m_ref-1.0, 0.2, 6)[::-1]
+    parameters['scatter'] = setup_range(0.01, 0.25, 6)
 elif study == 5:
-    parameters['duration'] = setup_range(t_ramp_ref, 0.1, 6)
-    parameters['scatter'] = setup_range(0.01, 0.1, 6)
+    parameters['duration'] = setup_range(t_ramp_ref, 0.2, 6)
+    parameters['scatter'] = setup_range(0.01, 0.25, 6)
 else:
-    parameters['magnitude'] = setup_range(0.98, 0.01, 4)
+    parameters['magnitude'] = 1.0 + setup_range(m_ref-1.0, 0.2, 4)[::-1]
     parameters['duration'] = setup_range(t_ramp_ref, 0.1, 4)
-    parameters['scatter'] = setup_range(0.01, 0.1, 4)
+    parameters['scatter'] = setup_range(0.01, 0.25, 4)
 
 keys = list(parameters.keys())
 values = list(itertools.product(*parameters.values()))
@@ -81,8 +81,27 @@ output_path = f'{path}/outputs/{study_name}'
 setup_directory(output_path)
 
 # Save parameter sets
-param_filepath = f'{output_path}/params.txt'
-np.savetxt(param_filepath, np.array(values), fmt='%.8e')
+param_filepath = f"{output_path}/params.txt"
+if os.path.isfile(param_filepath):
+    # Get old parameters
+    all_params = np.loadtxt(param_filepath)
+    if all_params.ndim == 1:
+        all_params = np.atleast_2d(all_params).T
+    all_params = [tuple(np.round(param, 14)) for param in all_params]
+    values = [tuple(np.round(value, 14)) for value in values]
+
+    # Figure out new parameters
+    new_params = []
+    for value in values:
+        if value not in all_params:
+            all_params.append(value)
+            new_params.append(value)
+
+    # Determine starting number
+    sim_skip = len(os.listdir(output_path)) - 1
+else:
+    all_params = new_params = values
+    sim_skip = 0
 
 ########################################
 # Setup the problem
@@ -154,28 +173,19 @@ solver.coarsen_level = 0.01
 solver.write_outputs = True
 
 ########################################
-# Run the reference problem
-########################################
-msg = '===== Running reference ====='
-head = '=' * len(msg)
-print()
-print('\n'.join([head, msg, head]))
-
-simulation_path = os.path.join(output_path, 'reference')
-setup_directory(simulation_path)
-solver.output_directory = simulation_path
-solver.initialize()
-solver.execute()
-
-########################################
 # Run the parameter study
 ########################################
 t_avg = 0.0
-for n, params in enumerate(values):
+for n, params in enumerate(new_params):
+    with open(param_filepath, 'a') as pfile:
+        for par in params:
+            pfile.write(f"{par:.14e} ")
+        pfile.write("\n")
 
     # Setup output path
-    simulation_path = os.path.join(output_path, str(n).zfill(3))
-    setup_directory(simulation_path)
+    sim_num = n + sim_skip
+    simulation_path = os.path.join(output_path, str(sim_num).zfill(3))
+    setup_directory(simulation_path, clear=True)
     solver.output_directory = simulation_path
 
     # Modify system parameters

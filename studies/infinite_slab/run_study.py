@@ -19,9 +19,9 @@ from studies.utils import *
 def function(g, x, sigma_a) -> float:
     t = x[0]
     if g == 1 and 0.0 < t <= t_ramp:
-        return sigma_a * (1.0 + t/t_ramp*m)
+        return sigma_a * (1.0 + t/t_ramp*(m - 1.0))
     elif g == 1 and t > t_ramp:
-        return (1.0 + m) * sigma_a
+        return m * sigma_a
     else:
         return sigma_a
 
@@ -46,13 +46,13 @@ if study > 6:
 
 # Define nominal values for each problem
 if problem == 0:
-    m_ref, t_ramp_ref = 0.03, 1.0
+    m_ref, t_ramp_ref = 1.03, 1.0
     t_final, dt = 2.0, 0.04
 elif problem == 1:
-    m_ref, t_ramp_ref = -0.01, 1.0
+    m_ref, t_ramp_ref = 0.99, 1.0
     t_final, dt = 2.0, 0.04
 else:
-    m_ref, t_ramp_ref = -0.05, 0.01
+    m_ref, t_ramp_ref = 0.95, 0.01
     t_final, dt = 0.02, 4.0e-4
 
 m, t_ramp = m_ref, t_ramp_ref
@@ -60,24 +60,24 @@ m, t_ramp = m_ref, t_ramp_ref
 # Define parameter spaces
 parameters = {}
 if study == 0:
-    parameters['magnitude'] = setup_range(m_ref, 0.2, 31)
+    parameters['magnitude'] = 1.0 + setup_range(m_ref-1.0, 0.2, 21)[::-1]
 elif study == 1:
-    parameters['duration'] = setup_range(t_ramp_ref, 0.2, 31)
+    parameters['duration'] = setup_range(t_ramp_ref, 0.2, 21)
 elif study == 2:
-    parameters['interface'] = setup_range(40.0, 0.05, 31)
+    parameters['interface'] = setup_range(40.0, 0.05, 21)
 elif study == 3:
-    parameters['magnitude'] = setup_range(m_ref, 0.1, 7)
-    parameters['duration'] = setup_range(t_ramp_ref, 0.1, 7)
+    parameters['magnitude'] = 1.0 + setup_range(m_ref-1.0, 0.2, 6)[::-1]
+    parameters['duration'] = setup_range(t_ramp_ref, 0.2, 6)
 elif study == 4:
-    parameters['magnitude'] = setup_range(m_ref, 0.1, 7)
-    parameters['interface'] = setup_range(40.0, 0.025, 7)
+    parameters['magnitude'] = 1.0 + setup_range(m_ref-1.0, 0.1, 6)[::-1]
+    parameters['interface'] = setup_range(40.0, 0.0125, 6)
 elif study == 5:
-    parameters['duration'] = setup_range(t_ramp_ref, 0.1, 7)
-    parameters['interface'] = setup_range(40.0, 0.025, 7)
+    parameters['duration'] = setup_range(t_ramp_ref, 0.2, 6)
+    parameters['interface'] = setup_range(40.0, 0.025, 6)
 elif study == 6:
-    parameters['magnitude'] = setup_range(m_ref, 0.05, 5)
-    parameters['duration'] = setup_range(t_ramp_ref, 0.05, 5)
-    parameters['interface'] = setup_range(40.0, 0.025, 5)
+    parameters['magnitude'] = 1.0 + setup_range(m_ref-1.0, 0.1, 5)[::-1]
+    parameters['duration'] = setup_range(t_ramp_ref, 0.1, 5)
+    parameters['interface'] = setup_range(40.0, 0.0125, 5)
 else:
     raise ValueError(f'Invalid case provided.')
 
@@ -104,8 +104,29 @@ output_path = f'{path}/outputs/{problem_name}/{study_name}'
 setup_directory(output_path)
 
 # Save parameter sets
-param_filepath = f'{output_path}/params.txt'
-np.savetxt(param_filepath, np.array(values), fmt='%.8e')
+param_filepath = f"{output_path}/params.txt"
+if os.path.isfile(param_filepath):
+    # Get old parameters
+    all_params = np.loadtxt(param_filepath)
+    if all_params.ndim == 1:
+        all_params = np.atleast_2d(all_params).T
+    all_params = [tuple(np.round(param, 14)) for param in all_params]
+    values = [tuple(np.round(value, 14)) for value in values]
+
+    # Figure out new parameters
+    new_params = []
+    for value in values:
+        if value not in all_params:
+            all_params.append(value)
+            new_params.append(value)
+
+    # Determine starting number
+    sim_skip = len(os.listdir(output_path)) - 1
+else:
+    all_params = new_params = np.round(values, 14)
+    sim_skip = 0
+
+print(f"Running {len(new_params)} new simulations...")
 
 ########################################
 # Setup the problem
@@ -153,6 +174,10 @@ solver.t_final = t_final
 solver.dt = dt
 solver.method = 'tbdf2'
 
+solver.adaptivity = True
+solver.refine_level = 0.05
+solver.coarsen_level = 0.01
+
 solver.max_iterations = max_iterations
 solver.tolerance = tolerance
 
@@ -160,28 +185,19 @@ solver.tolerance = tolerance
 solver.write_outputs = True
 
 ########################################
-# Run the reference problem
-########################################
-msg = '===== Running reference ====='
-head = '=' * len(msg)
-print()
-print('\n'.join([head, msg, head]))
-
-simulation_path = os.path.join(output_path, 'reference')
-setup_directory(simulation_path)
-solver.output_directory = simulation_path
-solver.initialize()
-solver.execute()
-
-########################################
 # Run the parameter study
 ########################################
 t_avg = 0.0
-for n, params in enumerate(values):
+for n, params in enumerate(new_params):
+    with open(param_filepath, 'a') as pfile:
+        for par in params:
+            pfile.write(f"{par:.14e} ")
+        pfile.write("\n")
 
     # Setup output path
-    simulation_path = os.path.join(output_path, str(n).zfill(3))
-    setup_directory(simulation_path)
+    sim_num = n + sim_skip
+    simulation_path = os.path.join(output_path, str(sim_num).zfill(3))
+    setup_directory(simulation_path, clear=True)
     solver.output_directory = simulation_path
 
     # Modify system parameters
