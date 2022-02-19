@@ -34,7 +34,6 @@ def plot_reconstruction_errors():
     from matplotlib.pyplot import Figure, Axes
 
     fig, axs = plt.subplots(1, 2, figsize=(8, 4))
-    fig: Figure = fig
     axs: List[Axes] = axs.ravel()
 
     for i, ax in enumerate(axs):
