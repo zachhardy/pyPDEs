@@ -5,15 +5,16 @@ __all__ = ['xs_material_0', 'xs_material_1',
            'sigma_a_ramp', 'sigma_a_step', 'tolerance',
            'max_iterations']
 
+delta = 0.97667 - 1.0
 
 def sigma_a_ramp(g: int, x: List[float], sigma_a: float) -> float:
     t = x[0]
     if g == 1:
         if 0.0 <= t <= 0.2:
-            return sigma_a*(1.0 + t/0.2*(0.97667 - 1.0))
+            return sigma_a*(1.0 + t/0.2*delta)
 
         else:
-            return 0.97667*sigma_a
+            return (1.0 + delta)*sigma_a
     else:
         return sigma_a
 

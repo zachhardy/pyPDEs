@@ -22,9 +22,9 @@ def function(g: int, x: List[float], sigma_a: float) -> float:
     t = x[0]
     if g == 1:
         if 0.0 <= t <= t_ramp:
-            return sigma_a * (1.0 + t/t_ramp*(m - 1.0))
+            return sigma_a * (1.0 + t/t_ramp*delta)
         else:
-            return m * sigma_a
+            return (1.0 + delta)*sigma_a
     else:
         return sigma_a
 
@@ -43,29 +43,29 @@ study = int(sys.argv[1])
 if study > 6:
     raise ValueError("Invalid study number.")
 
-m_ref, t_ramp_ref = 0.97667, 0.2
-m, t_ramp = m_ref, t_ramp_ref
+delta_ref, t_ramp_ref = 0.97667 - 1.0, 0.2
+delta, t_ramp = delta_ref, t_ramp_ref
 
 # Define parameter space
 parameters = {}
 if study == 0:
-    parameters['magnitude'] = 1.0 + setup_range(m_ref-1.0, 0.2, 21)[::-1]
+    parameters['magnitude'] = setup_range(delta_ref, 0.2, 21)
 elif study == 1:
-    parameters['duration'] = setup_range(t_ramp_ref, 0.2, 21)
+    parameters['duration'] = setup_range(t_ramp_ref, 0.2, 2)
 elif study == 2:
-    parameters['scatter'] = setup_range(0.01, 0.25, 21)
+    parameters['scatter'] = setup_range(0.01, 0.25, 2)
 elif study == 3:
-    parameters['magnitude'] = 1.0 + setup_range(m_ref-1.0, 0.2, 6)[::-1]
-    parameters['duration'] = setup_range(t_ramp_ref, 0.2, 6)
+    parameters['magnitude'] = setup_range(delta_ref, 0.2, 2)
+    parameters['duration'] = setup_range(t_ramp_ref, 0.2, 2)
 elif study == 4:
-    parameters['magnitude'] = 1.0 + setup_range(m_ref-1.0, 0.2, 6)[::-1]
-    parameters['scatter'] = setup_range(0.01, 0.25, 6)
+    parameters['magnitude'] = setup_range(delta_ref, 0.2, 2)
+    parameters['scatter'] = setup_range(0.01, 0.25, 2)
 elif study == 5:
-    parameters['duration'] = setup_range(t_ramp_ref, 0.2, 6)
-    parameters['scatter'] = setup_range(0.01, 0.25, 6)
+    parameters['duration'] = setup_range(t_ramp_ref, 0.2, 2)
+    parameters['scatter'] = setup_range(0.01, 0.25, 2)
 else:
-    parameters['magnitude'] = 1.0 + setup_range(m_ref-1.0, 0.2, 4)[::-1]
-    parameters['duration'] = setup_range(t_ramp_ref, 0.1, 4)
+    parameters['magnitude'] = setup_range(delta_ref, 0.2, 4)
+    parameters['duration'] = setup_range(t_ramp_ref, 0.2, 4)
     parameters['scatter'] = setup_range(0.01, 0.25, 4)
 
 keys = list(parameters.keys())
@@ -190,7 +190,7 @@ for n, params in enumerate(new_params):
 
     # Modify system parameters
     if 'magnitude' in keys:
-        m = params[keys.index('magnitude')]
+        delta = params[keys.index('magnitude')]
     if 'duration' in keys:
         t_ramp = params[keys.index('duration')]
 

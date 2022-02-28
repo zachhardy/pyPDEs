@@ -6,7 +6,7 @@ __all__ = ['fuel_1_with_rod', 'fuel_1_without_rod',
            'fuel_2_with_rod', 'fuel_2_without_rod', 'fuel_2_control',
            'reflector', 'sigma_a_with_rod', 'sigma_a_without_rod']
 
-m = 0.8787631*0.975
+delta = 0.8787631 - 1.0
 t_ramp = 2.0
 gamma = 3.034e-3
 
@@ -19,9 +19,9 @@ def sigma_a_with_rod(g: int, x: List[float], sigma_a: float) -> float:
         return sigma_a * (1.0 + gamma*(np.sqrt(T) - np.sqrt(T0)))
     elif g == 1:
         if t <= t_ramp:
-            return sigma_a * (1.0 + t/t_ramp*(m - 1.0))
+            return sigma_a * (1.0 + t/t_ramp*delta)
         else:
-            return sigma_a * m
+            return (1.0 + delta)*sigma_a
     else:
         return sigma_a
 

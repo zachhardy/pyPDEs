@@ -27,9 +27,9 @@ def function(g: int, x: List[float], sigma_a: float) -> float:
         return sigma_a*(1.0 + gamma*(np.sqrt(T) - np.sqrt(T0)))
     elif g == 1:
         if t <= t_ramp:
-            return sigma_a*(1.0 + t/t_ramp*(m - 1.0))
+            return sigma_a*(1.0 + t/t_ramp*delta)
         else:
-            return sigma_a * m
+            return (delta + 1.0)*sigma_a
     else:
         return sigma_a
 
@@ -49,30 +49,30 @@ if study > 6:
     raise ValueError("Invalid study number.")
 
 # Nominal parameters
-m_ref, t_ramp_ref, feedback_ref = 0.8787631, 2.0, 3.034e-3
-m, t_ramp, feedback = m_ref, t_ramp_ref, feedback_ref
+delta_ref, t_ramp_ref, feedback_ref = 0.8787631-1.0, 2.0, 3.034e-3
+delta, t_ramp, feedback = delta_ref, t_ramp_ref, feedback_ref
 
 # Define parameter space
 parameters = {}
 if study == 0:
-    parameters['magnitude'] = 1.0 + setup_range(m_ref-1.0, 0.05, 2)
+    parameters['magnitude'] = setup_range(delta_ref, 0.025, 2)
 elif study == 1:
-    parameters['duration'] = setup_range(t_ramp_ref, 0.1, 2)
+    parameters['duration'] = setup_range(t_ramp_ref, 0.05, 2)
 elif study == 2:
-    parameters['feedback'] = setup_range(feedback_ref, 0.25, 2)
+    parameters['feedback'] = setup_range(feedback_ref, 0.05, 2)
 elif study == 3:
-    parameters['magnitude'] = setup_range(m_ref, 0.025, 5)
-    parameters['duration'] = setup_range(t_ramp_ref, 0.05, 5)
+    parameters['magnitude'] = setup_range(delta_ref, 0.025, 2)
+    parameters['duration'] = setup_range(t_ramp_ref, 0.05, 2)
 elif study == 4:
-    parameters['magnitude'] = setup_range(m_ref, 0.005, 5)
-    parameters['feedback'] = setup_range(feedback_ref, 0.1, 5)
+    parameters['magnitude'] =setup_range(delta_ref, 0.025, 6)
+    parameters['feedback'] = setup_range(feedback_ref, 0.05, 6)
 elif study == 5:
-    parameters['duration'] = setup_range(t_ramp_ref, 0.05, 5)
-    parameters['feedback'] = setup_range(feedback_ref, 0.025, 5)
+    parameters['duration'] = setup_range(t_ramp_ref, 0.05, 2)
+    parameters['feedback'] = setup_range(feedback_ref, 0.05, 2)
 else:
-    parameters['magnitude'] = setup_range(m_ref, 0.01, 4)
-    parameters['duration'] = setup_range(t_ramp_ref, 0.025, 4)
-    parameters['feedback'] = setup_range(feedback_ref, 0.25, 4)
+    parameters['magnitude'] = setup_range(delta_ref, 0.025, 4)
+    parameters['duration'] = setup_range(t_ramp_ref, 0.05, 4)
+    parameters['feedback'] = setup_range(feedback_ref, 0.05, 4)
 
 keys = list(parameters.keys())
 values = list(itertools.product(*parameters.values()))
@@ -177,8 +177,8 @@ solver.tolerance = 1.0e-8
 solver.max_iterations = int(1.0e4)
 
 solver.is_nonlinear = True
-solver.nonlinear_tolerance = 1.0e-6
-solver.nonlinear_max_iterations = 500
+solver.nonlinear_tolerance = 1.0e-8
+solver.nonlinear_max_iterations = 20
 
 # Set precursor options
 solver.use_precursors = True
@@ -199,8 +199,8 @@ solver.dt = 0.01
 solver.method = 'tbdf2'
 
 solver.adaptivity = True
-solver.refine_level = 0.1
-solver.coarsen_level = 0.025
+solver.refine_level = 0.2
+solver.coarsen_level = 0.01
 
 # Output informations
 solver.write_outputs = True
@@ -223,7 +223,7 @@ for n, params in enumerate(new_params):
 
     # Modify system parameters
     if 'magnitude' in keys:
-        m = params[keys.index('magnitude')]
+        delta = params[keys.index('magnitude')]
     if 'duration' in keys:
         t_ramp = params[keys.index('duration')]
     if 'feedback' in key:
