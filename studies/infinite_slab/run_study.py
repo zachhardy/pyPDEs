@@ -19,9 +19,9 @@ from studies.utils import *
 def function(g, x, sigma_a) -> float:
     t = x[0]
     if g == 1 and 0.0 < t <= t_ramp:
-        return sigma_a * (1.0 + t/t_ramp*(m - 1.0))
+        return sigma_a * (1.0 + t/t_ramp*delta)
     elif g == 1 and t > t_ramp:
-        return m * sigma_a
+        return (1.0 + delta) * sigma_a
     else:
         return sigma_a
 
@@ -46,38 +46,38 @@ if study > 6:
 
 # Define nominal values for each problem
 if problem == 0:
-    m_ref, t_ramp_ref = 1.03, 1.0
+    delta_ref, t_ramp_ref = 0.03, 1.0
     t_final, dt = 2.0, 0.04
 elif problem == 1:
-    m_ref, t_ramp_ref = 0.99, 1.0
+    delta_ref, t_ramp_ref = -0.01, 1.0
     t_final, dt = 2.0, 0.04
 else:
-    m_ref, t_ramp_ref = 0.95, 0.01
+    delta_ref, t_ramp_ref = -0.05, 0.01
     t_final, dt = 0.02, 4.0e-4
 
-m, t_ramp = m_ref, t_ramp_ref
+delta, t_ramp = delta_ref, t_ramp_ref
 
 # Define parameter spaces
 parameters = {}
 if study == 0:
-    parameters['magnitude'] = 1.0 + setup_range(m_ref-1.0, 0.2, 21)[::-1]
+    parameters['magnitude'] = setup_range(delta_ref, 0.2, 21)
 elif study == 1:
     parameters['duration'] = setup_range(t_ramp_ref, 0.2, 21)
 elif study == 2:
     parameters['interface'] = setup_range(40.0, 0.05, 21)
 elif study == 3:
-    parameters['magnitude'] = 1.0 + setup_range(m_ref-1.0, 0.2, 6)[::-1]
+    parameters['magnitude'] = setup_range(delta_ref, 0.2, 6)
     parameters['duration'] = setup_range(t_ramp_ref, 0.2, 6)
 elif study == 4:
-    parameters['magnitude'] = 1.0 + setup_range(m_ref-1.0, 0.1, 6)[::-1]
+    parameters['magnitude'] = setup_range(delta_ref, 0.1, 6)
     parameters['interface'] = setup_range(40.0, 0.0125, 6)
 elif study == 5:
     parameters['duration'] = setup_range(t_ramp_ref, 0.2, 6)
     parameters['interface'] = setup_range(40.0, 0.025, 6)
 elif study == 6:
-    parameters['magnitude'] = 1.0 + setup_range(m_ref-1.0, 0.1, 5)[::-1]
-    parameters['duration'] = setup_range(t_ramp_ref, 0.1, 5)
-    parameters['interface'] = setup_range(40.0, 0.0125, 5)
+    parameters['magnitude'] = setup_range(delta_ref, 0.05, 5)
+    parameters['duration'] = setup_range(t_ramp_ref, 0.05, 5)
+    parameters['interface'] = setup_range(40.0, 0.025, 5)
 else:
     raise ValueError(f'Invalid case provided.')
 
