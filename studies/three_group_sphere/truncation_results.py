@@ -36,9 +36,9 @@ splits = dataset.train_test_split(variables=var,
                                   interior_only=interior_only)
 X_train, X_test, Y_train, Y_test = splits
 
-rom_info = {'tau': [], 'n_modes': [],
-            'mean_error': [], 'max_error': [],
-            'min_error': [], 'predict_time': []}
+info = {'tau': [], 'n_modes': [],
+        'mean_error': [], 'max_error': [],
+        'min_error': [], 'predict_time': []}
 
 taus = [10.0**i for i in range(-16, 0)]
 for tau in taus:
@@ -68,12 +68,12 @@ for tau in taus:
     for i in range(len(X_test)):
         errors[i] = norm(X_test[i]-X_pred[i])/norm(X_test[i])
 
-    rom_info['tau'].append(tau)
-    rom_info['n_modes'].append(pod.n_modes)
-    rom_info['predict_time'].append(avg_predict_time)
-    rom_info['mean_error'].append(np.mean(errors))
-    rom_info['max_error'].append(np.max(errors))
-    rom_info['min_error'].append(np.min(errors))
+    info['tau'].append(tau)
+    info['n_modes'].append(pod.n_modes)
+    info['predict_time'].append(avg_predict_time)
+    info['mean_error'].append(np.mean(errors))
+    info['max_error'].append(np.max(errors))
+    info['min_error'].append(np.min(errors))
 
 print(f"Training set size:\t{len(X_train)}")
 
@@ -88,19 +88,19 @@ for i, ax in enumerate(axs):
     if i == 0:
         ax.set_xlabel(f"# of Modes", fontsize=12)
         ax.set_ylabel(f"Relative $L^2$ Error", fontsize=12)
-        ax.semilogy(rom_info['n_modes'], rom_info['mean_error'],
+        ax.semilogy(info['n_modes'], info['mean_error'],
                     '-b*', label="Mean Error")
-        ax.semilogy(rom_info['n_modes'], rom_info['max_error'],
+        ax.semilogy(info['n_modes'], info['max_error'],
                     '-ro', label="Max Error")
-        ax.semilogy(rom_info['n_modes'], rom_info['min_error'],
+        ax.semilogy(info['n_modes'], info['min_error'],
                     '-k+', label="Min Error")
         ax.legend()
         ax.grid(True)
     else:
         ax.set_xlabel(f"$\\tau$", fontsize=12)
-        ax.loglog(taus, rom_info['mean_error'], '-b*', label="Mean Error")
-        ax.loglog(taus, rom_info['max_error'], '-ro', label="Max Error")
-        ax.loglog(taus, rom_info['min_error'], '-k+', label="Min Error")
+        ax.loglog(taus, info['mean_error'], '-b*', label="Mean Error")
+        ax.loglog(taus, info['max_error'], '-ro', label="Max Error")
+        ax.loglog(taus, info['min_error'], '-k+', label="Min Error")
         ax.legend()
         ax.grid(True)
 plt.tight_layout()
