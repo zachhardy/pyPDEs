@@ -40,7 +40,7 @@ from pydmd import MrDMD
 X = sim.create_simulation_matrix('power_density')
 times = sim.times
 
-dmd = DMD(svd_rank=13, opt=True).fit(X)
+dmd = DMD(svd_rank=1.0e-8, opt=True).fit(X)
 dmd.print_summary()
 dmd_errors = dmd.snapshot_errors
 
@@ -59,12 +59,13 @@ mrdmd_errors = norm(X-X_dmd, axis=1)/norm(X, axis=1)
 
 plt.figure()
 snapshot_errors = pdmd.snapshot_errors
+plt.tick_params(labelsize=12)
 plt.xlabel(f"Time (s)", fontsize=12)
 plt.ylabel(f"Relative $L^2$ Error", fontsize=12)
-plt.semilogy(times, dmd_errors, '-*b', label="DMD")
-plt.semilogy(times, pdmd_errors, '-or', label="Partitioned DMD")
-plt.semilogy(times, mrdmd_errors, '-+k', label="MrDMD")
-plt.legend()
+plt.semilogy(times, dmd_errors, '-*b', label=f"DMD: {dmd.n_modes} Modes")
+plt.semilogy(times, pdmd_errors, '-or', label=f"Partitioned DMD: {sum(pdmd.n_modes)} Modes")
+plt.semilogy(times, mrdmd_errors, '-+k', label=f"MRDMD: {mrdmd.modes.shape[1]} Modes")
+plt.legend(fontsize=12)
 plt.grid(True)
 
 for subdmd in pdmd:

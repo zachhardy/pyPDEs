@@ -62,4 +62,12 @@ solver.output_directory = \
 
 # Run the problem
 solver.initialize(verbose=1)
+solver.plot_solution()
+for i, ax in enumerate(plt.gcf().get_axes()):
+    ylabel = "$\phi_g(z)$" if i == 0 else "$C_j(z)$"
+    ax.set_xlabel("z (cm)", fontsize=12)
+    ax.set_ylabel(ylabel, fontsize=12)
+    ax.legend(fontsize=12)
+    ax.tick_params(labelsize=12)
 solver.execute(verbose=1)
+plt.show()

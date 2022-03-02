@@ -7,8 +7,6 @@ from numpy.linalg import norm
 
 from readers import NeutronicsSimulationReader
 from pyROMs.dmd import DMD, PartitionedDMD
-from mrdmd import DMD as PyDMD
-from mrdmd import MrDMD
 
 warnings.filterwarnings('ignore')
 
@@ -48,6 +46,8 @@ sim.read_simulation_data()
 sim.plot_flux_moments(0, [0, 1], times, grouping='time')
 for g, ax in enumerate(plt.gcf().get_axes()):
     ax.set_title(f"Group {g}")
+    ax.tick_params(labelsize=12)
+    ax.legend(fontsize=12)
 
 if arg == 2:
     from typing import List
@@ -74,4 +74,5 @@ sim.plot_power()
 ax = plt.gca()
 ax.set_xlabel(f"Time (s)", fontsize=12)
 ax.set_ylabel(f"Power (W)", fontsize=12)
+ax.tick_params(labelsize=12)
 plt.show()
