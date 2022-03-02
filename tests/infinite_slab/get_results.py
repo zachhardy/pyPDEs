@@ -43,6 +43,8 @@ else:
 sim = NeutronicsSimulationReader(path)
 sim.read_simulation_data()
 
+print(sim.powers[-1])
+
 sim.plot_flux_moments(0, [0, 1], times, grouping='time')
 for g, ax in enumerate(plt.gcf().get_axes()):
     ax.set_title(f"Group {g}")
