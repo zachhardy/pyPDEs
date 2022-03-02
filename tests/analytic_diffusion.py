@@ -30,6 +30,8 @@ exact.plot_expansion(r, 4.0e-3)
 
 path = os.path.dirname(os.path.abspath(__file__))
 path = os.path.join(path, 'three_group_sphere', 'transient')
-exact.save(path + f'/sphere{int(r_b)}cm.obj')
+
+filename = f"{path}/sphere{int(r_b)}cm.obj"
+exact.save(filename)
 
 plt.show()

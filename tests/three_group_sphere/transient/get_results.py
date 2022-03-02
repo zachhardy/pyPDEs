@@ -95,5 +95,11 @@ sim = NeutronicsSimulationReader(path)
 sim.read_simulation_data()
 
 times = sim.times
-sim.plot_flux_moments(0, times=[0.0, times[-1]])
+sim.plot_flux_moments(0, times=[0.0, times[-1]/2, times[-1]])
+for ax in plt.gcf().get_axes():
+    ax.tick_params(labelsize=12)
+    ax.set_xlabel(ax.get_xlabel(), fontsize=12)
+    ax.set_ylabel(ax.get_ylabel(), fontsize=12)
+    ax.set_title(ax.get_title(), fontsize=12)
+    ax.legend(fontsize=12)
 plt.show()

@@ -13,8 +13,9 @@ def plot_reconstruction_errors():
                  'min_error': [],
                  'tau': [10.0 ** i for i in range(-18, 0)]}
     for tau in tau_error['tau']:
-        dmd.fit(X, svd_rank=1.0 - tau)
+        dmd.fit(X, svd_rank=tau, opt=False)
         errors = dmd.snapshot_errors
+
         tau_error['mean_error'].append(np.mean(errors))
         tau_error['max_error'].append(np.max(errors))
         tau_error['min_error'].append(np.min(errors))
@@ -47,16 +48,16 @@ def plot_reconstruction_errors():
                         '-ro', label="Max Error")
             ax.semilogy(n, mode_error['min_error'],
                         '-k+', label="Min Error")
-            ax.legend()
-            ax.grid(True)
         else:
             tau = tau_error['tau']
-            ax.set_xlabel(f"$\\tau$", fontsize=12)
+            ax.set_xlabel(r"$\tau_{cut}$", fontsize=12)
             ax.loglog(tau, tau_error['mean_error'], '-b*', label="Mean Error")
             ax.loglog(tau, tau_error['max_error'], '-ro', label="Max Error")
             ax.loglog(tau, tau_error['min_error'], '-k+', label="Min Error")
-            ax.legend()
-            ax.grid(True)
+        ax.legend(fontsize=12)
+        ax.grid(True)
+        ax.tick_params(labelsize=12)
+
     plt.tight_layout()
     plt.show()
 
@@ -97,8 +98,9 @@ def compare_modes():
             ax.set_ylabel(ylabel, fontsize=12)
             for g in range(n_grps):
                 ax.plot(r, phi[g::n_grps], label=f"Group {g}")
-            ax.legend()
+            ax.legend(fontsize=12)
             ax.grid(True)
+            ax.tick_params(labelsize=12)
         plt.tight_layout()
     plt.show()
 
@@ -120,15 +122,21 @@ times = sim.times
 ########################################
 from pyROMs import DMD
 
-dmd = DMD(svd_rank=10).fit(X)
-dmd.print_summary()
+dmd = DMD(svd_rank=0, opt=False)
+plot_reconstruction_errors()
+
+dt = np.diff(times)[0]
+dmd.original_time = {'t0': 0.0, 'tend': times[-1], 'dt': dt}
+dmd.fit(X, svd_rank=6)
+dmd.print_summary(skip_line=True)
 
 ########################################
 # Compare to exact eigenvalues
 ########################################
 from modules.neutron_diffusion.analytic import *
 
-exact: AnalyticSolution = load(base + '/sphere6cm.obj')
+filename = f"{base}/sphere6cm"
+exact: AnalyticSolution = load(f"{filename}.obj")
 modes = [exact.get_mode(i, method='amp') for i in range(dmd.n_modes)]
 alphas = np.array([mode.alpha for mode in modes])
 attn = np.exp(alphas * np.diff(times)[0])
@@ -136,6 +144,8 @@ attn = np.exp(alphas * np.diff(times)[0])
 eig_idx = []
 for alpha in alphas:
     eig_idx.append(exact.find_mode_index_from_alpha(alpha))
+
+print()
 print(eig_idx)
 
 eigs = dmd.eigvals
@@ -145,10 +155,11 @@ for i in range(len(eigs)):
         if omega.imag % np.pi < 1.0e-12:
             eigs[i] = eigs[i].real + 0.0j
 
-idx = []
 omegas = dmd.omegas.real
+idx, avail = [], list(range(len(omegas)))
 for i, alpha in enumerate(alphas):
-    idx.append(np.argmin(np.abs(alpha - omegas)))
+    idx.append(avail[np.argmin(np.abs(alpha - omegas[avail]))])
+    avail.remove(idx[i])
 
 plt.figure()
 plt.xlabel(r"$\mathcal{R}~(\lambda)$", fontsize=14)
@@ -156,7 +167,8 @@ plt.ylabel(r"$\mathcal{I}~(\lambda)$", fontsize=14)
 plt.plot(eigs.real, eigs.imag, 'bo', label='DMD')
 plt.plot(attn.real, attn.imag, 'r*', label='Exact')
 plt.grid(True)
-plt.legend()
+plt.legend(fontsize=12)
+plt.tick_params(labelsize=12)
 plt.tight_layout()
 
 compare_modes()
@@ -171,5 +183,6 @@ for m in range(dmd.n_modes):
            f"{omega:.3e} & " \
            f"{(alpha - omega) / np.abs(alpha):.3e} \\\\"
 msg += "\n\t\hline\n\end{tabular}"
+print()
 print(msg)
 plt.show()

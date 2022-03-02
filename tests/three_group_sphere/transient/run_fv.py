@@ -57,5 +57,5 @@ solver.output_directory = \
     os.path.join(abs_path, 'outputs/fv')
 
 # Run the problem
-solver.initialize(verbose=1)
+solver.initialize(verbose=0)
 solver.execute(verbose=0)
