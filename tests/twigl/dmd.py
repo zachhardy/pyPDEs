@@ -58,9 +58,12 @@ plt.figure()
 snapshot_errors = pdmd.snapshot_errors
 plt.xlabel(f"Time (s)", fontsize=12)
 plt.ylabel(f"Relative $L^2$ Error", fontsize=12)
-plt.semilogy(times, dmd_errors, '-*b', label=f"DMD: {dmd.n_modes} Modes")
-plt.semilogy(times, pdmd_errors, '-or', label=f"Partitioned DMD: {sum(pdmd.n_modes)} Modes")
-plt.semilogy(times, mrdmd_errors, '-+k', label=f"MrDMD: {mrdmd.modes.shape[1]} Modes")
+plt.semilogy(times, dmd_errors, '-*b',
+             ms=4.0, label=f"DMD: {dmd.n_modes} Modes")
+plt.semilogy(times, pdmd_errors, '-or',
+             ms=4.0, label=f"Partitioned DMD: {sum(pdmd.n_modes)} Modes")
+plt.semilogy(times, mrdmd_errors, '-+k',
+             ms=4.0, label=f"MrDMD: {mrdmd.modes.shape[1]} Modes")
 plt.legend()
 plt.grid(True)
 
