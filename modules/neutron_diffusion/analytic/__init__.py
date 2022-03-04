@@ -184,7 +184,7 @@ class AnalyticSolution:
         """
         if method == 'nm':
             for mode in self.modes:
-                if mode.n == n + 1 and mode.m == m:
+                if mode.n == n and mode.m == m:
                     return mode
         elif method == 'eig':
             return self.modes[n]
