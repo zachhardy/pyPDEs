@@ -47,7 +47,7 @@ solver.t_final = 0.1
 solver.dt = solver.t_final / 50
 solver.method = 'tbdf2'
 
-solver.adaptivity = True
+solver.adaptivity = False
 solver.coarsen_level = 0.01
 solver.refine_level = 0.025
 
@@ -58,4 +58,4 @@ solver.output_directory = \
 
 # Run the problem
 solver.initialize(verbose=0)
-solver.execute(verbose=0)
+solver.execute(verbose=1)

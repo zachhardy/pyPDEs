@@ -22,22 +22,23 @@ r = [p.z for p in sim.nodes]
 times = sim.times
 X = sim.create_simulation_matrix()
 
-idx = len(X)//4 + 1
-dmd = DMD(svd_rank=10).fit(X[:idx])
-dmd.print_summary()
+train = 101
+stop = 501
 
+dmd = DMD(svd_rank=1.0e-8).fit(X[:train])
+dmd.print_summary()
 recon_error = dmd.snapshot_errors
 
-dmd.dmd_time["tend"] = 50
+dmd.dmd_time["tend"] = stop - 1
 X_dmd = dmd.reconstructed_data
-step_errors = norm(X - X_dmd, axis=1) / norm(X, axis=1)
+step_errors = norm(X[:stop] - X_dmd, axis=1) / norm(X[:stop], axis=1)
 
 plt.figure()
 plt.xlabel("Time ($\mu$s)", fontsize=12)
 plt.ylabel("Relative $L^2$ Error", fontsize=12)
-plt.semilogy(times[:idx], recon_error, '-*b',
+plt.semilogy(times[:train], recon_error, '-*b',
              ms=3.0, label=f"Reconstruction")
-plt.semilogy(times[idx:], step_errors[idx:], '-ro',
+plt.semilogy(times[train:stop:4], step_errors[train:stop:4], '-or',
              ms=3.0, label=f"Extrapolation")
 plt.grid(True)
 plt.legend()
