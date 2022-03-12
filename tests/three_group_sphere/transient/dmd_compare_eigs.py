@@ -233,4 +233,4 @@ for m in range(dmd.n_modes):
 msg += "\n\t\hline\n\end{tabular}"
 print()
 print(msg)
-# plt.show()
+plt.show()

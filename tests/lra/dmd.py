@@ -22,12 +22,12 @@ sim.read_simulation_data()
 X = sim.create_simulation_matrix('power_density')
 times = sim.times
 
-dmd = DMD(svd_rank=1.0e-8, opt=True).fit(X)
+dmd = DMD(svd_rank=1.0e-10, opt=True).fit(X)
 dmd.print_summary()
 dmd_errors = dmd.snapshot_errors
 
 partition_points = list(range(12, 300, 12))
-pdmd = PartitionedDMD(DMD(svd_rank=1.0e-8, opt=True), partition_points)
+pdmd = PartitionedDMD(DMD(svd_rank=1.0e-10, opt=True), partition_points)
 pdmd.fit(X)
 pdmd_errors = pdmd.snapshot_errors
 
@@ -38,6 +38,7 @@ mrdmd_reconstruction_error = norm(X-X_dmd)/norm(X)
 mrdmd_errors = norm(X-X_dmd, axis=1)/norm(X, axis=1)
 
 plt.figure()
+plt.tick_params(labelsize=12)
 snapshot_errors = pdmd.snapshot_errors
 plt.xlabel(f"Time (s)", fontsize=12)
 plt.ylabel(f"Relative $L^2$ Error", fontsize=12)
