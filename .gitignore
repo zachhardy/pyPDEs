@@ -3,4 +3,4 @@
 __pycache__
 outputs
 *.obj
-
+outputs_aux
