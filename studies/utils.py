@@ -1,7 +1,8 @@
 """
 Support functions for studies.
 """
-__all__ = ['setup_directory', 'setup_range', 'get_data']
+__all__ = ['setup_directory', 'setup_range',
+           'get_data', 'get_params']
 
 import os
 import numpy as np
@@ -21,31 +22,26 @@ def setup_range(ref: float, var: float, N: int):
     return ref * (1.0 + var*np.linspace(-1.0, 1.0, N))
 
 
-def get_data(problem_name: str, *args,
+def get_data(problem_name: str,
              skip: int = 1) -> NeutronicsDatasetReader:
+
+    if "slab" in problem_name:
+        case = int(input("What case? "))
+    study = int(input("What study? "))
+
     # Is this a valid problem name?
-    options = ['three_group_sphere', 'infinite_slab', 'twigl', 'lra']
+    options = ['sphere', 'slab', 'twigl', 'lra']
     if problem_name not in options:
         raise ValueError("Invalid problem name.")
     idx = options.index(problem_name)
 
-    # Have the correct number of arguments been supplied?
-    n_args = [1, 2, 1, 1]
-    if len(args) != n_args[idx]:
-        raise ValueError(
-            f"Invalid number of arguments for {problem_name}.")
-
     # Check case argument
-    case = int(args[0])
-    case_arg_limit = [None, 2, None, None]
-    if case_arg_limit[idx] is not None:
-        if case > case_arg_limit[idx]:
-            raise ValueError(
-                f"Invalid case argument for {problem_name}.")
+    if "slab" in problem_name and case > 2:
+        raise ValueError(
+            f"Invalid case argument for {problem_name}.")
 
     # Check study argument
     study_arg_limit = [3, 6, 6, 6]
-    study = int(args[1]) if idx == 1 else int(args[0])
     if study > study_arg_limit[idx]:
         raise ValueError(
             f"Invalid study argument for {problem_name}.")
@@ -54,7 +50,8 @@ def get_data(problem_name: str, *args,
     path = os.path.dirname(os.path.abspath(__file__))
 
     # Handle three group sphere
-    if problem_name == 'three_group_sphere':
+    if problem_name == 'sphere':
+        problem_name = 'three_group_sphere'
         if study == 0:
             study_name = 'size'
         elif study == 1:
@@ -65,10 +62,11 @@ def get_data(problem_name: str, *args,
             study_name = 'size_density_down_scatter'
 
     # Handle infinite slab
-    if problem_name == 'infinite_slab':
-        if args[0] == 0:
+    if problem_name == 'slab':
+        problem_name = 'infinite_slab'
+        if case == 0:
             case_name = 'subcritical'
-        elif args[0] == 1:
+        elif case == 1:
             case_name = 'supercritical'
         else:
             case_name = 'prompt_supercritical'
@@ -124,7 +122,7 @@ def get_data(problem_name: str, *args,
 
     # Define the path to the case and study
     path = f"{path}/{problem_name}/outputs/"
-    if case_arg_limit[idx] is not None:
+    if "slab" in problem_name:
         path += f"{case_name}/"
     path += f"{study_name}"
     if not os.path.isdir(path):
@@ -134,3 +132,20 @@ def get_data(problem_name: str, *args,
     dataset = NeutronicsDatasetReader(path)
     dataset.read_dataset(skip=skip)
     return dataset
+
+
+def get_params(problem_name: str) -> dict:
+    params = {"tau": 1.0e-8,
+              "interp": "rbf",
+              "vars": "power_density" }
+    if "sphere" in problem_name:
+        params["vars"] = None
+        params["epsilon"] = 200.0
+    elif "slab" in problem_name:
+        params["epsilon"] = 10.0
+    elif "twigl" in problem_name:
+        params["epsilon"] = 20.0
+    elif "lra" in problem_name:
+        params["tau"] = 1.0e-10
+        params["epsilon"] = 200.0
+    return params
