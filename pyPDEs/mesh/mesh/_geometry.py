@@ -30,7 +30,7 @@ def compute_volume(self: 'Mesh', cell: Cell) -> float:
         if self.coord_sys == 'cartesian':
             return vr - vl
         elif self.coord_sys == 'cylindrical':
-            return 2.0 * np.pi * (vr ** 2 - vl ** 2)
+            return np.pi * (vr ** 2 - vl ** 2)
         elif self.coord_sys == 'spherical':
             return 4.0 / 3.0 * np.pi * (vr ** 3 - vl ** 3)
 

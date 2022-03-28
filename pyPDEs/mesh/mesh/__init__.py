@@ -31,7 +31,6 @@ class Mesh:
         self.coord_sys: str = 'cartesian'
         self.is_orthogonal: bool = True
 
-        self.is_orthogonal: bool = True
         self.cell_to_ijk_mapping: List[List[int]] = []
         self.n_cells_ijk: tuple = []
 
