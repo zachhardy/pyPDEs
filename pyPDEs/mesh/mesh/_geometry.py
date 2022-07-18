@@ -70,6 +70,7 @@ def compute_area(self: 'Mesh', face: Face) -> float:
         v1 = self.vertices[face.vertex_ids[1]]
         return (v1 - v0).norm()
 
+
 def compute_centroid(self: 'Mesh', obj: Union[Cell, Face]) -> Vector:
     """
     Compute the centroid of a cell, or a face.
