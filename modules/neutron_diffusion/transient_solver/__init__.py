@@ -184,8 +184,6 @@ class TransientSolver(KEigenvalueSolver):
         """
         KEigenvalueSolver.initialize(self)
         KEigenvalueSolver.execute(self, verbose=verbose)
-        if verbose > 0:
-            time.sleep(2.0)
 
         # Set transient cross section flag
         for xs in self.material_xs:
@@ -310,7 +308,7 @@ class TransientSolver(KEigenvalueSolver):
 
         self.dt = dt_initial
 
-    def assemble_transient_matrix(self, m: int = 0) -> List[csr_matrix]:
+    def assemble_transient_matrix(self, m: int = 0) -> csr_matrix:
         """
         Assemble the multigroup evolution matrix for step `m`.
 
@@ -484,6 +482,7 @@ class TransientSolver(KEigenvalueSolver):
         """
         Evaluate the initial conditions.
         """
+
         # Evaluate initial condition functions
         if self.initial_conditions is not None:
             self._check_initial_conditions()
@@ -522,6 +521,7 @@ class TransientSolver(KEigenvalueSolver):
         # Normalize phi to initial power conditions
         if self.phi_norm_method is not None:
             self.compute_fission_rate()
+
             if 'total' in self.phi_norm_method:
                 self.phi *= self.power / self.compute_power()
             elif 'average' in self.phi_norm_method:
@@ -535,3 +535,4 @@ class TransientSolver(KEigenvalueSolver):
             self.compute_precursors()
 
         self.step_solutions()
+        print(f"{np.linalg.norm(self.phi):.5e}")
