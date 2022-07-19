@@ -7,6 +7,7 @@ __all__ = ['xs_material_0', 'xs_material_1',
 
 delta = 0.97667 - 1.0
 
+
 def sigma_a_ramp(g: int, x: List[float], sigma_a: float) -> float:
     t = x[0]
     if g == 1:
