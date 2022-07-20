@@ -535,4 +535,3 @@ class TransientSolver(KEigenvalueSolver):
             self.compute_precursors()
 
         self.step_solutions()
-        print(f"{np.linalg.norm(self.phi):.5e}")

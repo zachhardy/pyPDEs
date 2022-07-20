@@ -14,8 +14,6 @@ def plot_material_ids(self: 'Mesh') -> None:
     This is a utility to ensure that materials are set correctly
     in accordance to the user's wishes.
     """
-    fig: Figure = plt.figure()
-
     matids = [cell.material_id for cell in self.cells]
     if self.dim == 1:
         plt.xlabel('z')

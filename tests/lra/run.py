@@ -75,13 +75,14 @@ solver.boundaries = boundaries
 solver.tolerance = 1.0e-12
 solver.max_iterations = int(1.0e4)
 
-solver.is_nonlinear = True
+solver.is_nonlinear = False
 solver.nonlinear_tolerance = 1.0e-8
 solver.nonlinear_max_iterations = 50
 
 # Set precursor options
 solver.use_precursors = True
 solver.lag_precursors = False
+solver.normalize_fission = True
 
 # Set feedback options
 solver.feedback_coeff = 3.034e-3
@@ -95,9 +96,9 @@ solver.phi_norm_method = 'average'
 # Set time stepping options
 solver.t_final = 3.0
 solver.dt = 0.01
-solver.method = 'tbdf2'
+solver.method = 'cn'
 
-solver.adaptivity = True
+solver.adaptivity = False
 solver.refine_level = 0.1
 solver.coarsen_level = 0.025
 
