@@ -12,8 +12,12 @@ from sklearn.model_selection import LeaveOneOut
 
 from typing import Union
 
-from utils import get_data, get_default_setup
+from utils import get_dataset
+from utils import get_reference
+from utils import get_default_params
+
 from readers import NeutronicsDatasetReader
+
 from pyROM.pod import POD_MCI
 
 
@@ -73,14 +77,9 @@ def exercise_rom(
         qois[s] = qoi_function(X_pod[s])
     t_end = time.time()
 
-    print(f"Average ROM query took {(t_end - t_start) / n_samples:.3g} s.")
-    print(f"Mean QoI:\t{np.mean(qois):.3g}")
-    print(f"STD QoI :\t{np.std(qois):.3g}")
-
-    plt.figure()
-    plt.ylabel("Probability")
-    sb.histplot(qois, bins=50, stat='probability', kde=True, ax=plt.gca())
-    plt.tight_layout()
+    print()
+    print(f"Total query time  :\t{(t_end - t_start):.3g} s")
+    print(f"Average query time:\t{(t_end - t_start) / n_samples:.3g} s")
     return qois
 
 
@@ -94,14 +93,18 @@ if __name__ == "__main__":
     problem_name = sys.argv[1]
     study_num = int(sys.argv[2])
 
-    defaults = get_default_setup(problem_name)
+    defaults = get_default_params(problem_name)
     svd_rank = 1.0 - defaults.pop("tau")
     interpolant = defaults.pop("interpolant")
     variable_names = defaults.pop("variable_names")
     hyperparams = {"epsilon": defaults.pop("epsilon")}
 
+    # Get the reference problem
+    reference = get_reference(problem_name)
+    X_ref = reference.create_simulation_matrix(variable_names)
+
     # Get the dataset
-    data = get_data(problem_name, study_num)
+    data = get_dataset(problem_name, study_num)
 
     # Initialize the ROM
     rom = POD_MCI(svd_rank, interpolant, **hyperparams)
@@ -127,6 +130,18 @@ if __name__ == "__main__":
         if "n=" in arg:
             n = int(arg.split("=")[1])
 
-    exercise_rom(data, rom, f, variable_names, n_samples=n)
+    # Get QoIs
+    ref_qoi = f(X_ref)
+    rom_qois = exercise_rom(data, rom, f, variable_names, n_samples=n)
+
+    print()
+    print(f"Reference QoI:\t{ref_qoi:.3g}")
+    print(f"Mean QoI:\t{np.mean(rom_qois):.3g}")
+    print(f"STD QoI :\t{np.std(rom_qois):.3g}")
+
+    plt.figure()
+    plt.ylabel("Probability")
+    sb.histplot(rom_qois, bins=50, stat='probability', kde=True, ax=plt.gca())
+    plt.tight_layout()
 
     plt.show()

@@ -9,8 +9,11 @@ from numpy.linalg import norm
 
 from typing import Union
 
-from utils import get_data, get_default_setup
+from utils import get_dataset
+from utils import get_default_params
+
 from readers import NeutronicsDatasetReader
+
 from pyROM.pod import POD_MCI
 
 
@@ -136,14 +139,14 @@ if __name__ == "__main__":
     problem_name = sys.argv[1]
     study_num = int(sys.argv[2])
 
-    defaults = get_default_setup(problem_name)
+    defaults = get_default_params(problem_name)
     svd_rank = 1.0 - defaults.pop("tau")
     interpolant = defaults.pop("interpolant")
     variable_names = defaults.pop("variable_names")
     hyperparams = {"epsilon": defaults.pop("epsilon")}
 
     # Get the dataset
-    data = get_data(problem_name, study_num)
+    data = get_dataset(problem_name, study_num)
 
     # Initialize the ROM
     rom = POD_MCI(svd_rank, interpolant, **hyperparams)

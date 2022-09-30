@@ -1,8 +1,8 @@
 import os
 import sys
-import itertools
 import time
 import copy
+import itertools
 import numpy as np
 
 
@@ -74,7 +74,7 @@ def parameter_study(
     if problem == "Sphere3g":
 
         # Default value
-        radius = 6.0
+        radius = 6.0 if study != 2 else 6.1612
         density = 0.05
         sig_s01 = 1.46
 
@@ -85,7 +85,6 @@ def parameter_study(
         elif study == 1:
             parameters['density'] = define_range(0.05134325, 0.025, 21)
         elif study == 2:
-            density = 0.05134325
             parameters['scatter'] = define_range(sig_s01, 0.2, 21)
         elif study == 3:
             parameters['radius'] = define_range(radius, 0.01, 6)

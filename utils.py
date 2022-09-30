@@ -3,9 +3,10 @@ import sys
 import pickle
 
 from readers import NeutronicsDatasetReader
+from readers import NeutronicsSimulationReader
 
 
-def get_data(problem: str, study: int) -> NeutronicsDatasetReader:
+def get_dataset(problem: str, study: int) -> NeutronicsDatasetReader:
     """
     Get the data from the specified parameter study.
 
@@ -19,8 +20,7 @@ def get_data(problem: str, study: int) -> NeutronicsDatasetReader:
     -------
     NeutronicsDatasetReader
     """
-    opts = ["Sphere3g", "InfiniteSlab", "TWIGL", "LRA"]
-    if problem not in opts:
+    if problem not in ["Sphere3g", "InfiniteSlab", "TWIGL", "LRA"]:
         raise ValueError(f"{problem} is not a valid problem.")
 
     study = int(study)
@@ -100,21 +100,39 @@ def get_data(problem: str, study: int) -> NeutronicsDatasetReader:
     ##################################################
 
     path = os.path.abspath(os.path.dirname(__file__))
-    path = f"{path}/Problems/{problem}"
+    path = f"{path}/Problems/{problem}/pickles"
     if not os.path.isdir(path):
         raise NotADirectoryError(f"{path} is not a valid directory.")
 
-    path = f"{path}/pickles"
-    if not os.path.isdir(path):
-        os.makedirs(path)
     filepath = f"{path}/{study_name}.obj"
-
     with open(filepath, 'rb') as file:
         data = pickle.load(file)
     return data
 
 
-def get_default_setup(problem: str) -> dict:
+def get_reference(problem: str) -> NeutronicsSimulationReader:
+    """
+    Return the reference solution for the specified problem.
+
+    Parameters
+    ----------
+    problem : {'Sphere3g', 'InfiniteSlab', 'TWIGL', 'LRA'}
+
+    Returns
+    -------
+    NeutronicsSimulationReader
+    """
+    if problem not in ["Sphere3g", "InfiniteSlab", "TWIGL", "LRA"]:
+        raise ValueError(f"{problem} is not a valid problem.")
+
+    path = os.path.abspath(os.path.dirname(__file__))
+    path = f"{path}/Problems/{problem}/outputs"
+    if not os.path.isdir(path):
+        raise NotADirectoryError(f"{path} is not a valid directory.")
+    return NeutronicsSimulationReader(path).read()
+
+
+def get_default_params(problem: str) -> dict:
     """
     Return the default hyper-parameters for each problem.
 

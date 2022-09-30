@@ -4,8 +4,10 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-from utils import get_data
+from utils import get_dataset
+
 from readers import NeutronicsDatasetReader
+
 from pyROM.pod import POD_MCI
 
 
@@ -36,7 +38,7 @@ def plot_power_span(
     # Get the data
     ##################################################
 
-    data = get_data(problem, study)
+    data = get_dataset(problem, study)
 
     powers = []
     for s, simulation in enumerate(data):
@@ -124,7 +126,7 @@ def plot_temperature_span(
     # Get the data
     ##################################################
 
-    data = get_data(problem, study)
+    data = get_dataset(problem, study)
 
     tempratures = []
     for s, simulation in enumerate(data):
@@ -183,7 +185,7 @@ if __name__ == "__main__":
 
     plot_power_span(problem_name, study_num, logscale=False)
 
-    reader = get_data(problem_name, study_num)
+    reader = get_dataset(problem_name, study_num)
     X = reader.create_2d_matrix("power_density")
     Y = reader.parameters
 

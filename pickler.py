@@ -15,15 +15,13 @@ import pickle
 
 from readers import NeutronicsDatasetReader
 
-valid_problems = ["Sphere3g", "InfiniteSlab", "TWIGL", "LRA"]
-
 
 if __name__ == "__main__":
 
     # Parse problem names
     problems = []
     for arg in sys.argv[1:]:
-        if arg not in valid_problems:
+        if arg not in ["Sphere3g", "InfiniteSlab", "TWIGL", "LRA"]:
             raise ValueError(f"{arg} is not a valid problem name.")
         problems.append(arg)
     if len(problems) == 0:
