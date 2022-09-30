@@ -22,7 +22,7 @@ def exercise_rom(
         pod_mci: POD_MCI,
         qoi_function: callable,
         variables: Union[str, list[str]] = None,
-        n: int = int(2.0e4)
+        n_samples: int = int(2.0e4)
 ) -> np.ndarray:
     """
     Exercise the ROM for
@@ -35,7 +35,7 @@ def exercise_rom(
         A callable expression to evaluate a QoI.
     variables : str or list[str], default None
         The variables from the dataset to fit the POD-MCI model to.
-    n : int, default 20000
+    n_samples : int, default 20000
         The number of queries to perform.
     """
 
@@ -57,23 +57,23 @@ def exercise_rom(
 
     # Generate the samples
     rng = np.random.default_rng()
-    samples = np.zeros((n, pod_mci.n_parameters))
+    samples = np.zeros((n_samples, pod_mci.n_parameters))
     for p in range(pod_mci.n_parameters):
         low, high = dataset.parameter_bounds[p]
-        samples[:, p] = rng.uniform(low, high, n)
+        samples[:, p] = rng.uniform(low, high, n_samples)
 
     print("Exercising the ROM...")
 
     # Exercise the ROM at the sample points
     t_start = time.time()
-    qois = np.zeros(n)
+    qois = np.zeros(n_samples)
     X_pod = pod_mci.predict(samples).T
     X_pod = dataset.unstack_simulation_vector(X_pod)
-    for s in range(n):
+    for s in range(n_samples):
         qois[s] = qoi_function(X_pod[s])
     t_end = time.time()
 
-    print(f"Average ROM query took {(t_end - t_start) / n:.3g} s.")
+    print(f"Average ROM query took {(t_end - t_start) / n_samples:.3g} s.")
     print(f"Mean QoI:\t{np.mean(qois):.3g}")
     print(f"STD QoI :\t{np.std(qois):.3g}")
 
@@ -122,11 +122,11 @@ if __name__ == "__main__":
         raise AssertionError(msg)
 
     # Exercise the ROM
-    n_samples = 5000
+    n = 5000
     for arg in sys.argv[1:]:
         if "n=" in arg:
-            n_samples = int(arg.split("=")[1])
+            n = int(arg.split("=")[1])
 
-    exercise_rom(data, rom, f, variable_names, n=n_samples)
+    exercise_rom(data, rom, f, variable_names, n_samples=n)
 
     plt.show()
