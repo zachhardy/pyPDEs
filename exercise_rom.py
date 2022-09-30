@@ -136,12 +136,12 @@ if __name__ == "__main__":
 
     print()
     print(f"Reference QoI:\t{ref_qoi:.3g}")
-    print(f"Mean QoI:\t{np.mean(rom_qois):.3g}")
-    print(f"STD QoI :\t{np.std(rom_qois):.3g}")
+    print(f"Mean QoI     :\t{np.mean(rom_qois):.3g}")
+    print(f"STD QoI      :\t{np.std(rom_qois):.3g}")
 
     plt.figure()
     plt.ylabel("Probability")
-    sb.histplot(rom_qois, bins=50, stat='probability', kde=True, ax=plt.gca())
+    sb.histplot(rom_qois, bins=50, stat='probability', kde=True, ax=plt.gca(), log_scale=True)
     plt.tight_layout()
 
     plt.show()
