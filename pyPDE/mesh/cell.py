@@ -78,7 +78,7 @@ class Cell:
             s += f"----- Face {f} -----\n{face}"
         return s
 
-    def __eq__(self, other: Cell) -> bool:
+    def __eq__(self, other: 'Cell') -> bool:
         """
         Test the equality of two cells.
 
@@ -98,7 +98,7 @@ class Cell:
                 return False
         return True
 
-    def __ne__(self, other: Cell) -> bool:
+    def __ne__(self, other: 'Cell') -> bool:
         """
         Test the equality of two cells.
 
@@ -160,7 +160,7 @@ class Face:
              f"area: {self.area}\n"
         return s
 
-    def __eq__(self, other: Face) -> bool:
+    def __eq__(self, other: 'Face') -> bool:
         """
         Test the equality of two faces.
 
@@ -175,7 +175,7 @@ class Face:
         assert type(other) == type(self)
         return set(self.vertex_ids) == set(other.vertex_ids)
 
-    def __ne__(self, other: Face) -> bool:
+    def __ne__(self, other: 'Face') -> bool:
         """
         Test the inequality of two faces.
 

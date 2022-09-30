@@ -15,7 +15,7 @@ class CartesianVector:
     def __init__(
             self,
             x: float = 0.0,
-            y: flaot = 0.0,
+            y: float = 0.0,
             z: float = 0.0
     ) -> None:
         """
@@ -30,7 +30,7 @@ class CartesianVector:
 
         self._xyz = np.array([x, y, z])
 
-    def __iadd__(self, other: CartesianVector) -> CartesianVector:
+    def __iadd__(self, other: 'CartesianVector') -> 'CartesianVector':
         """
         Add another Cartesian vector to this one.
 
@@ -48,7 +48,7 @@ class CartesianVector:
         self._xyz += other._xyz
         return self
 
-    def __add__(self, other: CartesianVector) -> CartesianVector:
+    def __add__(self, other: 'CartesianVector') -> 'CartesianVector':
         """
         Add two Cartesian vectors.
 
@@ -66,7 +66,7 @@ class CartesianVector:
         xyz = self._xyz + other._xyz
         return CartesianVector(*xyz.tolist())
 
-    def __isub__(self, other: CartesianVector) -> CartesianVector:
+    def __isub__(self, other: 'CartesianVector') -> 'CartesianVector':
         """
         Subtract another Cartesian vector from this one.
 
@@ -84,7 +84,7 @@ class CartesianVector:
         self._xyz -= other._xyz
         return self
 
-    def __sub__(self, other: CartesianVector) -> CartesianVector:
+    def __sub__(self, other: 'CartesianVector') -> 'CartesianVector':
         """
         Return the difference of two Cartesian vectors.
 
@@ -102,7 +102,7 @@ class CartesianVector:
         xyz = self._xyz - other._xyz
         return CartesianVector(*xyz.tolist())
 
-    def __imul__(self, factor: Union[int, float]) -> CartesianVector:
+    def __imul__(self, factor: Union[int, float]) -> 'CartesianVector':
         """
         Multiply this Cartesian vector by a scalar.
 
@@ -122,7 +122,7 @@ class CartesianVector:
         self._xyz *= factor
         return self
 
-    def __mul__(self, factor: Union[int, float]) -> CartesianVector:
+    def __mul__(self, factor: Union[int, float]) -> 'CartesianVector':
         """
         Return a Cartesian vector multiplied by a scalar.
 
@@ -142,7 +142,7 @@ class CartesianVector:
         xyz = factor * self._xyz
         return CartesianVector(*xyz.tolist())
 
-    def __rmul__(self, factor: Union[int, float]) -> CartesianVector:
+    def __rmul__(self, factor: Union[int, float]) -> 'CartesianVector':
         """
         Return a Cartesian vector left-multiplied by a scalar.
 
@@ -156,7 +156,7 @@ class CartesianVector:
         """
         return self * factor
 
-    def __itruediv__(self, factor: Union[int, float]) -> CartesianVector:
+    def __itruediv__(self, factor: Union[int, float]) -> 'CartesianVector':
         """
         Divide the Cartesian vector by a scalar.
 
@@ -176,7 +176,7 @@ class CartesianVector:
         self._xyz /= factor
         return self
 
-    def __truediv__(self, factor: Union[int, float]) -> CartesianVector:
+    def __truediv__(self, factor: Union[int, float]) -> 'CartesianVector':
         """
         Return a Cartesian vector divided by a scalar.
 
@@ -196,7 +196,7 @@ class CartesianVector:
         xyz = self._xyz / factor
         return CartesianVector(*xyz.tolist())
 
-    def __abs__(self) -> CartesianVector:
+    def __abs__(self) -> 'CartesianVector':
         """
         Return the absolute value of the Cartesian vector.
 
@@ -206,7 +206,7 @@ class CartesianVector:
         """
         return CartesianVector(*self._xyz.tolist())
 
-    def __neg__(self) -> CartesianVector:
+    def __neg__(self) -> 'CartesianVector':
         """
         Return the negative of the Cartesian vector.
 
@@ -253,7 +253,7 @@ class CartesianVector:
     def __repr__(self) -> str:
         return f"CartesianVector{str(self)}"
 
-    def __eq__(self, other: CartesianVector) -> CartesianVector:
+    def __eq__(self, other: 'CartesianVector') -> 'CartesianVector':
         """
         Test the equality of two Cartesian vectors.
 
@@ -267,7 +267,7 @@ class CartesianVector:
         """
         return all(self._xyz == other._xyz)
 
-    def __ne__(self, other: CartesianVector) -> CartesianVector:
+    def __ne__(self, other: 'CartesianVector') -> 'CartesianVector':
         """
         Test the inequality of two Cartesian vectors.
 
@@ -347,7 +347,7 @@ class CartesianVector:
         """
         self._xyz[2] = value
 
-    def dot(self, other: CartesianVector) -> float:
+    def dot(self, other: 'CartesianVector') -> float:
         """
         Return the dot product between two Cartesian vectors.
 
@@ -364,7 +364,7 @@ class CartesianVector:
             raise TypeError(msg)
         return np.dot(self._xyz, other._xyz)
 
-    def cross(self, other: CartesianVector) -> CartesianVector:
+    def cross(self, other: 'CartesianVector') -> 'CartesianVector':
         """
         Return the cross product between two Cartesian vectors.
 
@@ -394,7 +394,7 @@ class CartesianVector:
         """
         return np.sqrt(self.dot(self))
 
-    def direction(self) -> CartesianVector:
+    def direction(self) -> 'CartesianVector':
         """
         Return the direction of the Cartesian vector.
 
@@ -405,7 +405,7 @@ class CartesianVector:
         length = self.length()
         return self / length if length > 0.0 else self
 
-    def distance(self, other: CartesianVector) -> float:
+    def distance(self, other: 'CartesianVector') -> float:
         """
         Return the Euclidean distance between two Cartesian vectors.
 
@@ -420,7 +420,7 @@ class CartesianVector:
         return (self - other).length()
 
 
-def dot(p: CartesianVector, q: CartesianVector) -> float:
+def dot(p: 'CartesianVector', q: 'CartesianVector') -> float:
     """
     Return the dot product between two Cartesian vectors.
 
@@ -436,7 +436,7 @@ def dot(p: CartesianVector, q: CartesianVector) -> float:
     return p.dot(q)
 
 
-def cross(p: CartesianVector, q: CartesianVector) -> CartesianVector:
+def cross(p: 'CartesianVector', q: 'CartesianVector') -> 'CartesianVector':
     """
     Return the cross product between two Cartesian vectors.
 
@@ -452,7 +452,7 @@ def cross(p: CartesianVector, q: CartesianVector) -> CartesianVector:
     return p.cross(q)
 
 
-def distance(p: CartesianVector, q: CartesianVector) -> float:
+def distance(p: 'CartesianVector', q: 'CartesianVector') -> float:
     """
     Return the distance between two Cartesian vectors.
 
@@ -468,7 +468,7 @@ def distance(p: CartesianVector, q: CartesianVector) -> float:
     return p.distance(q)
 
 
-def direction(p: CartesianVector) -> CartesianVector:
+def direction(p: 'CartesianVector') -> 'CartesianVector':
     """
     Return the direction of a Cartesian vector.
 
