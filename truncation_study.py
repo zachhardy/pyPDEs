@@ -14,7 +14,7 @@ from utils import get_default_params
 
 from readers import NeutronicsDatasetReader
 
-from pyROM.pod import POD_MCI
+from pyROMs.pod import POD_MCI
 
 
 def truncation_study(

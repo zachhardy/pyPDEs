@@ -8,7 +8,7 @@ from utils import get_dataset
 
 from readers import NeutronicsDatasetReader
 
-from pyROM.pod import POD_MCI
+from pyROMs.pod import POD_MCI
 
 
 def plot_power_span(

@@ -18,7 +18,7 @@ from utils import get_default_params
 from readers import NeutronicsDatasetReader
 from readers import NeutronicsSimulationReader
 
-from pyROM.pod import POD_MCI
+from pyROMs.pod import POD_MCI
 
 
 def cross_validation(
