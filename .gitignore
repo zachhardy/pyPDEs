@@ -1,0 +1,11 @@
+.DS_Store
+.idea
+
+__pycache__
+*.pyc
+
+outputs
+parametric
+pickles
+*.obj
+
