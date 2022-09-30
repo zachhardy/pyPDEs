@@ -17,7 +17,7 @@ from readers import NeutronicsDatasetReader
 from pyROMs.pod import POD_MCI
 
 
-def truncation_study(
+def interpolant_study(
         dataset: NeutronicsDatasetReader,
         pod_mci: POD_MCI,
         variables: Union[str, list[str]] = None,
@@ -26,8 +26,8 @@ def truncation_study(
         seed: int = None
 ) -> dict:
     """
-    Perform a truncation study to examine error as a function of
-    truncation parameter.
+    Perform an interpolant study to examine error as a function of
+    interpolation method.
 
     Parameters
     ----------
@@ -47,13 +47,6 @@ def truncation_study(
     dict
     """
 
-    interp_method = pod_mci.interpolation_method
-    if not interior_only:
-        if "rbf" not in interp_method and interp_method != "neighbor":
-            err = "Only RBF and nearest neighbor interpolants are " \
-                  "permissible when extrapolation may be performed."
-            raise ValueError(err)
-
     ##################################################
     # Define the train/test split
     ##################################################
@@ -65,6 +58,7 @@ def truncation_study(
         interior_only=interior_only,
         seed=seed,
     )
+
     X_train, X_test, Y_train, Y_test = splits
 
     ##################################################
@@ -78,56 +72,48 @@ def truncation_study(
     # Run the study
     ##################################################
 
-    taus = [10.0 ** i for i in range(-16, 0)]
+    interpolants = [
+        "rbf_linear", "rbf_cubic", "rbf_quintic",
+        "rbf_thin_plate_spline", "nearest"
+    ]
 
     # Output structure
-    out = {"tau": [], "n_modes": [], "mean": [],
-           "max": [], "min": []}
+    out = {"method": interpolants,
+           "mean": [], "max": [], "min": []}
 
-    print("Starting truncation study...")
-    for tau in taus:
+    print("Starting interpolant study...")
+    for method in interpolants:
 
         # Refit the POD-MCI model
-        pod_mci.refit(1.0 - tau)
+        pod_mci.refit(pod_mci.svd_rank, method)
         X_pod = pod_mci.predict(Y_test).T
 
         errors = np.zeros(len(X_test))
         for i, (x_pod, x_test) in enumerate(zip(X_pod, X_test)):
             errors[i] = norm(x_pod - x_test) / norm(x_test)
 
-        out["tau"].append(tau)
-        out["n_modes"].append(pod_mci.n_modes)
         out["mean"].append(np.mean(errors))
         out["max"].append(np.max(errors))
         out["min"].append(np.min(errors))
 
-    ##################################################
-    # Plot the results
-    ##################################################
+    print()
+    print(f"-" * 85)
+    print(f"{'Interpolant':<25}{'Mean Error':<20}"
+          f"{'Max Error':<20}{'Min Error':<20}")
+    print(f"-"*85)
 
-    fig: plt.Figure = plt.figure()
+    vals = (out["method"], out["mean"], out["max"], out["min"])
+    for (method, emean, emax, emin) in zip(*vals):
+        method = method.split("_")
+        if method[0] == "rbf":
+            for i in range(len(method[1:])):
+                method[i + 1] = method[i + 1].capitalize()
+            method = " ".join(method[1:]) + " RBF"
+        elif method[0] == "nearest":
+            method = "Nearest Neighbor"
 
-    # Plot as a function of number of modes
-    ax: plt.Axes = fig.add_subplot(1, 2, 1)
-    ax.set_xlabel("n")
-    ax.set_ylabel("Relative $\ell_2$ Error")
-    ax.semilogy(out["n_modes"], out["mean"], '-*b', label="Mean")
-    ax.semilogy(out["n_modes"], out["max"], '-or', label="Max")
-    ax.semilogy(out["n_modes"], out["min"], '-+k', label="Min")
-    ax.legend()
-    ax.grid(True)
-
-    ax: plt.Axes = fig.add_subplot(1, 2, 2)
-    ax.set_xlabel(r"$\tau$")
-    ax.set_ylabel("Relative $\ell_2$ Error")
-    ax.loglog(out["tau"], out["mean"], '-*b', label="Mean")
-    ax.loglog(out["tau"], out["max"], '-or', label="Max")
-    ax.loglog(out["tau"], out["min"], '-+k', label="Min")
-    ax.legend()
-    ax.grid(True)
-
-    fig.tight_layout()
-    return out
+        print(f"{method:<25}{emean:<20.3g}{emax:<20.3g}{emin:<20.3g}")
+    print()
 
 
 if __name__ == "__main__":
@@ -160,7 +146,5 @@ if __name__ == "__main__":
     hyperparams = get_hyperparams(problem_name)
     rom = POD_MCI(**hyperparams)
 
-    # Perform the truncation study
-    truncation_study(data, rom, variable_names, *args)
-
-    plt.show()
+    # Perform the interpolant study
+    interpolant_study(data, rom, variable_names, *args)

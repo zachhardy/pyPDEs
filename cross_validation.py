@@ -13,7 +13,7 @@ from sklearn.model_selection import LeaveOneOut
 from typing import Union
 
 from utils import get_dataset
-from utils import get_default_params
+from utils import get_hyperparams
 
 from readers import NeutronicsDatasetReader
 from readers import NeutronicsSimulationReader
@@ -196,7 +196,26 @@ def cross_validation(
     return out
 
 
-if __name__ == "__main__":
+def parse_args() -> list:
+    arguments = ["loo", False]
+    for arg in sys.argv[1:]:
+
+        if "method=" in arg:
+            arguments[0] = arg.split("=")[1]
+            if arguments[0] not in ["kfold", "loo"]:
+                err = f"{arg[0]} is not a valid cross-validator."
+                raise ValueError(err)
+
+        if "interior=" in arg:
+            arguments[1] = int(arg.split("=")[1])
+            if arguments[1] not in [0, 1]:
+                err = "interior argument must be 0 or 1."
+                raise ValueError(err)
+            arguments[1] = bool(interior_flag)
+    return arguments
+
+
+if __name__ == "__main__":\
 
     if len(sys.argv) < 3:
         msg = "Invalid command line arguments. "
@@ -205,34 +224,23 @@ if __name__ == "__main__":
 
     problem_name = sys.argv[1]
     study_num = int(sys.argv[2])
+    variable_names = "power_density"
+    args = ["loo", False]
 
-    defaults = get_default_params(problem_name)
-    svd_rank = 1.0 - defaults.pop("tau")
-    interpolant = defaults.pop("interpolant")
-    variable_names = defaults.pop("variable_names")
-    hyperparams = {"epsilon": defaults.pop("epsilon")}
+    if len(sys.argv) > 3:
+        for arg in sys.argv[3:]:
+            argval = arg.split("=")[1]
+            if "cv=" in arg:
+                args[0] = argval
+            elif "interior=" in arg:
+                args[1] = bool(int(argval))
 
     # Get the dataset
     data = get_dataset(problem_name, study_num)
 
     # Initialize the ROM
-    rom = POD_MCI(svd_rank, interpolant, **hyperparams)
+    hyperparams = get_hyperparams(problem_name)
+    rom = POD_MCI(**hyperparams)
 
     # Perform cross-validation
-    args = ["loo", False]
-    for arg in sys.argv[1:]:
-
-        if "method=" in arg:
-            args[0] = arg.split("=")[1]
-            if args[0] not in ["kfold", "loo"]:
-                msg = f"{arg[0]} is not a valid cross-validator."
-                raise ValueError(msg)
-
-        if "interior=" in arg:
-            args[1] = int(arg.split("=")[1])
-            if args[1] not in [0, 1]:
-                msg = "interior argument must be 0 or 1."
-                raise ValueError(msg)
-            args[1] = bool(interior_flag)
-
     cross_validation(data, rom, variable_names, *args)

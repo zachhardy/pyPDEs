@@ -132,7 +132,7 @@ def get_reference(problem: str) -> NeutronicsSimulationReader:
     return NeutronicsSimulationReader(path).read()
 
 
-def get_default_params(problem: str) -> dict:
+def get_hyperparams(problem: str) -> dict:
     """
     Return the default hyper-parameters for each problem.
 
@@ -144,20 +144,10 @@ def get_default_params(problem: str) -> dict:
     -------
     dict
     """
-    params = {"tau": 1.0e-8,
-              "interpolant": "rbf",
-              "variable_names": "power_density"}
-    if problem == "Sphere3g":
-        params["variable_names"] = None
-        params["epsilon"] = 200.0
-    elif problem == "InfiniteSlab":
-        params["epsilon"] = 10.0
-    elif problem == "TWIGL":
-        params["epsilon"] = 20.0
-    elif problem == "LRA":
-        params["tau"] = 1.0e-10
-        params["epsilon"] = 200.0
-    else:
-        err = f"{problem} is an invalid problem."
-        raise ValueError(err)
-    return params
+    hyperparams = {"svd_rank": 1.0 - 1.0e-8,
+                   "interpolant": "rbf",
+                   "neighbors": None,
+                   "epsilon": 100.0}
+    if problem == "LRA":
+        hyperparams["svd_rank"] = 1.0 - 1.0e-10
+    return hyperparams

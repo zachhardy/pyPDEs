@@ -14,7 +14,7 @@ from typing import Union
 
 from utils import get_dataset
 from utils import get_reference
-from utils import get_default_params
+from utils import get_hyperparams
 
 from readers import NeutronicsDatasetReader
 
@@ -83,6 +83,29 @@ def exercise_rom(
     return qois
 
 
+def get_qoi_function(problem: str) -> callable:
+    """
+    Return the QoI function.
+
+    Parameters
+    ----------
+    problem : {'Sphere3g', 'InfiniteSlab', 'TWIGL', 'LRA'}
+
+    Returns
+    -------
+    callable
+    """
+    if problem != "LRA":
+        def func(x: np.ndarray) -> float:
+            assert x.ndim == 2
+            return np.sum(x[-1])
+    else:
+        def func(x: np.ndarray) -> float:
+            assert x.ndim == 2
+            return np.sum(x[np.argmax(np.sum(x, axis=1))])
+    return func
+
+
 if __name__ == "__main__":
 
     if len(sys.argv) < 3:
@@ -92,16 +115,23 @@ if __name__ == "__main__":
 
     problem_name = sys.argv[1]
     study_num = int(sys.argv[2])
+    variable_names = "power_density"
+    args = [5000]
 
-    defaults = get_default_params(problem_name)
-    svd_rank = 1.0 - defaults.pop("tau")
-    interpolant = defaults.pop("interpolant")
-    variable_names = defaults.pop("variable_names")
-    hyperparams = {"epsilon": defaults.pop("epsilon")}
+    # Parse command line
+    if len(sys.argv) > 3:
+        for arg in sys.argv[3:]:
+            argval = arg.split("=")[1]
+            if "n=" in arg:
+                args[0] = int(argval)
+
+    # Define the QoI function
+    f = get_qoi_function(problem_name)
 
     # Get the reference problem
     reference = get_reference(problem_name)
     X_ref = reference.create_simulation_matrix(variable_names)
+    ref_qoi = f(problem_name, X_ref)
 
     # Get the dataset
     data = get_dataset(problem_name, study_num)
@@ -109,31 +139,10 @@ if __name__ == "__main__":
     # Initialize the ROM
     rom = POD_MCI(svd_rank, interpolant, **hyperparams)
 
-    # Defining the QoI functions
-    if problem_name in ["Sphere3g", "InfiniteSlab", "TWIGL"]:
-        def f(x):
-            assert x.ndim == 2
-            return np.sum(x[-1])
+    # Query the ROM
+    rom_qois = exercise_rom(data, rom, f, variable_names, *args)
 
-    elif problem_name == "LRA":
-        def f(x):
-            assert x.ndim == 2
-            return np.sum(x[np.argmax(np.sum(x, axis=1))])
-
-    else:
-        msg = f"{problem_name} is not a valid problem name."
-        raise AssertionError(msg)
-
-    # Exercise the ROM
-    n = 5000
-    for arg in sys.argv[1:]:
-        if "n=" in arg:
-            n = int(arg.split("=")[1])
-
-    # Get QoIs
-    ref_qoi = f(X_ref)
-    rom_qois = exercise_rom(data, rom, f, variable_names, n_samples=n)
-
+    # Display the results
     print()
     print(f"Reference QoI:\t{ref_qoi:.3g}")
     print(f"Mean QoI     :\t{np.mean(rom_qois):.3g}")
