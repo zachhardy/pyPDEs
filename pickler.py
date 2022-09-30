@@ -25,7 +25,7 @@ if __name__ == "__main__":
             raise ValueError(f"{arg} is not a valid problem name.")
         problems.append(arg)
     if len(problems) == 0:
-        problems = valid_problems
+        problems = ["Sphere3g", "InfiniteSlab", "TWIGL", "LRA"]
 
     path = os.path.abspath(os.path.dirname(__file__))
     path = f"{path}/Problems"

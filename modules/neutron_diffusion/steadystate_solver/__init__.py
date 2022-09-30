@@ -2,13 +2,13 @@ import numpy as np
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 
-from pyPDE.mesh import Mesh
-from pyPDE.math.discretization import FiniteVolume
+from pyPDEs.mesh import Mesh
+from pyPDEs.math.discretization import FiniteVolume
 
-from pyPDE.material import Material
-from pyPDE.material import CrossSections
-from pyPDE.material import IsotropicMultiGroupSource
-from pyPDE.material import LightWeightCrossSections
+from pyPDEs.material import Material
+from pyPDEs.material import CrossSections
+from pyPDEs.material import IsotropicMultiGroupSource
+from pyPDEs.material import LightWeightCrossSections
 
 from ..boundaries import Boundary
 

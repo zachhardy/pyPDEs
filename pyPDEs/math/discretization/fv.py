@@ -1,6 +1,6 @@
-from pyPDE.mesh import Mesh
-from pyPDE.mesh import Cell
-from pyPDE.mesh import CartesianVector
+from ...mesh import Mesh
+from ...mesh import Cell
+from ...mesh import CartesianVector
 
 from .discretization import SpatialDiscretization
 

@@ -5,8 +5,8 @@ from scipy.sparse import csr_matrix
 
 from typing import Union
 
-from pyPDE.math.discretization import FiniteVolume
-from pyPDE.material import Material
+from pyPDEs.math.discretization import FiniteVolume
+from pyPDEs.material import Material
 
 from .. import SteadyStateSolver
 from .. import KEigenvalueSolver

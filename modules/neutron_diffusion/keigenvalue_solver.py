@@ -4,8 +4,8 @@ from numpy.linalg import norm
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 
-from pyPDE.math.discretization import FiniteVolume
-from pyPDE.material import Material
+from pyPDEs.math.discretization import FiniteVolume
+from pyPDEs.material import Material
 
 from modules.neutron_diffusion import SteadyStateSolver
 

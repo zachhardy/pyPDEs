@@ -3,13 +3,13 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-from pyPDE.mesh import create_1d_orthomesh
-from pyPDE.mesh import CartesianVector
-from pyPDE.math.discretization import FiniteVolume
+from pyPDEs.mesh import create_1d_orthomesh
+from pyPDEs.mesh import CartesianVector
+from pyPDEs.math.discretization import FiniteVolume
 
-from pyPDE.material import Material
-from pyPDE.material import CrossSections
-from pyPDE.material import IsotropicMultiGroupSource
+from pyPDEs.material import Material
+from pyPDEs.material import CrossSections
+from pyPDEs.material import IsotropicMultiGroupSource
 
 from modules.neutron_diffusion import SteadyStateSolver
 from modules.neutron_diffusion import KEigenvalueSolver

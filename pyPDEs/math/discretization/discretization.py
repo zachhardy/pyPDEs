@@ -3,9 +3,9 @@ import struct
 
 import numpy as np
 
-from pyPDE.mesh import Mesh
-from pyPDE.mesh import Cell
-from pyPDE.mesh import CartesianVector
+from ...mesh import Mesh
+from ...mesh import Cell
+from ...mesh import CartesianVector
 
 
 class SpatialDiscretization:

@@ -2,9 +2,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from . import SteadyStateSolver
 
-from pyPDE.material import CrossSections
-from pyPDE.material import LightWeightCrossSections
-from pyPDE.material import IsotropicMultiGroupSource
+from pyPDEs.material import CrossSections
+from pyPDEs.material import LightWeightCrossSections
+from pyPDEs.material import IsotropicMultiGroupSource
 
 from ..boundaries import Boundary
 from ..boundaries import DirichletBoundary
