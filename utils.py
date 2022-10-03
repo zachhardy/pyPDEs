@@ -20,12 +20,6 @@ def get_dataset(problem: str, study: int) -> NeutronicsDatasetReader:
     -------
     NeutronicsDatasetReader
     """
-    if problem not in ["Sphere3g", "InfiniteSlab", "TWIGL", "LRA"]:
-        raise ValueError(f"{problem} is not a valid problem.")
-
-    study = int(study)
-    if study > 6:
-        raise ValueError(f"{study} is an invalid study number.")
 
     ##################################################
     # Define the name of the study
@@ -44,8 +38,10 @@ def get_dataset(problem: str, study: int) -> NeutronicsDatasetReader:
             study_name = "radius_scatter"
         elif study == 5:
             study_name = "density_scatter"
-        else:
+        elif study == 6:
             study_name = "radius_density_scatter"
+        else:
+            raise ValueError(f"{study} is an invalid study number.")
 
     elif problem == "InfiniteSlab":
         if study == 0:
@@ -60,8 +56,10 @@ def get_dataset(problem: str, study: int) -> NeutronicsDatasetReader:
             study_name = "magnitude_interface"
         elif study == 5:
             study_name = "duration_interface"
-        else:
+        elif study == 6:
             study_name = "magnitude_duration_interface"
+        else:
+            raise ValueError(f"{study} is an invalid study number.")
 
     elif problem == "TWIGL":
         if study == 0:
@@ -76,10 +74,12 @@ def get_dataset(problem: str, study: int) -> NeutronicsDatasetReader:
             study_name = "magnitude_scatter"
         elif study == 5:
             study_name = "duration_scatter"
-        else:
+        elif study == 6:
             study_name = "magnitude_duration_scatter"
+        else:
+            raise ValueError(f"{study} is an invalid study number.")
 
-    else:
+    elif problem == "LRA":
         if study == 0:
             study_name = "magnitude"
         elif study == 1:
@@ -92,8 +92,13 @@ def get_dataset(problem: str, study: int) -> NeutronicsDatasetReader:
             study_name = "magnitude_feedback"
         elif study == 5:
             study_name = "duration_feedback"
-        else:
+        elif study == 6:
             study_name = "magnitude_duration_feedback"
+        else:
+            raise ValueError(f"{study} is an invalid study number.")
+
+    else:
+        raise ValueError(f"{problem} is not a valid problem.")
 
     ##################################################
     # Unpickle the data handler

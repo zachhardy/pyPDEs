@@ -2,8 +2,11 @@ import os
 import sys
 import time
 import copy
+import pickle
 import itertools
 import numpy as np
+
+from readers import NeutronicsDatasetReader
 
 
 def setup_directory(path):
@@ -60,9 +63,8 @@ def parameter_study(
     path = os.path.dirname(os.path.abspath(__file__))
     path = f"{path}/Problems/{problem}"
     if not os.path.isdir(path):
-        msg = f"{path} is not a valid directory."
-        raise NotADirectoryError(msg)
-    filepath = f"{path}/run.py"
+        raise NotADirectoryError(f"{path} is not a valid directory.")
+    run_filepath = f"{path}/run.py"
 
     study = int(study)
 
@@ -100,8 +102,7 @@ def parameter_study(
             parameters['density'] = define_range(density, 0.005, 4)
             parameters['scatter'] = define_range(sig_s01, 0.1, 4)
         else:
-            msg = f"Invalid study number for {problem}."
-            raise AssertionError(msg)
+            raise ValueError(f"{study} is an invalid study number.")
 
     # Infinite slab problem
     elif problem == "InfiniteSlab":
@@ -133,8 +134,7 @@ def parameter_study(
             parameters['duration'] = define_range(duration, 0.05, 4)
             parameters['interface'] = define_range(40.0, 0.025, 4)
         else:
-            msg = f"Invalid study number for {problem}."
-            raise AssertionError(msg)
+            raise ValueError(f"{study} is an invalid study number.")
 
     # TWIGL problem
     elif problem == "TWIGL":
@@ -166,8 +166,7 @@ def parameter_study(
             parameters['duration'] = define_range(duration, 0.2, 4)
             parameters['scatter'] = define_range(scatter, 0.25, 4)
         else:
-            msg = f"Invalid study number for {problem}."
-            raise AssertionError(msg)
+            raise ValueError(f"{study} is an invalid study number.")
 
     # LRA benchmark problem
     elif problem == "LRA":
@@ -199,11 +198,10 @@ def parameter_study(
             parameters['duration'] = define_range(duration, 0.05, 4)
             parameters['feedback'] = define_range(feedback, 0.05, 4)
         else:
-            msg = f"Invalid study number for {problem}."
-            raise AssertionError(msg)
+            raise ValueError(f"{study} is an invalid study number.")
 
     else:
-        raise AssertionError("Invalid problem name.")
+        raise AssertionError(f"{problem} is an invalid problem name.")
 
     keys = list(parameters.keys())
     max_len = np.max([len(key) for key in keys])
@@ -228,9 +226,8 @@ def parameter_study(
     ##################################################
 
     # Define the path to the output directory
-    output_path = f"{path}/parametric/{keys[0]}"
-    for k, key in enumerate(keys[1:]):
-        output_path += f"_{key}"
+    study_name = "_".join(keys)
+    output_path = f"{path}/parametric/{study_name}"
     setup_directory(output_path)
 
     # Save the parameters to a file
@@ -242,12 +239,12 @@ def parameter_study(
     # Run the reference problem
     ##################################################
 
-    sim_path = os.path.join(output_path, "reference")
-    setup_directory(sim_path)
-
-    cmd = f"python {filepath} output_directory={sim_path} "
-    cmd += f"xs_directory={path}/xs >> {sim_path}/log.txt"
-    os.system(cmd)
+    # sim_path = os.path.join(output_path, "reference")
+    # setup_directory(sim_path)
+    #
+    # cmd = f"python {filepath} output_directory={sim_path} "
+    # cmd += f"xs_directory={path}/xs >> {sim_path}/log.txt"
+    # os.system(cmd)
 
     ##################################################
     # Run the parameter study
@@ -260,7 +257,7 @@ def parameter_study(
         sim_path = os.path.join(output_path, str(n).zfill(3))
         setup_directory(sim_path)
 
-        cmd = f"python {path}/run.py "
+        cmd = f"python {run_filepath} "
         for k, key in enumerate(keys):
             cmd += f"{key}={params[k]} "
         cmd += f"output_directory={sim_path} "
@@ -284,6 +281,17 @@ def parameter_study(
     print()
     print(f"Average Simulation Time = {total_time/len(values):.3e} s")
     print(f"Total Parameter Study Time = {total_time:.3e} s")
+
+    pickle_path = f"{path}/pickles"
+    if not os.path.isdir(pickle_path):
+        os.makedirs(pickle_path)
+
+    obj_filepath = f"{pickle_path}/{study_name}.obj"
+    reader = NeutronicsDatasetReader(output_path).read()
+    with open(obj_filepath, 'wb') as file:
+        pickle.dump(reader, file)
+
+    print(f"Dataset reader saved to {obj_filepath}.")
 
 
 if __name__ == "__main__":
