@@ -131,13 +131,14 @@ if __name__ == "__main__":
     # Get the reference problem
     reference = get_reference(problem_name)
     X_ref = reference.create_simulation_matrix(variable_names)
-    ref_qoi = f(problem_name, X_ref)
+    ref_qoi = f(X_ref)
 
     # Get the dataset
     data = get_dataset(problem_name, study_num)
 
     # Initialize the ROM
-    rom = POD_MCI(svd_rank, interpolant, **hyperparams)
+    hyperparams = get_hyperparams(problem_name)
+    rom = POD_MCI(**hyperparams)
 
     # Query the ROM
     rom_qois = exercise_rom(data, rom, f, variable_names, *args)
@@ -150,7 +151,7 @@ if __name__ == "__main__":
 
     plt.figure()
     plt.ylabel("Probability")
-    sb.histplot(rom_qois, bins=50, stat='probability', kde=True, ax=plt.gca(), log_scale=True)
+    sb.histplot(rom_qois, bins=20, stat='probability', kde=True, ax=plt.gca())
     plt.tight_layout()
 
     plt.show()
