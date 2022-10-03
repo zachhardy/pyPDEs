@@ -192,7 +192,7 @@ if __name__ == "__main__":
     pod = POD_MCI(1.0 - 1.0e-10)
     pod.fit(X.T, Y)
     pod.plot_singular_values(show_rank=True)
-    pod.plot_coefficients([0, 2, 4])
+    pod.plot_coefficients()
     pod.print_summary()
 
     plt.show()
