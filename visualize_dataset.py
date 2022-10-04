@@ -70,7 +70,7 @@ def plot_power_span(
     power_type = "Peak" if problem == "LRA" else "Final"
     print(f"\n{power_type} Power % Difference:\t{d * 100.0:.3g}")
 
-    d = P_max/P_min - 1.0
+    d = P_max / P_min - 1.0
     print(f"{power_type} Min-Max % Difference:\t{d * 100.0:.3g}\n")
 
     ##################################################
@@ -202,9 +202,20 @@ if __name__ == "__main__":
 
     problem_name = sys.argv[1]
     study_num = int(sys.argv[2])
+    save = False
+
+    variable_names = "power_density"
+    if problem_name == "Sphere3g":
+        variable_names = None
+
+    if len(sys.argv) > 3:
+        for arg in sys.argv[3:]:
+            argval = arg.split("=")[1]
+            if "save=" in arg:
+                save = bool(int(argval))
 
     reader = get_dataset(problem_name, study_num)
-    X = reader.create_2d_matrix(None)
+    X = reader.create_2d_matrix(variable_names)
     Y = reader.parameters
 
     hyperparams = get_hyperparams(problem_name)
@@ -213,17 +224,18 @@ if __name__ == "__main__":
 
     pod.fit(X.T, Y)
 
-    base = "/Users/zhardy/Documents/Journal Papers/POD-MCI/figures"
-
     if problem_name == "Sphere3g":
-        base = f"{base}/Sphere3g/rom"
-        fname = f"{base}/power_span.pdf"
+        outpath = "/Users/zhardy/Documents/Journal Papers/POD-MCI/figures"
+        outpath += "/Sphere3g/rom/"
+        outpath += "oned" if study_num == 0 else "threed"
+
+        fname = f"{outpath}/power_span.pdf" if save else None
         plot_power_span(problem_name, study_num, filename=fname)
 
-        fname = f"{base}/svd.pdf"
+        fname = f"{outpath}/svd.pdf" if save else None
         pod.plot_singular_values(show_rank=True, filename=fname)
 
-        fname = f"{base}/coeffs.pdf"
+        fname = f"{outpath}/coeffs.pdf" if save else None
         pod.plot_coefficients(filename=fname)
 
         pod.print_summary()

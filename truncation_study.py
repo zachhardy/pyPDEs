@@ -134,7 +134,7 @@ def truncation_study(
     # Plot the results
     ##################################################
 
-    fig: plt.Figure = plt.figure()
+    plt.figure()
     plt.xlabel("n")
     plt.ylabel("Relative $\ell_2$ Error")
 
@@ -166,16 +166,17 @@ if __name__ == "__main__":
 
     problem_name = sys.argv[1]
     study_num = int(sys.argv[2])
-    variable_names = "power_density"
     splitting_method = "random"
     args = [0.2, False, None]
     save = False
 
+    variable_names = "power_density"
+    if problem_name == "Sphere3g":
+        variable_names = None
+
     # Parse the command line
     if len(sys.argv) > 3:
         for arg in sys.argv[3:]:
-            print(arg)
-            print(arg.split("="))
             argval = arg.split("=")[1]
             if "split=" in arg:
                 splitting_method = argval

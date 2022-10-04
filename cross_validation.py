@@ -4,12 +4,14 @@ import time
 import itertools
 
 import numpy as np
+import seaborn as sb
 import matplotlib.pyplot as plt
 
 from numpy.linalg import norm
 from sklearn.model_selection import RepeatedKFold
 from sklearn.model_selection import LeaveOneOut
 
+from os.path import splitext
 from typing import Union
 
 from utils import get_dataset
@@ -25,9 +27,12 @@ def cross_validation(
         dataset: NeutronicsDatasetReader,
         pod_mci: POD_MCI,
         variables: Union[str, list[str]] = None,
-        cv_method: str = "kfold",
+        cv_method: str = "loo",
         interior_only: bool = False,
-        **kwargs
+        n_splits: int = 5,
+        n_repeats: int = 100,
+        seed: int = None,
+        filename: str = None
 ) -> dict:
     """
    Perform a cross-validation study.
@@ -43,9 +48,14 @@ def cross_validation(
         cross-validation. Other option is leave-one-out cross-validation.
     interior_only : bool, default False
         A flag to include only interior samples in the validation set.
-    kwargs : varies
-        Hyper-parameters for the cross-validator. This includes the number
-        of splits, number of repeats, and seed.
+    n_splits : int, default 5
+        The number of splits for k-fold cross-validation.
+    n_repeats : int, default 100
+        The number of repeats for k-fold cross-validation
+    seed : int, default None
+        The random number seed.
+    filename : str, default None.
+        A location to save the plot to, if specified.
 
     Returns
     -------
@@ -71,14 +81,6 @@ def cross_validation(
 
     # Initialize the cross-validator
     if cv_method == "kfold":
-        n_splits, n_repeats, seed = 5, 20, None
-        if "n_splits" in kwargs:
-            n_splits = kwargs.pop("n_splits")
-        if "n_repeats" in kwargs:
-            n_repeats = kwargs.pop("n_repeats")
-        if "seed" in kwargs:
-            seed = kwargs.pop("seed")
-
         cv = RepeatedKFold(n_splits=n_splits,
                            n_repeats=n_repeats,
                            random_state=seed)
@@ -101,7 +103,7 @@ def cross_validation(
     ##################################################
 
     # Output structure
-    out = {"mean": [], "max": [], "min": [],
+    out = {"mean": [], "max": [], "min": [], "all": [],
            "construction_time": [], "query_time": []}
 
     # Start cross-validating
@@ -136,6 +138,7 @@ def cross_validation(
         errs = np.zeros(len(X_pod))
         for i, (x_pod, x_test) in enumerate(zip(X_pod, X_test)):
             errs[i] = norm(x_pod - x_test) / norm(x_test)
+            out["all"].append(errs[i])
 
         out["mean"].append(np.mean(errs))
         out["max"].append(np.max(errs))
@@ -182,6 +185,29 @@ def cross_validation(
         print(f"\tMean  :\t{np.mean(out['min']):.3g}")
         print(f"\tMedian:\t{np.median(out['min']):.3g}")
         print(f"\t95% CI:\t[{ci[0]:.3g}, {ci[1]:.3g}]")
+
+        fig: plt.Figure = plt.figure()
+
+        # Plot mean errors
+        ax: plt.Axes = fig.add_subplot(1, 2, 1)
+        ax.set_xlabel("Mean Errors")
+        ax.set_ylabel("Probability")
+        sb.histplot(out["mean"], bins=10, stat="probability",
+                    log_scale=True, ax=ax)
+
+        # Plot max errors
+        ax: plt.Axes = fig.add_subplot(1, 2, 2)
+        ax.set_xlabel("Max Error")
+        ax.set_ylabel("Probability")
+        sb.histplot(out["max"], bins=10, stat="probability",
+                    log_scale=True, ax=ax)
+
+        fig.tight_layout()
+
+        if filename is not None:
+            base, ext = splitext(filename)
+            plt.savefig(f"{base}.pdf")
+
     else:
         print("--- Leave-One-Out Cross-Validation Statistics")
 
@@ -196,25 +222,6 @@ def cross_validation(
     return out
 
 
-def parse_args() -> list:
-    arguments = ["loo", False]
-    for arg in sys.argv[1:]:
-
-        if "method=" in arg:
-            arguments[0] = arg.split("=")[1]
-            if arguments[0] not in ["kfold", "loo"]:
-                err = f"{arg[0]} is not a valid cross-validator."
-                raise ValueError(err)
-
-        if "interior=" in arg:
-            arguments[1] = int(arg.split("=")[1])
-            if arguments[1] not in [0, 1]:
-                err = "interior argument must be 0 or 1."
-                raise ValueError(err)
-            arguments[1] = bool(interior_flag)
-    return arguments
-
-
 if __name__ == "__main__":
 
     if len(sys.argv) < 3:
@@ -224,7 +231,9 @@ if __name__ == "__main__":
 
     problem_name = sys.argv[1]
     study_num = int(sys.argv[2])
-    args = ["loo", False]
+    args = ["loo", False, 5, 20, None]
+    save = False
+
     variable_names = "power_density"
     if problem_name == "Sphere3g":
         variable_names = None
@@ -236,6 +245,14 @@ if __name__ == "__main__":
                 args[0] = argval
             elif "interior=" in arg:
                 args[1] = bool(int(argval))
+            elif "nsplits=" in arg:
+                args[2] = int(argval)
+            elif "nrepeats=" in arg:
+                args[3] = int(argval)
+            elif "seed=" in arg:
+                args[4] = int(argval)
+            elif "save=" in arg:
+                save = bool(int(argval))
 
     # Get the dataset
     data = get_dataset(problem_name, study_num)
@@ -245,4 +262,15 @@ if __name__ == "__main__":
     rom = POD_MCI(**hyperparams)
 
     # Perform cross-validation
-    cross_validation(data, rom, variable_names, *args)
+    fname = None
+    if save:
+        fname = f"/Users/zhardy/Documents/Journal Papers/POD-MCI/figures/"
+
+        if problem_name == "Sphere3g":
+            fname += f"{problem_name}/rom/"
+            fname += "oned/" if study_num == 0 else "threed/"
+            fname += "error_distribution.pdf"
+
+    cross_validation(data, rom, variable_names, *args, filename=fname)
+
+    plt.show()
