@@ -351,6 +351,9 @@ class TransientSolver(KEigenvalueSolver):
 
         if isinstance(self.initial_conditions, dict):
 
+            # Zero the flux moment vector
+            self.phi[:] = 0.0
+
             # Loop over cells
             for cell in self.mesh.cells:
 
