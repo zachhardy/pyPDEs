@@ -4,7 +4,10 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
+from os.path import splitext
+
 from utils import get_dataset
+from utils import get_hyperparams
 
 from readers import NeutronicsDatasetReader
 
@@ -15,7 +18,8 @@ def plot_power_span(
         problem: str,
         study: int,
         mode: str = "TOTAL",
-        logscale: bool = False
+        logscale: bool = False,
+        filename: str = None
 ) -> None:
     """
     Plot the bounding power profiles as a function of time.
@@ -30,6 +34,8 @@ def plot_power_span(
     study : int
     mode : {'TOTAL', 'PEAK', 'AVERAGE'}, default 'TOTAL'
     logscale : bool, default False
+    filename : str, default None.
+        A location to save the plot to, if specified.
     """
     if mode not in ["TOTAL", "PEAK", "AVERAGE"]:
         raise ValueError(f"{mode} is not a valid mode name.")
@@ -62,7 +68,10 @@ def plot_power_span(
     P_max, P_min = max(powers), min(powers)
     d = (P_max - P_min) / (0.5 * (P_max + P_min))
     power_type = "Peak" if problem == "LRA" else "Final"
-    print(f"\n{power_type} Power % Difference:\t{d * 100.0:.3f}\n")
+    print(f"\n{power_type} Power % Difference:\t{d * 100.0:.3g}")
+
+    d = P_max/P_min - 1.0
+    print(f"{power_type} Min-Max % Difference:\t{d * 100.0:.3g}\n")
 
     ##################################################
     # Plot the bounding cases
@@ -70,9 +79,9 @@ def plot_power_span(
 
     plt.figure()
     plt.xlabel("Time")
-    plt.ylabel("Power (W)" if mode == "TOTAL" else
-               "Peak Power Density (W/cc)" if mode == "PEAK" else
-               "Average Power Density (W/cc)")
+    plt.ylabel("Power" if mode == "TOTAL" else
+               "Peak Power Density" if mode == "PEAK" else
+               "Average Power Density")
 
     argmin = int(np.argmin(powers))
     argmax = int(np.argmax(powers))
@@ -97,12 +106,17 @@ def plot_power_span(
     plt.legend()
     plt.tight_layout()
 
+    if filename is not None:
+        base, ext = splitext(filename)
+        plt.savefig(f"{base}.pdf")
+
 
 def plot_temperature_span(
         problem: str,
         study: int,
         mode: str = "PEAK",
-        logscale: bool = False
+        logscale: bool = False,
+        filename: str = None
 ) -> None:
     """
     Plot the bounding temperature profiles as a function of time.
@@ -118,6 +132,8 @@ def plot_temperature_span(
     study : int
     mode : {'PEAK', 'AVERAGE'}, default 'PEAK'
     logscale : bool, default False
+    filename : str, default None.
+        A location to save the plot to, if specified.
     """
     if mode not in ["PEAK", "AVERAGE"]:
         raise ValueError(f"{mode} is not a valid mode name.")
@@ -172,6 +188,10 @@ def plot_temperature_span(
     plt.legend()
     plt.tight_layout()
 
+    if filename is not None:
+        base, ext = splitext(filename)
+        plt.savefig(f"{base}.pdf")
+
 
 if __name__ == "__main__":
 
@@ -183,16 +203,29 @@ if __name__ == "__main__":
     problem_name = sys.argv[1]
     study_num = int(sys.argv[2])
 
-    plot_power_span(problem_name, study_num, logscale=False)
-
     reader = get_dataset(problem_name, study_num)
-    X = reader.create_2d_matrix("power_density")
+    X = reader.create_2d_matrix(None)
     Y = reader.parameters
 
-    pod = POD_MCI(1.0 - 1.0e-10)
+    hyperparams = get_hyperparams(problem_name)
+    hyperparams["svd_rank"] = 5
+    pod = POD_MCI(**hyperparams)
+
     pod.fit(X.T, Y)
-    pod.plot_singular_values(show_rank=True)
-    pod.plot_coefficients()
-    pod.print_summary()
+
+    base = "/Users/zhardy/Documents/Journal Papers/POD-MCI/figures"
+
+    if problem_name == "Sphere3g":
+        base = f"{base}/Sphere3g/rom"
+        fname = f"{base}/power_span.pdf"
+        plot_power_span(problem_name, study_num, filename=fname)
+
+        fname = f"{base}/svd.pdf"
+        pod.plot_singular_values(show_rank=True, filename=fname)
+
+        fname = f"{base}/coeffs.pdf"
+        pod.plot_coefficients(filename=fname)
+
+        pod.print_summary()
 
     plt.show()

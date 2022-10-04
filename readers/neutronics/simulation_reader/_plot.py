@@ -5,6 +5,7 @@ if TYPE_CHECKING:
 import numpy as np
 import matplotlib.pyplot as plt
 
+from os.path import splitext
 from typing import Union
 
 
@@ -12,7 +13,8 @@ def plot_flux_moment(
         self: 'NeutronicsSimulationReader',
         moment: int = 0,
         groups: Union[int, list[int]] = None,
-        times: Union[float, list[float]] = None
+        times: Union[float, list[float]] = None,
+        filename: str = None
 ) -> None:
     """
     Plot a group-wise flux moments at the specified times.
@@ -31,7 +33,8 @@ def plot_flux_moment(
         of float is specified, the specified times are plotted. If
         the specified time does not lie on a snapshot, an interpolation
         is performed.
-
+    filename : str, default None.
+        A location to save the plot to, if specified.
     """
 
     # Parse the groups input
@@ -80,8 +83,8 @@ def plot_flux_moment(
         for t, time in enumerate(times):
             plt.figure()
             plt.title(f"Time = {time:.3f}")
-            plt.xlabel(f"z (cm)")
-            plt.ylabel(r"$\phi_{m,g}(r)$ (cm$^{-2}$ s$^{-1}$)")
+            plt.xlabel(f"r")
+            plt.ylabel(r"$\phi_{m,g}(r)$")
 
             # Plot the group-wise moments
             for group in groups:
@@ -91,6 +94,10 @@ def plot_flux_moment(
             plt.legend()
             plt.grid(True)
             plt.tight_layout()
+
+            if filename is not None:
+                base, ext = splitext(filename)
+                plt.savefig(f"{base}_{t}.pdf")
 
     elif self.dimension == 2:
         x = [node[0] for node in self.nodes]
@@ -117,12 +124,17 @@ def plot_flux_moment(
                                 vmin=0.0, vmax=phi_.max())
                 plt.colorbar(im)
                 plt.tight_layout()
+
+                if filename is not None:
+                    base, ext = splitext(filename)
+                    plt.savefig(f"{base}_g{group}_{t}.pdf")
     plt.show()
 
 
 def plot_power_profile(
         self: 'NeutronicsSimulationReader',
-        times: Union[float, list[float]] = None
+        times: Union[float, list[float]] = None,
+        filename: str = None
 ) -> None:
     """
     Plot the power density at the specified times.
@@ -135,6 +147,8 @@ def plot_power_profile(
         of float is specified, the specified times are plotted. If
         the specified time does not lie on a snapshot, an interpolation
         is performed.
+    filename : str, default None.
+        A location to save the plot to, if specified.
     """
 
     # Parse the times input
@@ -161,7 +175,7 @@ def plot_power_profile(
     if self.dimension == 1:
         plt.figure()
         plt.xlabel("z (cm)")
-        plt.ylabel("Power Density (W/cc)")
+        plt.ylabel("Power Density")
 
         # Plot the power density at each time
         for t, time in enumerate(times):
@@ -170,6 +184,10 @@ def plot_power_profile(
         plt.legend()
         plt.grid(True)
         plt.tight_layout()
+
+        if filename is not None:
+            base, ext = splitext(filename)
+            plt.savefig(f"{base}.pdf")
 
     # Plot 2D power densities
     elif self.dimension == 2:
@@ -195,12 +213,17 @@ def plot_power_profile(
                             vmin=0.0, vmax=P_.max())
             plt.colorbar(im)
             plt.tight_layout()
+
+            if filename is not None:
+                base, ext = splitext(filename)
+                plt.savefig(f"{base}_{t}.pdf")
     plt.show()
 
 
 def plot_temperature_profile(
         self: 'NeutronicsSimulationReader',
-        times: Union[float, list[float]] = None
+        times: Union[float, list[float]] = None,
+        filename: str = None
 ) -> None:
     """
     Plot the power density at the specified times.
@@ -213,6 +236,8 @@ def plot_temperature_profile(
         of float is specified, the specified times are plotted. If
         the specified time does not lie on a snapshot, an interpolation
         is performed.
+    filename : str, default None.
+        A location to save the plot to, if specified.
     """
 
     # Parse the times input
@@ -246,6 +271,10 @@ def plot_temperature_profile(
         plt.grid(True)
         plt.tight_layout()
 
+        if filename is not None:
+            base, ext = splitext(filename)
+            plt.savefig(f"{base}.pdf")
+
     # Plot 2D power densities
     elif self.dimension == 2:
         x = [node[0] for node in self.nodes]
@@ -271,13 +300,18 @@ def plot_temperature_profile(
                             vmin=0.0, vmax=T_.max())
             plt.colorbar(im)
             plt.tight_layout()
+
+            if filename is not None:
+                base, ext = splitext(filename)
+                plt.savefig(f"{base}_{t}.pdf")
     plt.show()
 
 
 def plot_power(
         self: 'NeutronicsSimulationReader',
         mode: str = "TOTAL",
-        logscale: bool = False
+        logscale: bool = False,
+        filename: str = None
 ) -> None:
     """
     Plot the reactor power, peak power density, or average power density
@@ -290,6 +324,8 @@ def plot_power(
         The power quantity to plot.
     logscale : bool, default False
         A flag for plotting the y-axis on a logarithmic scale.
+    filename : str, default None.
+        A location to save the plot to, if specified.
     """
     if mode not in ["TOTAL", "PEAK", "AVERAGE", "BOTH"]:
         msg = "Invalid mode. Mode must be [TOTAL/PEAK/AVERAGE]."
@@ -298,17 +334,17 @@ def plot_power(
     # Get the appropriate quantity to plot
     if mode == "TOTAL":
         p = [self.powers]
-        ylabel = "Power (W)"
+        ylabel = "Power"
     elif mode == "PEAK":
         p = [self.peak_power_densities]
-        ylabel = "Peak Power Density (W/cc)"
+        ylabel = "Peak Power Density"
     elif mode == "AVERAGE":
         p = [self.average_power_densities]
-        ylabel = "Average Power Density (W/cc)"
+        ylabel = "Average Power Density"
     else:
         p = [self.peak_power_densities,
              self.average_power_densities]
-        ylabel = "Power Density (W/cc)"
+        ylabel = "Power Density"
 
     # Plot
     plt.figure()
@@ -325,13 +361,17 @@ def plot_power(
 
     plt.grid(True)
     plt.tight_layout()
-    plt.show()
+
+    if filename is not None:
+        base, ext = splitext(filename)
+        plt.savefig(f"{base}.pdf")
 
 
 def plot_fuel_temperature(
         self: 'NeutronicsSimulationReader',
         mode: str = "PEAK",
-        logscale: bool = False
+        logscale: bool = False,
+        filename: str = None
 ) -> None:
     """
     Plot the peak or average fuel temperatures as a function of time.
@@ -343,6 +383,8 @@ def plot_fuel_temperature(
         The fuel temperature quantity to plot.
     logscale : bool, default False
         A flag for plotting the y-axis on a logarithmic scale.
+    filename : str, default None.
+        A location to save the plot to, if specified.
     """
     if mode not in ["PEAK", "AVERAGE", "BOTH"]:
         msg = "Invalid mode. Mode must be [PEAK/AVERAGE/BOTH]."
@@ -375,4 +417,7 @@ def plot_fuel_temperature(
 
     plt.grid(True)
     plt.tight_layout()
-    plt.show()
+
+    if filename is not None:
+        base, ext = splitext(filename)
+        plt.savefig(f"{base}.pdf")

@@ -215,7 +215,7 @@ def parse_args() -> list:
     return arguments
 
 
-if __name__ == "__main__":\
+if __name__ == "__main__":
 
     if len(sys.argv) < 3:
         msg = "Invalid command line arguments. "
@@ -224,8 +224,10 @@ if __name__ == "__main__":\
 
     problem_name = sys.argv[1]
     study_num = int(sys.argv[2])
-    variable_names = "power_density"
     args = ["loo", False]
+    variable_names = "power_density"
+    if problem_name == "Sphere3g":
+        variable_names = None
 
     if len(sys.argv) > 3:
         for arg in sys.argv[3:]:
