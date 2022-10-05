@@ -9,8 +9,12 @@ from os.path import splitext
 from numpy.linalg import norm
 from typing import Union
 
+from sklearn.model_selection import train_test_split
+
+from utils import get_reader
 from utils import get_dataset
 from utils import get_hyperparams
+from utils import train_test_split
 
 from readers import NeutronicsDatasetReader
 
@@ -18,13 +22,11 @@ from pyROMs.pod import POD_MCI
 
 
 def truncation_study(
-        dataset: NeutronicsDatasetReader,
+        X_train: np.ndarray,
+        X_test: np.ndarray,
+        Y_train: np.ndarray,
+        Y_test: np.ndarray,
         pod_mci: POD_MCI,
-        variables: Union[str, list[str]] = None,
-        split_method: str = "random",
-        test_size: float = 0.2,
-        interior_only: bool = False,
-        seed: int = None,
         filename: str = None
 ) -> dict:
     """
@@ -33,20 +35,11 @@ def truncation_study(
 
     Parameters
     ----------
-    dataset : NeutronicsDatasetReader
+    X_train : numpy.ndarray
+    X_test : numpy.ndarray
+    Y_train : numpy.ndarray
+    Y_test : numpy.ndarray
     pod_mci : POD_MCI
-    variables : str or list[str], default None
-        The variables from the dataset to fit the POD-MCI model to.
-    split_method : str, {'random', 'uniform', 'none'}
-        The method used to produce the training and test set. Random
-        uses scikit-learn train_test_split, uniform takes every other
-        snapshot, and none performs a reconstruction error study.
-    test_size : float
-        The fraction of samples to use for validation.
-    interior_only : bool, default False
-        A flag for excluding boundary samples from the test set.
-    seed : int or None, default None
-        The random number seed.
     filename : str, default None.
         A location to save the plot to, if specified.
 
@@ -54,42 +47,6 @@ def truncation_study(
     -------
     dict
     """
-
-    interp_method = pod_mci.interpolation_method
-    if not interior_only:
-        if "rbf" not in interp_method and interp_method != "neighbor":
-            err = "Only RBF and nearest neighbor interpolants are " \
-                  "permissible when extrapolation may be performed."
-            raise ValueError(err)
-
-    ##################################################
-    # Define the train/test split
-    ##################################################
-
-    print("Defining the training and test set...")
-    if split_method == "random":
-        splits = dataset.train_test_split(
-            variables=variables,
-            test_size=test_size,
-            interior_only=interior_only,
-            seed=seed,
-        )
-        X_train, X_test, Y_train, Y_test = splits
-
-    else:
-        Y = dataset.parameters
-        X = dataset.create_2d_matrix(variables)
-
-        if split_method == "uniform":
-            X_train, X_test = X[::2], X[1::2]
-            Y_train, Y_test = Y[::2], Y[1::2]
-
-        elif split_method == "none":
-            X_train, X_test = X, X
-            Y_train, Y_test = Y, Y
-
-        else:
-            raise ValueError(f"{split_method} is not a valid method.")
 
     ##################################################
     # Fitting the POD-MCI model
@@ -138,12 +95,13 @@ def truncation_study(
     plt.xlabel("n")
     plt.ylabel("Relative $\ell_2$ Error")
 
-    if split_method != "none":
+    if len(X_train) != len(X_test):
         plt.semilogy(out["n_modes"], out["mean"], '-*b', label="Mean")
         plt.semilogy(out["n_modes"], out["max"], '-or', label="Max")
         plt.semilogy(out["n_modes"], out["min"], '-+k', label="Min")
     else:
-        plt.semilogy(pod_mci.singular_values, '-+k', label="Singular Values")
+        svals = pod_mci.singular_values
+        plt.semilogy(svals/sum(svals), '-+k', label="Singular Values")
         plt.semilogy(total_error, '-*b', label="Reconstruction Error")
 
     plt.legend()
@@ -166,13 +124,18 @@ if __name__ == "__main__":
 
     problem_name = sys.argv[1]
     study_num = int(sys.argv[2])
-    splitting_method = "random"
-    args = [0.2, False, None]
-    save = False
 
-    variable_names = "power_density"
-    if problem_name == "Sphere3g":
-        variable_names = None
+    # Splitting parameters
+    splitting_method = "random"
+    test_size = 0.2
+    interior = False,
+    seed = None
+
+    # Which particular problem
+    case = 0
+
+    # Save outputs?
+    save = False
 
     # Parse the command line
     if len(sys.argv) > 3:
@@ -181,22 +144,51 @@ if __name__ == "__main__":
             if "split=" in arg:
                 splitting_method = argval
             elif "test_size=" in arg:
-                args[0] = float(argval)
+                test_size = float(argval)
             elif "interior=" in arg:
-                args[1] = bool(int(argval))
+                interior = bool(int(argval))
             elif "seed=" in arg:
-                args[2] = int(argval)
+                seed = int(argval)
+            elif "case=" in arg:
+                case = int(argval)
             elif "save=" in arg:
                 save = bool(int(argval))
 
-    # Get the dataset
-    data = get_dataset(problem_name, study_num)
+    ##################################################
+    # Get the data
+    ##################################################
 
-    # Initialize the ROM
+    print("Getting the data...")
+
+    reader = get_reader(problem_name, study_num)
+    X, Y = get_dataset(reader, problem_name, case)
     hyperparams = get_hyperparams(problem_name)
-    rom = POD_MCI(**hyperparams)
 
-    # Perform the truncation study
+    ##################################################
+    # Split the data
+    ##################################################
+
+    if splitting_method == "random":
+        mask = reader.interior_mask if interior else None
+        splits = train_test_split(X, Y, test_size, mask, seed)
+    elif splitting_method == "uniform":
+        splits = (X[::2], X[1::2], Y[::2], Y[1::2])
+    else:
+        splits = (X, X, Y, Y)
+
+    ##################################################
+    # Perform truncation study
+    ##################################################
+
+    # Last second check
+    interp_method = hyperparams["interpolant"]
+    if not interior:
+        if "rbf" not in interp_method and interp_method != "neighbor":
+            err = "Only RBF and nearest neighbor interpolants are " \
+                  "permissible when extrapolation may be performed."
+            raise ValueError(err)
+
+    # Define output filename
     fname = None
     if save:
         fname = f"/Users/zhardy/Documents/Journal Papers/POD-MCI/figures/"
@@ -210,7 +202,7 @@ if __name__ == "__main__":
             else:
                 fname += f"truncation_{splitting_method}.pdf"
 
-    truncation_study(data, rom, variable_names,
-                     splitting_method, *args, filename=fname)
+    rom = POD_MCI(**hyperparams)
+    truncation_study(*splits, rom, filename=fname)
 
     plt.show()

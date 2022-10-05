@@ -2,13 +2,15 @@ import os
 import sys
 import pickle
 
+import numpy as np
+
 from readers import NeutronicsDatasetReader
 from readers import NeutronicsSimulationReader
 
 
-def get_dataset(problem: str, study: int) -> NeutronicsDatasetReader:
+def get_reader(problem: str, study: int) -> NeutronicsDatasetReader:
     """
-    Get the data from the specified parameter study.
+    Get the reader from the specified parameter study.
 
     Parameters
     ----------
@@ -115,6 +117,43 @@ def get_dataset(problem: str, study: int) -> NeutronicsDatasetReader:
     return data
 
 
+def get_dataset(
+        reader: NeutronicsDatasetReader,
+        problem: str,
+        case: int
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Get the appropriate data for a POD-MCI ROM.
+
+    Parameters
+    ----------
+    reader : NeutronicsDatasetReader
+    problem : {'Sphere3g', 'InfiniteSlab', 'TWIGL', 'LRA'}
+    case : int
+        The case for the POD-MCI ROM.
+
+    Returns
+    -------
+    X : numpy.ndarray
+        The simulation data.
+    Y : numpy.ndarray
+        The parameters corresponding to each simulation.
+    """
+    if case == 0:
+        if problem == "Sphere3g":
+            X = reader.create_2d_matrix(None)
+        else:
+            X = reader.create_2d_matrix("power_density")
+    elif case == 1:
+        if problem == "Sphere3g":
+            X = reader.create_3d_matrix("power_density")[:, -1]
+        else:
+            raise NotImplementedError
+    else:
+        raise NotImplementedError
+    return X, reader.parameters
+
+
 def get_reference(problem: str) -> NeutronicsSimulationReader:
     """
     Return the reference solution for the specified problem.
@@ -156,3 +195,60 @@ def get_hyperparams(problem: str) -> dict:
     if problem == "LRA":
         hyperparams["svd_rank"] = 1.0 - 1.0e-10
     return hyperparams
+
+
+def train_test_split(
+        X: np.ndarray,
+        Y: np.ndarray,
+        test_size: float = 0.2,
+        interior_mask: list[bool] = None,
+        seed: int = None
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Return training and test sets.
+
+    Parameters
+    ----------
+    X : numpy.ndarray
+        The simulation data
+    Y : numpy.ndarray
+        The parameters corresponding to the simulation data.
+    test_size : float, default 0.2
+        The fraction of simulations to reserve for validation.
+    interior_mask : list[bool], default None
+        A mask for interior simulations. If not None, the validation
+        set will only contain interior simulations.
+    seed : int, default None
+        Random number seed.
+
+    Returns
+    -------
+    numpy.ndarray
+        The training simulation data.
+    numpy.ndarray
+        The validation simulation data.
+    numpy.ndarray
+        The training simulation parameters.
+    numpy.ndarray
+        The validation simulation parameters.
+    """
+    from sklearn.model_selection import train_test_split
+
+    if interior_mask is not None:
+        splits = train_test_split(
+            X[interior_mask], Y[interior_mask],
+            test_size=test_size, random_state=seed
+        )
+
+        bndry_mask = [not flag for flag in interior_mask]
+        splits[0] = np.vstack((splits[0], X[bndry_mask]))
+        splits[2] = np.vstack((splits[2], Y[bndry_mask]))
+
+    else:
+        splits = train_test_split(
+            X, Y, test_size=test_size, random_state=seed
+        )
+
+    return splits
+
+

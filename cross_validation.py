@@ -14,6 +14,7 @@ from sklearn.model_selection import LeaveOneOut
 from os.path import splitext
 from typing import Union
 
+from utils import get_reader
 from utils import get_dataset
 from utils import get_hyperparams
 
@@ -24,14 +25,11 @@ from pyROMs.pod import POD_MCI
 
 
 def cross_validation(
-        dataset: NeutronicsDatasetReader,
+        X: np.ndarray,
+        Y: np.ndarray,
+        cross_validator: Union[RepeatedKFold, LeaveOneOut],
         pod_mci: POD_MCI,
-        variables: Union[str, list[str]] = None,
-        cv_method: str = "loo",
-        interior_only: bool = False,
-        n_splits: int = 5,
-        n_repeats: int = 100,
-        seed: int = None,
+        interior_mask: list[bool] = None,
         filename: str = None
 ) -> dict:
     """
@@ -39,21 +37,17 @@ def cross_validation(
 
     Parameters
     ----------
-    dataset : NeutronicsDatasetReader
+    X : numpy.ndarray
+        The dataset to model using POD-MCI.
+    Y : numpy.ndarray
+        The parameters corresponding to the snapshots of `X`.
+    cross_validator : RepeatedKFold or LeaveOneOut
+        A cross validator object to use.
     pod_mci : POD_MCI
-    variables : str or list[str], default None
-        The variables from the dataset to fit the POD-MCI model to.
-    cv_method : {'kfold', 'loo'}, default 'kfold'
-        The cross-validation method to use. Default used repeated k-fold
-        cross-validation. Other option is leave-one-out cross-validation.
-    interior_only : bool, default False
-        A flag to include only interior samples in the validation set.
-    n_splits : int, default 5
-        The number of splits for k-fold cross-validation.
-    n_repeats : int, default 100
-        The number of repeats for k-fold cross-validation
-    seed : int, default None
-        The random number seed.
+        The POD-MCI ROM initialized with the desired parameters.
+    interior_mask : list[bool], default None
+        A mask to extract interior snapshots. If not None, this
+        causes only interior snapshots to be in validation sets.
     filename : str, default None.
         A location to save the plot to, if specified.
 
@@ -62,39 +56,21 @@ def cross_validation(
     dict
     """
 
-    if cv_method not in ["kfold", "loo"]:
-        err = f"{cv_method} is not a valid cross-validation method."
-        raise AssertionError(err)
-
-    interp_method = pod_mci.interpolation_method
-    if not interior_only:
+    interp_method = hyperparams["interpolant"]
+    if interior_mask is not None:
         if "rbf" not in interp_method and interp_method != "neighbor":
             err = "Only RBF and nearest neighbor interpolants are " \
                   "permissible when extrapolation may be performed."
             raise ValueError(err)
 
     ##################################################
-    # Define the cross-validator
+    # Define the cross-validation sets
     ##################################################
 
-    print("Setting up the cross-validation sets...")
-
-    # Initialize the cross-validator
-    if cv_method == "kfold":
-        cv = RepeatedKFold(n_splits=n_splits,
-                           n_repeats=n_repeats,
-                           random_state=seed)
+    if interior_mask is not None:
+        iterator = cross_validator.split(X[interior_mask])
     else:
-        cv = LeaveOneOut()
-
-    # Define the sets
-    Y = dataset.parameters
-    X = dataset.create_2d_matrix(variables)
-    if interior_only:
-        interior = dataset.interior_mask
-        iterator = cv.split(X[interior], Y[interior])
-    else:
-        iterator = cv.split(X, Y)
+        iterator = cross_validator.split(X)
     iterator, tmp_iterator = itertools.tee(iterator)
     n_cv = sum(1 for _ in tmp_iterator)
 
@@ -112,12 +88,14 @@ def cross_validation(
     for train, test in iterator:
 
         # Define training and test sets
-        if interior_only:
-            interior, bndry = dataset.interior_mask, dataset.boundary_mask
-            X_train, Y_train = X[interior][train], Y[interior][train]
-            X_test, Y_test = X[interior][test], Y[interior][test]
-            X_train = np.vstack((X_train, X[bndry]))
-            Y_train = np.vstack((Y_train, Y[bndry]))
+        if (interior_mask is not None and
+                isinstance(cross_validator, RepeatedKFold)):
+            bndry = [not flag for flag in interior_mask]
+            X_train = np.vstack((X[interior_mask][train], X[bndry]))
+            Y_train = np.vstack((Y[interior_mask][train], Y[bndry]))
+
+            X_test = X[interior_mask][test]
+            Y_test = Y[interior_mask][test]
         else:
             X_train, Y_train = X[train], Y[train]
             X_test, Y_test = X[test], Y[test]
@@ -225,6 +203,10 @@ def cross_validation(
 
 if __name__ == "__main__":
 
+    ##################################################
+    # Parse inputs
+    ##################################################
+
     if len(sys.argv) < 3:
         msg = "Invalid command line arguments. "
         msg += "A problem name and study number must be provided."
@@ -232,46 +214,77 @@ if __name__ == "__main__":
 
     problem_name = sys.argv[1]
     study_num = int(sys.argv[2])
-    args = ["loo", False, 5, 20, None]
-    save = False
 
-    variable_names = "power_density"
-    if problem_name == "Sphere3g":
-        variable_names = None
+    # Cross-validation parameters
+    cv_method = "loo"
+    n_splits = 3
+    n_repeats = 250
+    seed = None
+    interior = False
+
+    # Which particular problem
+    case = 0
+
+    # Save outputs?
+    save = False
 
     if len(sys.argv) > 3:
         for arg in sys.argv[3:]:
             argval = arg.split("=")[1]
             if "cv=" in arg:
-                args[0] = argval
+                cv_method = argval
             elif "interior=" in arg:
-                args[1] = bool(int(argval))
+                interior = bool(int(argval))
             elif "nsplits=" in arg:
-                args[2] = int(argval)
+                n_splits = int(argval)
             elif "nrepeats=" in arg:
-                args[3] = int(argval)
+                n_repeats = int(argval)
             elif "seed=" in arg:
-                args[4] = int(argval)
+                seed = int(argval)
+            elif "case=" in arg:
+                case = int(argval)
             elif "save=" in arg:
                 save = bool(int(argval))
 
-    # Get the dataset
-    data = get_dataset(problem_name, study_num)
+    ##################################################
+    # Get the data
+    ##################################################
 
-    # Initialize the ROM
+    print("Getting the data...")
+
+    reader = get_reader(problem_name, study_num)
+    data = get_dataset(reader, problem_name, case)
     hyperparams = get_hyperparams(problem_name)
-    rom = POD_MCI(**hyperparams)
 
-    # Perform cross-validation
+    ##################################################
+    # Create the cross-validator
+    ##################################################
+
+    # Create the cross-validator
+    if cv_method == "kfold":
+        cv = RepeatedKFold(n_splits=n_splits,
+                           n_repeats=n_repeats,
+                           random_state=seed)
+    elif cv_method == "loo":
+        cv = LeaveOneOut()
+    else:
+        raise NotImplementedError
+
+    ##################################################
+    # Perform cross validation
+    ##################################################
+
+    # Define output filename
     fname = None
     if save:
         fname = f"/Users/zhardy/Documents/Journal Papers/POD-MCI/figures/"
-
         if problem_name == "Sphere3g":
             fname += f"{problem_name}/rom/"
             fname += "oned/" if study_num == 0 else "threed/"
             fname += "error_distribution.pdf"
 
-    cross_validation(data, rom, variable_names, *args, filename=fname)
+    rom = POD_MCI(**hyperparams)
+    mask = None if not interior else reader.interior_mask
+    cross_validation(*data, cv, rom, mask, filename=fname)
 
     plt.show()
