@@ -24,13 +24,13 @@ if __name__ == "__main__":
     data_path = f"{path}/Problems/{problem_name}/outputs"
     outpath = "/Users/zhardy/Documents/Journal Papers/POD-MCI/figures"
 
-    data = NeutronicsSimulationReader(data_path).read()
+    reader = NeutronicsSimulationReader(data_path).read()
 
     if problem_name == "Sphere3g":
-        fname = f"{outpath}/Sphere3g/sflux"
-        data.plot_flux_moment(0, -1, [0.0, data.times[-1]], filename=fname)
+        fname = f"{outpath}/Sphere3g/ref/sflux"
+        reader.plot_flux_moment(0, -1, [0.0, reader.times[-1]], filename=fname)
 
-        fname = f"{outpath}/Sphere3g/power"
-        data.plot_power(filename=fname)
+        fname = f"{outpath}/Sphere3g/ref/power"
+        reader.plot_power(filename=fname)
 
     plt.show()

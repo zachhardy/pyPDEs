@@ -15,7 +15,7 @@ class NeutronicsSimulationReader:
     energy_per_fission: float = 3.204e-11
 
     plt.rcParams['text.usetex'] = True
-    plt.rcParams['font.size'] = 12
+    plt.rcParams['font.size'] = 14
 
     from ._plot import plot_flux_moment
     from ._plot import plot_power_profile

@@ -83,7 +83,7 @@ def plot_flux_moment(
         for t, time in enumerate(times):
             plt.figure()
             plt.title(f"Time = {time:.3f}")
-            plt.xlabel(f"r")
+            plt.xlabel(f"Position")
             plt.ylabel(r"$\phi_{m,g}(r)$")
 
             # Plot the group-wise moments
