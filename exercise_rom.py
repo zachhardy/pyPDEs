@@ -12,8 +12,8 @@ from sklearn.model_selection import LeaveOneOut
 
 from typing import Union
 
+from utils import get_reader
 from utils import get_dataset
-from utils import get_reference
 from utils import get_hyperparams
 
 from readers import NeutronicsDatasetReader
@@ -22,11 +22,11 @@ from pyROMs.pod import POD_MCI
 
 
 def exercise_rom(
-        dataset: NeutronicsDatasetReader,
+        X: np.ndarray,
+        Y: np.ndarray,
         pod_mci: POD_MCI,
         qoi_function: callable,
-        variables: Union[str, list[str]] = None,
-        n_samples: int = int(2.0e4)
+        samples: np.ndarray
 ) -> np.ndarray:
     """
     Exercise the ROM for
@@ -49,22 +49,11 @@ def exercise_rom(
 
     print("Initializing and fitting the POD-MCI model...")
 
-    Y = dataset.parameters
-    X = dataset.create_2d_matrix(variables)
     pod_mci.fit(X.T, Y)
 
     ##################################################
     # Exercise the POD-MCI ROM
     ##################################################
-
-    print("Setting up samples...")
-
-    # Generate the samples
-    rng = np.random.default_rng()
-    samples = np.zeros((n_samples, pod_mci.n_parameters))
-    for p in range(pod_mci.n_parameters):
-        low, high = dataset.parameter_bounds[p]
-        samples[:, p] = rng.uniform(low, high, n_samples)
 
     print("Exercising the ROM...")
 
@@ -72,7 +61,6 @@ def exercise_rom(
     t_start = time.time()
     qois = np.zeros(n_samples)
     X_pod = pod_mci.predict(samples).T
-    X_pod = dataset.unstack_simulation_vector(X_pod)
     for s in range(n_samples):
         qois[s] = qoi_function(X_pod[s])
     t_end = time.time()
@@ -83,13 +71,14 @@ def exercise_rom(
     return qois
 
 
-def get_qoi_function(problem: str) -> callable:
+def get_qoi_function(problem: str, case: int) -> callable:
     """
     Return the QoI function.
 
     Parameters
     ----------
     problem : {'Sphere3g', 'InfiniteSlab', 'TWIGL', 'LRA'}
+    case : int
 
     Returns
     -------
@@ -97,16 +86,20 @@ def get_qoi_function(problem: str) -> callable:
     """
     if problem != "LRA":
         def func(x: np.ndarray) -> float:
-            assert x.ndim == 2
+            x = reader.unstack_simulation_vector(x)[0]
             return np.sum(x[-1])
     else:
         def func(x: np.ndarray) -> float:
-            assert x.ndim == 2
+            x = reader.unstack_simulation_vector(x)[0]
             return np.sum(x[np.argmax(np.sum(x, axis=1))])
     return func
 
 
 if __name__ == "__main__":
+
+    ##################################################
+    # Parse inputs
+    ##################################################
 
     if len(sys.argv) < 3:
         msg = "Invalid command line arguments. "
@@ -115,38 +108,60 @@ if __name__ == "__main__":
 
     problem_name = sys.argv[1]
     study_num = int(sys.argv[2])
-    variable_names = "power_density"
-    args = [5000]
+
+    n_samples = 5000
+    case_num = 0
+    save = False
 
     # Parse command line
     if len(sys.argv) > 3:
         for arg in sys.argv[3:]:
             argval = arg.split("=")[1]
             if "n=" in arg:
-                args[0] = int(argval)
+                n_samples = int(argval)
+            elif "case=" in arg:
+                case_num = int(argval)
+            elif "save=" in arg:
+                save = bool(int(argval))
 
-    # Define the QoI function
-    f = get_qoi_function(problem_name)
+    ##################################################
+    # Get the data
+    ##################################################
 
-    # Get the reference problem
-    reference = get_reference(problem_name)
-    X_ref = reference.create_simulation_matrix(variable_names)
-    ref_qoi = f(X_ref)
+    print("Getting the data...")
 
-    # Get the dataset
-    data = get_dataset(problem_name, study_num)
+    f = get_qoi_function(problem_name, case_num)
 
-    # Initialize the ROM
+    # Get the dataset and reference QoIs
+    reader = get_reader(problem_name, study_num)
+    data = get_dataset(reader, problem_name, case_num)
     hyperparams = get_hyperparams(problem_name)
-    rom = POD_MCI(**hyperparams)
 
+    ##################################################
+    # Generate the samples
+    ##################################################
+
+    print("Generating the samples...")
+
+    rng = np.random.default_rng()
+    samples = np.zeros((n_samples, reader.n_parameters))
+    for p in range(reader.n_parameters):
+        low, high = reader.parameter_bounds[p]
+        samples[:, p] = rng.uniform(low, high, n_samples)
+
+    #################################################
     # Query the ROM
-    rom_qois = exercise_rom(data, rom, f, variable_names, *args)
+    ##################################################
+
+    rom = POD_MCI(**hyperparams)
+    rom_qois = exercise_rom(*data, rom, f, samples)
+    train_qois = [f(x) for x in data[0]]
 
     # Display the results
     print()
-    print(f"Reference QoI:\t{ref_qoi:.3g}")
+    print(f"Ref. Mean QoI:\t{np.mean(train_qois):.3g}")
     print(f"Mean QoI     :\t{np.mean(rom_qois):.3g}")
+    print(f"Median QoI   :\t{np.median(rom_qois):.3g}")
     print(f"STD QoI      :\t{np.std(rom_qois):.3g}")
 
     plt.figure()
