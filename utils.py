@@ -107,7 +107,7 @@ def get_reader(problem: str, study: int) -> NeutronicsDatasetReader:
     ##################################################
 
     path = os.path.abspath(os.path.dirname(__file__))
-    path = f"{path}/Problems/{problem}/pickles"
+    path = f"{path}/Problems/{problem}/pickles/training"
     if not os.path.isdir(path):
         raise NotADirectoryError(f"{path} is not a valid directory.")
 
@@ -144,9 +144,12 @@ def get_dataset(
             X = reader.create_2d_matrix(None)
         else:
             X = reader.create_2d_matrix("power_density")
-    elif case == 1:
-        if problem == "Sphere3g":
+
+    elif problem == "Sphere3g":
+        if case == 1:
             X = reader.create_3d_matrix("power_density")[:, -1]
+        elif case == 2:
+            X = np.array([sim.powers for sim in reader])
         else:
             raise NotImplementedError
     else:
@@ -250,5 +253,3 @@ def train_test_split(
         )
 
     return splits
-
-
