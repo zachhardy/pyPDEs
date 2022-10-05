@@ -128,7 +128,7 @@ if __name__ == "__main__":
     # Splitting parameters
     splitting_method = "random"
     test_size = 0.2
-    interior = False,
+    interior = False
     seed = None
 
     # Which particular problem
@@ -184,9 +184,9 @@ if __name__ == "__main__":
     interp_method = hyperparams["interpolant"]
     if not interior:
         if "rbf" not in interp_method and interp_method != "neighbor":
-            err = "Only RBF and nearest neighbor interpolants are " \
+            msg = "Only RBF and nearest neighbor interpolants are " \
                   "permissible when extrapolation may be performed."
-            raise ValueError(err)
+            raise ValueError(msg)
 
     # Define output filename
     fname = None
