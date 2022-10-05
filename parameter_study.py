@@ -46,8 +46,8 @@ def define_range(reference, variance, n):
 def parameter_study(
         problem: str,
         study: int,
-        lhs: bool = False,
-        n: int = 50):
+        validation: bool = False,
+        n_validation_runs: int = 10):
     """
     Define and run a parameter study.
 
@@ -87,7 +87,7 @@ def parameter_study(
         elif study == 1:
             parameters['density'] = define_range(0.05134325, 0.025, 21)
         elif study == 2:
-            parameters['scatter'] = define_range(sig_s01, 0.2, 21)
+            parameters['scatter'] = define_range(sig_s01, 0.1, 21)
         elif study == 3:
             parameters['radius'] = define_range(radius, 0.01, 6)
             parameters['density'] = define_range(density, 0.01, 6)
@@ -98,9 +98,9 @@ def parameter_study(
             parameters['density'] = define_range(density, 0.01, 6)
             parameters['scatter'] = define_range(sig_s01, 0.1, 6)
         elif study == 6:
-            parameters['radius'] = define_range(radius, 0.02, 4)
-            parameters['density'] = define_range(density, 0.005, 4)
-            parameters['scatter'] = define_range(sig_s01, 0.1, 4)
+            parameters['radius'] = define_range(radius, 0.01, 4)
+            parameters['density'] = define_range(density, 0.01, 4)
+            parameters['scatter'] = define_range(sig_s01, 0.05, 4)
         else:
             raise ValueError(f"{study} is an invalid study number.")
 
@@ -206,11 +206,11 @@ def parameter_study(
     keys = list(parameters.keys())
     max_len = np.max([len(key) for key in keys])
 
-    if lhs:
+    if validation:
         from scipy.stats import qmc
         d = len(parameters.keys())
         sampler = qmc.LatinHypercube(d=d)
-        samples = sampler.random(n)
+        samples = sampler.random(n_validation_runs)
 
         l_bounds, u_bounds = [], []
         for vals in parameters.values():
@@ -227,7 +227,10 @@ def parameter_study(
 
     # Define the path to the output directory
     study_name = "_".join(keys)
-    output_path = f"{path}/parametric/{study_name}"
+    if validation:
+        output_path = f"{path}/validation/{study_name}"
+    else:
+        output_path = f"{path}/parametric/{study_name}"
     setup_directory(output_path)
 
     # Save the parameters to a file
@@ -282,7 +285,10 @@ def parameter_study(
     print(f"Average Simulation Time = {total_time/len(values):.3e} s")
     print(f"Total Parameter Study Time = {total_time:.3e} s")
 
-    pickle_path = f"{path}/pickles"
+    if validation:
+        pickle_path = f"{path}/pickles/validation"
+    else:
+        pickle_path = f"{path}/pickles/training"
     if not os.path.isdir(pickle_path):
         os.makedirs(pickle_path)
 
@@ -304,33 +310,42 @@ if __name__ == "__main__":
     #   LRA          - 6
     ############################################################
 
-    if len(sys.argv) == 2:
-        problem_name = sys.argv[1]
-        if problem_name == "Sphere3g":
-            max_study = 6
-        elif problem_name == "InfiniteSlab":
-            max_study = 6
-        elif problem_name == "TWIGL":
-            max_study = 6
-        elif problem_name == "LRA":
-            max_study = 6
-        else:
-            raise NotImplementedError("Invalid problem name.")
+    if len(sys.argv) < 2:
+        msg = "Invalid command line arguments. "
+        msg += "A problem name must be provided."
+        raise AssertionError(msg)
 
+    problem_name = sys.argv[1]
+    study_num = -1
+
+    # Validation parameters
+    n_runs = 10
+    is_validation = False
+
+    # Parse other arguments
+    if len(sys.argv) > 2:
+        for i, arg in enumerate(sys.argv[2:]):
+            if i == 0 and "=" not in arg:
+                study_num = int(arg)
+            else:
+                argval = arg.split("=")[1]
+                if "validation=" in arg:
+                    is_validation = bool(int(argval))
+                if "nruns=" in arg:
+                    n_runs = int(argval)
+
+    # If no study number, run all of them
+    if study_num == -1:
         check = input("Are you sure you want to run every parameter "
-                      f"study for {problem_name}? [y/n] ")
+                      f"study for {problem_name}? [y/n] ")\
+
         if "y" in check:
-            for i in range(max_study + 1):
-                parameter_study(problem_name, i)
+            for i in range(7):
+                parameter_study(problem_name, i, is_validation, n_runs)
+
         if "n" in check:
             print("Terminating program.")
             exit(0)
 
-    elif len(sys.argv) == 3:
-        use_lhs = "y" in input("Latin Hypercubes? [y/n] ")
-        n_samples = 0 if not use_lhs else int(input("How many samples? "))
-
-        parameter_study(*sys.argv[1:], use_lhs, n_samples)
-
     else:
-        raise AssertionError("Invalid command line inputs.")
+        parameter_study(problem_name, study_num, is_validation, n_runs)
