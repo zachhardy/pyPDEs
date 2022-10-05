@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 from os.path import splitext
 
-from utils import get_dataset
+from utils import get_reader
 from utils import get_hyperparams
 
 from readers import NeutronicsDatasetReader
@@ -15,8 +15,8 @@ from pyROMs.pod import POD_MCI
 
 
 def plot_power_span(
+        reader: NeutronicsDatasetReader,
         problem: str,
-        study: int,
         mode: str = "TOTAL",
         logscale: bool = False,
         filename: str = None
@@ -30,8 +30,8 @@ def plot_power_span(
 
     Parameters
     ----------
+    reader : NeutronicsDatasetReader
     problem : {'Sphere3g', 'InfiniteSlab', 'TWIGL', 'LRA'}
-    study : int
     mode : {'TOTAL', 'PEAK', 'AVERAGE'}, default 'TOTAL'
     logscale : bool, default False
     filename : str, default None.
@@ -44,10 +44,8 @@ def plot_power_span(
     # Get the data
     ##################################################
 
-    data = get_dataset(problem, study)
-
     powers = []
-    for s, simulation in enumerate(data):
+    for s, simulation in enumerate(reader):
         if mode == "TOTAL":
             if problem == "LRA":
                 P = simulation.powers.max()
@@ -112,8 +110,8 @@ def plot_power_span(
 
 
 def plot_temperature_span(
+        reader: NeutronicsDatasetReader,
         problem: str,
-        study: int,
         mode: str = "PEAK",
         logscale: bool = False,
         filename: str = None
@@ -128,6 +126,7 @@ def plot_temperature_span(
 
     Parameters
     ----------
+    reader : NeutronicsDatasetReader
     problem : {'Sphere3g', 'InfiniteSlab', 'TWIGL', 'LRA'}
     study : int
     mode : {'PEAK', 'AVERAGE'}, default 'PEAK'
@@ -142,10 +141,8 @@ def plot_temperature_span(
     # Get the data
     ##################################################
 
-    data = get_dataset(problem, study)
-
     tempratures = []
-    for s, simulation in enumerate(data):
+    for s, simulation in enumerate(reader):
         if mode == "PEAK":
             T = simulation.peak_fuel_temperatures.max()
         else:
@@ -202,26 +199,22 @@ if __name__ == "__main__":
 
     problem_name = sys.argv[1]
     study_num = int(sys.argv[2])
+    case = 0
     save = False
-
-    variable_names = "power_density"
-    if problem_name == "Sphere3g":
-        variable_names = None
 
     if len(sys.argv) > 3:
         for arg in sys.argv[3:]:
             argval = arg.split("=")[1]
-            if "save=" in arg:
+            if "case=" in arg:
+                case = int(argval)
+            elif "save=" in arg:
                 save = bool(int(argval))
 
-    reader = get_dataset(problem_name, study_num)
-    X = reader.create_2d_matrix(variable_names)
-    Y = reader.parameters
-
+    r = get_reader(problem_name, study_num)
+    X, Y = get_dataset(reader, problem_name, case)
     hyperparams = get_hyperparams(problem_name)
-    hyperparams["svd_rank"] = 5
-    pod = POD_MCI(**hyperparams)
 
+    pod = POD_MCI(**hyperparams)
     pod.fit(X.T, Y)
 
     if problem_name == "Sphere3g":
@@ -230,7 +223,7 @@ if __name__ == "__main__":
         outpath += "oned" if study_num == 0 else "threed"
 
         fname = f"{outpath}/power_span.pdf" if save else None
-        plot_power_span(problem_name, study_num, filename=fname)
+        plot_power_span(r, problem_name, filename=fname)
 
         fname = f"{outpath}/svd.pdf" if save else None
         pod.plot_singular_values(show_rank=True, filename=fname)
