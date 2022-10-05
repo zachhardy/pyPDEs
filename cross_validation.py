@@ -103,7 +103,7 @@ def cross_validation(
     ##################################################
 
     # Output structure
-    out = {"mean": [], "max": [], "min": [], "all": [],
+    out = {"mean": [], "max": [], "min": [],
            "construction_time": [], "query_time": []}
 
     # Start cross-validating
@@ -138,7 +138,6 @@ def cross_validation(
         errs = np.zeros(len(X_pod))
         for i, (x_pod, x_test) in enumerate(zip(X_pod, X_test)):
             errs[i] = norm(x_pod - x_test) / norm(x_test)
-            out["all"].append(errs[i])
 
         out["mean"].append(np.mean(errs))
         out["max"].append(np.max(errs))
@@ -171,12 +170,14 @@ def cross_validation(
         ci = np.percentile(out["mean"], [2.5, 97.5])
         print("Mean Error Statistics:")
         print(f"\tMean  :\t{np.mean(out['mean']):.3g}")
+        print(f"\tMax   :\t{np.max(out['mean']):.3g}")
         print(f"\tMedian:\t{np.median(out['mean']):.3g}")
         print(f"\t95% CI:\t[{ci[0]:.3g}, {ci[1]:.3g}]")
 
         ci = np.percentile(out["max"], [2.5, 97.5])
         print("\nMax Error Statistics:")
         print(f"\tMean  :\t{np.mean(out['max']):.3g}")
+        print(f"\tMax   :\t{np.max(out['max']):.3g}")
         print(f"\tMedian:\t{np.median(out['max']):.3g}")
         print(f"\t95% CI:\t[{ci[0]:.3g}, {ci[1]:.3g}]")
 
@@ -193,14 +194,14 @@ def cross_validation(
         ax.set_xlabel("Mean Errors")
         ax.set_ylabel("Probability")
         sb.histplot(out["mean"], bins=10, stat="probability",
-                    log_scale=True, ax=ax)
+                    log_scale=False, ax=ax)
 
         # Plot max errors
         ax: plt.Axes = fig.add_subplot(1, 2, 2)
         ax.set_xlabel("Max Error")
         ax.set_ylabel("Probability")
         sb.histplot(out["max"], bins=10, stat="probability",
-                    log_scale=True, ax=ax)
+                    log_scale=False, ax=ax)
 
         fig.tight_layout()
 
