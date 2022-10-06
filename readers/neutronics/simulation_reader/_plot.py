@@ -128,7 +128,6 @@ def plot_flux_moment(
                 if filename is not None:
                     base, ext = splitext(filename)
                     plt.savefig(f"{base}_g{group}_{t}.pdf")
-    plt.show()
 
 
 def plot_power_profile(
@@ -217,7 +216,6 @@ def plot_power_profile(
             if filename is not None:
                 base, ext = splitext(filename)
                 plt.savefig(f"{base}_{t}.pdf")
-    plt.show()
 
 
 def plot_temperature_profile(
@@ -304,7 +302,6 @@ def plot_temperature_profile(
             if filename is not None:
                 base, ext = splitext(filename)
                 plt.savefig(f"{base}_{t}.pdf")
-    plt.show()
 
 
 def plot_power(

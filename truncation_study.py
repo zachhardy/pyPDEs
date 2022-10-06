@@ -95,7 +95,7 @@ def truncation_study(
     plt.xlabel("n")
     plt.ylabel("Relative $\ell_2$ Error")
 
-    if len(X_train) != len(X_test):
+    if not np.array_equal(X_train, X_test):
         plt.semilogy(out["n_modes"], out["mean"], '-*b', label="Mean")
         plt.semilogy(out["n_modes"], out["max"], '-or', label="Max")
         plt.semilogy(out["n_modes"], out["min"], '-+k', label="Min")

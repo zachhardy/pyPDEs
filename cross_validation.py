@@ -30,6 +30,7 @@ def cross_validation(
         cross_validator: Union[RepeatedKFold, LeaveOneOut],
         pod_mci: POD_MCI,
         interior_mask: list[bool] = None,
+        logscale: bool = False,
         filename: str = None
 ) -> dict:
     """
@@ -48,6 +49,8 @@ def cross_validation(
     interior_mask : list[bool], default None
         A mask to extract interior snapshots. If not None, this
         causes only interior snapshots to be in validation sets.
+    logscale : bool, default False
+        A flag for a log scale histogram.
     filename : str, default None.
         A location to save the plot to, if specified.
 
@@ -172,14 +175,14 @@ def cross_validation(
         ax.set_xlabel("Mean Errors")
         ax.set_ylabel("Probability")
         sb.histplot(out["mean"], bins=10, stat="probability",
-                    log_scale=False, ax=ax)
+                    log_scale=logscale, ax=ax)
 
         # Plot max errors
         ax: plt.Axes = fig.add_subplot(1, 2, 2)
         ax.set_xlabel("Max Error")
         ax.set_ylabel("Probability")
         sb.histplot(out["max"], bins=10, stat="probability",
-                    log_scale=False, ax=ax)
+                    log_scale=logscale, ax=ax)
 
         fig.tight_layout()
 
@@ -221,6 +224,7 @@ if __name__ == "__main__":
     n_repeats = 250
     seed = None
     interior = False
+    logscale = True
 
     # Which particular problem
     case = 0
@@ -235,6 +239,8 @@ if __name__ == "__main__":
                 cv_method = argval
             elif "interior=" in arg:
                 interior = bool(int(argval))
+            elif "logscale=" in arg:
+                logscale = bool(int(argval))
             elif "nsplits=" in arg:
                 n_splits = int(argval)
             elif "nrepeats=" in arg:
@@ -285,6 +291,6 @@ if __name__ == "__main__":
 
     rom = POD_MCI(**hyperparams)
     mask = None if not interior else reader.interior_mask
-    cross_validation(*data, cv, rom, mask, filename=fname)
+    cross_validation(*data, cv, rom, mask, logscale=logscale, filename=fname)
 
     plt.show()

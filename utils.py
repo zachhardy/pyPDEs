@@ -157,6 +157,16 @@ def get_dataset(
             X = np.array([sim.powers for sim in reader])
         else:
             raise NotImplementedError
+
+    elif problem == "LRA":
+        if case == 1:
+            X = reader.create_3d_matrix("power_density")
+            X = np.array([x[np.argmax(np.sum(x, axis=1))] for x in X])
+        elif case == 2:
+            X = np.array([sim.powers for sim in reader])
+        else:
+            raise NotImplementedError
+
     else:
         raise NotImplementedError
     return X, reader.parameters

@@ -217,21 +217,30 @@ if __name__ == "__main__":
 
     pod = POD_MCI(**hyperparams)
     pod.fit(X.T, Y)
+    pod.print_summary()
 
+    outpath = "/Users/zhardy/Documents/Journal Papers/POD-MCI/figures/"
     if problem_name == "Sphere3g":
-        outpath = "/Users/zhardy/Documents/Journal Papers/POD-MCI/figures"
-        outpath += "/Sphere3g/rom/"
+        outpath = f"{outpath}/Sphere3g/rom/"
         outpath += "oned" if study_num == 0 else "threed"
 
         fname = f"{outpath}/power_span.pdf" if save else None
         plot_power_span(r, problem_name, filename=fname)
 
-        fname = f"{outpath}/svd.pdf" if save else None
+        fname = f"{outpath}/svd_{case}.pdf" if save else None
         pod.plot_singular_values(show_rank=True, filename=fname)
 
         fname = f"{outpath}/coeffs.pdf" if save else None
         pod.plot_coefficients(filename=fname)
 
-        pod.print_summary()
+    if problem_name == "LRA":
+        outpath = f"{outpath}/LRA/rom/"
+
+        fname = f"{outpath}/power_span.pdf" if save else None
+        plot_power_span(r, problem_name, mode="PEAK",
+                        logscale=False, filename=fname)
+
+        fname = f"{outpath}/svd_{case}.pdf" if save else None
+        pod.plot_singular_values(show_rank=True, filename=fname)
 
     plt.show()

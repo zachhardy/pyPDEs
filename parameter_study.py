@@ -198,7 +198,7 @@ def parameter_study(
             parameters['feedback'] = define_range(feedback, 0.05, 6)
         elif study == 6:
             parameters['magnitude'] = define_range(magnitude, 0.025, 4)
-            parameters['duration'] = define_range(duration, 0.05, 4)
+            parameters['duration'] = define_range(duration, 0.025, 4)
             parameters['feedback'] = define_range(feedback, 0.05, 4)
         else:
             raise ValueError(f"{study} is an invalid study number.")

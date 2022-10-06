@@ -84,14 +84,20 @@ def get_qoi_function(problem: str, case: int) -> callable:
     -------
     callable
     """
-    if problem != "LRA":
-        def func(x: np.ndarray) -> float:
-            x = reader.unstack_simulation_vector(x)[0]
-            return np.sum(x[-1])
-    else:
+    if problem == "LRA":
         def func(x: np.ndarray) -> float:
             x = reader.unstack_simulation_vector(x)[0]
             return np.sum(x[np.argmax(np.sum(x, axis=1))])
+    if problem == "Sphere3g" and case == 1:
+        def func(x: np.ndarray) -> float:
+            return np.sum(x)
+    elif problem == "Sphere3g" and case == 2:
+        def func(x: np.ndarray) -> float:
+            return x[-1]
+    else:
+        def func(x: np.ndarray) -> float:
+            x = reader.unstack_simulation_vector(x)[0]
+            return np.sum(x[-1])
     return func
 
 
