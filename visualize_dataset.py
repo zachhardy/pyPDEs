@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from os.path import splitext
 
 from utils import get_reader
+from utils import get_dataset
 from utils import get_hyperparams
 
 from readers import NeutronicsDatasetReader
@@ -84,7 +85,7 @@ def plot_power_span(
     argmin = int(np.argmin(powers))
     argmax = int(np.argmax(powers))
     for i, s in enumerate([argmax, argmin]):
-        simulation = data[s]
+        simulation = reader[s]
 
         # Get appopriate power quantity
         if mode == "TOTAL":
@@ -98,7 +99,7 @@ def plot_power_span(
         plotter = plt.semilogy if logscale else plt.plot
         style = '-*b' if i == 0 else '-or'
         label = "Max" if i == 0 else "Min"
-        plotter(data.times, P, style, label=f"{label}", ms=3.0)
+        plotter(reader.times, P, style, label=f"{label}", ms=3.0)
 
     plt.grid(True)
     plt.legend()
@@ -167,7 +168,7 @@ def plot_temperature_span(
     argmin = int(np.argmin(tempratures))
     argmax = int(np.argmax(tempratures))
     for i, s in enumerate([argmax, argmin]):
-        simulation = data[s]
+        simulation = reader[s]
 
         # Get appopriate power quantity
         if mode == "PEAK":
@@ -179,7 +180,7 @@ def plot_temperature_span(
         plotter = plt.semilogy if logscale else plt.plot
         style = '-*b' if i == 0 else '-or'
         label = "Max" if i == 0 else "Min"
-        plotter(data.times, T, style, label=f"{label}", ms=3.0)
+        plotter(reader.times, T, style, label=f"{label}", ms=3.0)
 
     plt.grid(True)
     plt.legend()
@@ -211,7 +212,7 @@ if __name__ == "__main__":
                 save = bool(int(argval))
 
     r = get_reader(problem_name, study_num)
-    X, Y = get_dataset(reader, problem_name, case)
+    X, Y = get_dataset(r, problem_name, case)
     hyperparams = get_hyperparams(problem_name)
 
     pod = POD_MCI(**hyperparams)
