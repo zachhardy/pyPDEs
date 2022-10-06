@@ -8,7 +8,11 @@ from readers import NeutronicsDatasetReader
 from readers import NeutronicsSimulationReader
 
 
-def get_reader(problem: str, study: int) -> NeutronicsDatasetReader:
+def get_reader(
+        problem: str,
+        study: int,
+        validation: bool = False
+) -> NeutronicsDatasetReader:
     """
     Get the reader from the specified parameter study.
 
@@ -107,7 +111,8 @@ def get_reader(problem: str, study: int) -> NeutronicsDatasetReader:
     ##################################################
 
     path = os.path.abspath(os.path.dirname(__file__))
-    path = f"{path}/Problems/{problem}/pickles/training"
+    path = f"{path}/Problems/{problem}/pickles/"
+    path += "training" if not validation else "validation"
     if not os.path.isdir(path):
         raise NotADirectoryError(f"{path} is not a valid directory.")
 
