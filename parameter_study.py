@@ -22,7 +22,7 @@ def setup_directory(path):
     os.makedirs(path)
 
 
-def define_range(reference, variance, n):
+def define_range(reference, variance, n, up=True, down=True):
     """
     Define sample points for a parameter given the nominal value,
     the variance, and the number of samples desired. This routine
@@ -39,7 +39,10 @@ def define_range(reference, variance, n):
     -------
     numpy.ndarray : The samples to use in the parameter study.
     """
-    samples = np.linspace(-1.0, 1.0, n)
+    assert up or down
+    lower = -1.0 if down else 0.0
+    upper = 1.0 if up else 0.0
+    samples = np.linspace(lower, upper, n)
     return reference*(1.0 + variance * samples)
 
 
@@ -98,9 +101,9 @@ def parameter_study(
             parameters['density'] = define_range(density, 0.01, 6)
             parameters['scatter'] = define_range(sig_s01, 0.1, 6)
         elif study == 6:
-            parameters['radius'] = define_range(radius, 0.01, 4)
-            parameters['density'] = define_range(density, 0.01, 4)
-            parameters['scatter'] = define_range(sig_s01, 0.05, 4)
+            parameters['radius'] = define_range(radius, 0.01, 4, up=False)
+            parameters['density'] = define_range(density, 0.01, 4, up=False)
+            parameters['scatter'] = define_range(sig_s01, 0.05, 4, up=False)
         else:
             raise ValueError(f"{study} is an invalid study number.")
 
@@ -207,16 +210,12 @@ def parameter_study(
     max_len = np.max([len(key) for key in keys])
 
     if validation:
-        from scipy.stats import qmc
         d = len(parameters.keys())
-        sampler = qmc.LatinHypercube(d=d)
-        samples = sampler.random(n_validation_runs)
-
-        l_bounds, u_bounds = [], []
-        for vals in parameters.values():
-            l_bounds.append(min(vals))
-            u_bounds.append(max(vals))
-        values = qmc.scale(samples, l_bounds, u_bounds)
+        rng = np.random.default_rng()
+        values = np.zeros((n_validation_runs, d))
+        for p, vals in enumerate(parameters.values()):
+            low, high = min(vals), max(vals)
+            values[:, p] = rng.uniform(low, high, n_validation_runs)
     else:
         values = np.array(list(itertools.product(*parameters.values())))
     values = np.round(values, 10)
