@@ -201,6 +201,13 @@ def cross_validation(
         print(f"\tMin   :\t{np.min(out['min']):.3g}")
         print(f"\t95% CI:\t[{ci[0]:.3g}, {ci[1]:.3g}]")
 
+        plt.figure()
+        plt.xlabel("Errors")
+        plt.ylabel("Probability")
+        sb.histplot(out["mean"], bins=10, stat="probability",
+                    log_scale=logscale, ax=plt.gca())
+        plt.tight_layout()
+
     return out
 
 
@@ -283,11 +290,12 @@ if __name__ == "__main__":
     # Define output filename
     fname = None
     if save:
-        fname = f"/Users/zhardy/Documents/Journal Papers/POD-MCI/figures/"
+        outpath = f"/Users/zhardy/Documents/Journal Papers/POD-MCI/figures"
+        outpath = f"{outpath}/{problem_name}/rom"
         if problem_name == "Sphere3g":
-            fname += f"{problem_name}/rom/"
-            fname += "oned/" if study_num == 0 else "threed/"
-            fname += "error_distribution.pdf"
+            outpath += f"{outpath}/oned" if study_num == 0 else \
+                       f"{outpath}/threed"
+        fname = f"{outpath}/error_distribution.pdf"
 
     rom = POD_MCI(**hyperparams)
     mask = None if not interior else reader.interior_mask

@@ -210,8 +210,6 @@ def get_hyperparams(problem: str) -> dict:
                    "interpolant": "rbf",
                    "neighbors": None,
                    "epsilon": 100.0}
-    if problem == "LRA":
-        hyperparams["svd_rank"] = 1.0 - 1.0e-10
     return hyperparams
 
 

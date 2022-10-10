@@ -200,7 +200,9 @@ if __name__ == "__main__":
 
     problem_name = sys.argv[1]
     study_num = int(sys.argv[2])
+
     case = 0
+    logscale = True
     save = False
 
     if len(sys.argv) > 3:
@@ -210,6 +212,8 @@ if __name__ == "__main__":
                 case = int(argval)
             elif "save=" in arg:
                 save = bool(int(argval))
+            elif "logscale=" in arg:
+                logscale = bool(int(argval))
 
     r = get_reader(problem_name, study_num)
     X, Y = get_dataset(r, problem_name, case)
@@ -234,11 +238,14 @@ if __name__ == "__main__":
         pod.plot_coefficients(filename=fname)
 
     if problem_name == "LRA":
-        outpath = f"{outpath}/LRA/rom/"
+        outpath = f"{outpath}/LRA/rom"
 
-        fname = f"{outpath}/power_span.pdf" if save else None
+        if not logscale:
+            fname = f"{outpath}/power_span.pdf" if save else None
+        else:
+            fname = f"{outpath}/power_span_log.pdf" if save else None
         plot_power_span(r, problem_name, mode="PEAK",
-                        logscale=False, filename=fname)
+                        logscale=logscale, filename=fname)
 
         fname = f"{outpath}/svd_{case}.pdf" if save else None
         pod.plot_singular_values(show_rank=True, filename=fname)

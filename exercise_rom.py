@@ -26,7 +26,7 @@ def exercise_rom(
         Y: np.ndarray,
         pod_mci: POD_MCI,
         qoi_function: callable,
-        samples: np.ndarray
+        pts: np.ndarray
 ) -> np.ndarray:
     """
     Exercise the ROM for
@@ -50,6 +50,7 @@ def exercise_rom(
     print("Initializing and fitting the POD-MCI model...")
 
     pod_mci.fit(X.T, Y)
+    pod_mci.print_summary()
 
     ##################################################
     # Exercise the POD-MCI ROM
@@ -60,7 +61,7 @@ def exercise_rom(
     # Exercise the ROM at the sample points
     t_start = time.time()
     qois = np.zeros(n_samples)
-    X_pod = pod_mci.predict(samples).T
+    X_pod = pod_mci.predict(pts).T
     for s in range(n_samples):
         qois[s] = qoi_function(X_pod[s])
     t_end = time.time()
@@ -84,11 +85,14 @@ def get_qoi_function(problem: str, case: int) -> callable:
     -------
     callable
     """
-    if problem == "LRA":
+    if problem == "LRA" and case == 0:
         def func(x: np.ndarray) -> float:
             x = reader.unstack_simulation_vector(x)[0]
             return np.sum(x[np.argmax(np.sum(x, axis=1))])
-    if problem == "Sphere3g" and case == 1:
+    elif problem == "LRA" and case == 1:
+        def func(x: np.ndarray) -> float:
+            return np.sum(x) * 7.5**2
+    elif problem == "Sphere3g" and case == 1:
         def func(x: np.ndarray) -> float:
             return np.sum(x)
     elif problem == "Sphere3g" and case == 2:
@@ -171,8 +175,16 @@ if __name__ == "__main__":
     print(f"STD QoI      :\t{np.std(rom_qois):.3g}")
 
     plt.figure()
+    plt.xlabel("Power")
     plt.ylabel("Probability")
-    sb.histplot(rom_qois, bins=20, stat='probability', kde=True, ax=plt.gca())
+    sb.histplot(rom_qois,
+                bins=20, stat='probability', kde=True, ax=plt.gca())
+    plt.axvline(np.mean(train_qois), color='r')
+    plt.axvline(np.max(train_qois), color='r')
+    plt.axvline(np.min(train_qois), color='r')
     plt.tight_layout()
 
+    outpath = "/Users/zhardy/Documents/Journal Papers/POD-MCI/figures"
+    fname = f"{outpath}/LRA/rom/qoi.pdf"
+    plt.savefig(fname)
     plt.show()
