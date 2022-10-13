@@ -20,7 +20,7 @@ def plot_power_span(
         problem: str,
         mode: str = "TOTAL",
         logscale: bool = False,
-        filename: str = None
+        filepath: str = None
 ) -> None:
     """
     Plot the bounding power profiles as a function of time.
@@ -35,7 +35,7 @@ def plot_power_span(
     problem : {'Sphere3g', 'InfiniteSlab', 'TWIGL', 'LRA'}
     mode : {'TOTAL', 'PEAK', 'AVERAGE'}, default 'TOTAL'
     logscale : bool, default False
-    filename : str, default None.
+    filepath : str, default None.
         A location to save the plot to, if specified.
     """
     if mode not in ["TOTAL", "PEAK", "AVERAGE"]:
@@ -105,8 +105,8 @@ def plot_power_span(
     plt.legend()
     plt.tight_layout()
 
-    if filename is not None:
-        base, ext = splitext(filename)
+    if filepath is not None:
+        base, ext = splitext(filepath)
         plt.savefig(f"{base}.pdf")
 
 
@@ -115,7 +115,7 @@ def plot_temperature_span(
         problem: str,
         mode: str = "PEAK",
         logscale: bool = False,
-        filename: str = None
+        filepath: str = None
 ) -> None:
     """
     Plot the bounding temperature profiles as a function of time.
@@ -132,7 +132,7 @@ def plot_temperature_span(
     study : int
     mode : {'PEAK', 'AVERAGE'}, default 'PEAK'
     logscale : bool, default False
-    filename : str, default None.
+    filepath : str, default None.
         A location to save the plot to, if specified.
     """
     if mode not in ["PEAK", "AVERAGE"]:
@@ -186,8 +186,8 @@ def plot_temperature_span(
     plt.legend()
     plt.tight_layout()
 
-    if filename is not None:
-        base, ext = splitext(filename)
+    if filepath is not None:
+        base, ext = splitext(filepath)
         plt.savefig(f"{base}.pdf")
 
 
@@ -202,7 +202,7 @@ if __name__ == "__main__":
     study_num = int(sys.argv[2])
 
     case = 0
-    logscale = True
+    log = True
     save = False
 
     if len(sys.argv) > 3:
@@ -213,7 +213,7 @@ if __name__ == "__main__":
             elif "save=" in arg:
                 save = bool(int(argval))
             elif "logscale=" in arg:
-                logscale = bool(int(argval))
+                log = bool(int(argval))
 
     r = get_reader(problem_name, study_num)
     X, Y = get_dataset(r, problem_name, case)
@@ -223,31 +223,30 @@ if __name__ == "__main__":
     pod.fit(X.T, Y)
     pod.print_summary()
 
-    outpath = "/Users/zhardy/Documents/Journal Papers/POD-MCI/figures/"
+    outpath = "/Users/zhardy/Documents/Journal Papers/POD-MCI/journal"
+    outpath = f"{outpath}/figures/{problem_name}/rom"
+
     if problem_name == "Sphere3g":
-        outpath = f"{outpath}/Sphere3g/rom/"
-        outpath += "oned" if study_num == 0 else "threed"
+        outpath = f"{outpath}/oned" if study_num == 0 else \
+                  f"{outpath}/threed"
 
-        fname = f"{outpath}/power_span.pdf" if save else None
-        plot_power_span(r, problem_name, filename=fname)
+        path = f"{outpath}/power_span.pdf" if save else None
+        plot_power_span(r, problem_name, filepath=path)
 
-        fname = f"{outpath}/svd_{case}.pdf" if save else None
-        pod.plot_singular_values(show_rank=True, filename=fname)
+        path = f"{outpath}/svd_{case}.pdf" if save else None
+        pod.plot_singular_values(show_rank=True, filename=path)
 
-        fname = f"{outpath}/coeffs.pdf" if save else None
-        pod.plot_coefficients(filename=fname)
+        path = f"{outpath}/coeffs.pdf" if save else None
+        pod.plot_coefficients(filename=path)
 
     if problem_name == "LRA":
-        outpath = f"{outpath}/LRA/rom"
-
-        if not logscale:
-            fname = f"{outpath}/power_span.pdf" if save else None
-        else:
-            fname = f"{outpath}/power_span_log.pdf" if save else None
+        path = f"{outpath}/power_span_log.pdf" if save and log else \
+               f"{outpath}/power_span.pdf" if save and not log else \
+               None
         plot_power_span(r, problem_name, mode="PEAK",
-                        logscale=logscale, filename=fname)
+                        logscale=log, filepath=path)
 
-        fname = f"{outpath}/svd_{case}.pdf" if save else None
-        pod.plot_singular_values(show_rank=True, filename=fname)
+        path = f"{outpath}/svd_{case}.pdf" if save else None
+        pod.plot_singular_values(show_rank=True, filename=path)
 
     plt.show()

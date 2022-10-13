@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     path = os.path.abspath(os.path.dirname(__file__))
     data_path = f"{path}/Problems/{problem_name}/outputs"
-    outpath = "/Users/zhardy/Documents/Journal Papers/POD-MCI/figures"
+    outpath = "/Users/zhardy/Documents/Journal Papers/POD-MCI/journal"
     outpath = f"{outpath}/{problem_name}/ref"
     if not os.path.isdir(outpath):
         os.makedirs(outpath)

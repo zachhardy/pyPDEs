@@ -27,7 +27,7 @@ def truncation_study(
         Y_train: np.ndarray,
         Y_test: np.ndarray,
         pod_mci: POD_MCI,
-        filename: str = None
+        filepath: str = None
 ) -> dict:
     """
     Perform a truncation study to examine error as a function of
@@ -40,7 +40,7 @@ def truncation_study(
     Y_train : numpy.ndarray
     Y_test : numpy.ndarray
     pod_mci : POD_MCI
-    filename : str, default None.
+    filepath : str, default None.
         A location to save the plot to, if specified.
 
     Returns
@@ -108,8 +108,8 @@ def truncation_study(
     plt.grid(True)
     plt.tight_layout()
 
-    if filename is not None:
-        base, ext = splitext(filename)
+    if filepath is not None:
+        base, ext = splitext(filepath)
         plt.savefig(f"{base}.pdf")
 
     return out
@@ -126,7 +126,7 @@ if __name__ == "__main__":
     study_num = int(sys.argv[2])
 
     # Splitting parameters
-    splitting_method = "random"
+    split_method = "random"
     test_size = 0.2
     interior = False
     seed = None
@@ -142,7 +142,7 @@ if __name__ == "__main__":
         for arg in sys.argv[3:]:
             argval = arg.split("=")[1]
             if "split=" in arg:
-                splitting_method = argval
+                split_method = argval
             elif "test_size=" in arg:
                 test_size = float(argval)
             elif "interior=" in arg:
@@ -168,10 +168,10 @@ if __name__ == "__main__":
     # Split the data
     ##################################################
 
-    if splitting_method == "random":
+    if split_method == "random":
         mask = reader.interior_mask if interior else None
         splits = train_test_split(X, Y, test_size, mask, seed)
-    elif splitting_method == "uniform":
+    elif split_method == "uniform":
         splits = (X[::2], X[1::2], Y[::2], Y[1::2])
     else:
         splits = (X, X, Y, Y)
@@ -189,20 +189,19 @@ if __name__ == "__main__":
             raise ValueError(msg)
 
     # Define output filename
-    fname = None
+    path = None
     if save:
-        fname = f"/Users/zhardy/Documents/Journal Papers/POD-MCI/figures/"
+        outpath = f"/Users/zhardy/Documents/Journal Papers"
+        outpath = f"{outpath}/POD-MCI/journal/figures/{problem_name}"
 
         if problem_name == "Sphere3g":
-            fname += f"{problem_name}/rom/"
-            fname += "oned/" if study_num == 0 else "threed/"
-
-            if splitting_method == "none":
-                fname += "verification.pdf"
-            else:
-                fname += f"truncation_{splitting_method}.pdf"
+            outpath = f"{outpath}/oned" if study_num == 0 else \
+                      f"{outpath}/threed/"
+            filename = "verification.pdf" if split_method == "none" else \
+                       f"truncation_{split_method}.pdf"
+            path = f"{outpath}/{filename}"
 
     rom = POD_MCI(**hyperparams)
-    truncation_study(*splits, rom, filename=fname)
+    truncation_study(*splits, rom, filepath=path)
 
     plt.show()

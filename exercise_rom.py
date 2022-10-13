@@ -184,7 +184,9 @@ if __name__ == "__main__":
     plt.axvline(np.min(train_qois), color='r')
     plt.tight_layout()
 
-    outpath = "/Users/zhardy/Documents/Journal Papers/POD-MCI/figures"
-    fname = f"{outpath}/LRA/rom/qoi.pdf"
-    plt.savefig(fname)
+    if save and problem_name == "LRA" and study_num == 6:
+        outpath = "/Users/zhardy/Documents/Journal Papers"
+        outpath = f"{outpath}/POD-MCI/figures/LRA/rom"
+        path = f"{outpath}/qoi.pdf"
+        plt.savefig(path)
     plt.show()
