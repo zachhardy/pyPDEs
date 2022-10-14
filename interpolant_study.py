@@ -25,7 +25,6 @@ def interpolant_study(
         Y_train: np.ndarray,
         Y_test: np.ndarray,
         pod_mci: POD_MCI,
-        filepath: str = None
 ) -> dict:
     """
     Perform an interpolant study to examine error as a function of
@@ -38,9 +37,6 @@ def interpolant_study(
     Y_train : numpy.ndarray
     Y_test : numpy.ndarray
     pod_mci : POD_MCI
-    filepath : str, default None.
-        A location to save the plot to, if specified.
-
 
     Returns
     -------

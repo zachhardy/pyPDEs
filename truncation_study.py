@@ -27,7 +27,7 @@ def truncation_study(
         Y_train: np.ndarray,
         Y_test: np.ndarray,
         pod_mci: POD_MCI,
-        filepath: str = None
+        filename: str = None
 ) -> dict:
     """
     Perform a truncation study to examine error as a function of
@@ -40,7 +40,7 @@ def truncation_study(
     Y_train : numpy.ndarray
     Y_test : numpy.ndarray
     pod_mci : POD_MCI
-    filepath : str, default None.
+    filename : str, default None.
         A location to save the plot to, if specified.
 
     Returns
@@ -108,8 +108,8 @@ def truncation_study(
     plt.grid(True)
     plt.tight_layout()
 
-    if filepath is not None:
-        base, ext = splitext(filepath)
+    if filename is not None:
+        base, ext = splitext(filename)
         plt.savefig(f"{base}.pdf")
 
     return out
@@ -191,17 +191,19 @@ if __name__ == "__main__":
     # Define output filename
     path = None
     if save:
-        outpath = f"/Users/zhardy/Documents/Journal Papers"
-        outpath = f"{outpath}/POD-MCI/journal/figures/{problem_name}"
+        outdir = f"/Users/zhardy/projects/POD-MCI/papers/journal"
+        outdir = f"{outdir}/figures/{problem_name}/rom"
 
         if problem_name == "Sphere3g":
-            outpath = f"{outpath}/oned" if study_num == 0 else \
-                      f"{outpath}/threed/"
+            outdir = f"{outdir}/oned" if study_num == 0 else \
+                      f"{outdir}/threed"
+
+        if problem_name in ["Sphere3g", "LRA"]:
             filename = "verification.pdf" if split_method == "none" else \
-                       f"truncation_{split_method}.pdf"
-            path = f"{outpath}/{filename}"
+                f"truncation_{split_method}.pdf"
+            path = f"{outdir}/{filename}"
 
     rom = POD_MCI(**hyperparams)
-    truncation_study(*splits, rom, filepath=path)
+    truncation_study(*splits, rom, filename=path)
 
     plt.show()

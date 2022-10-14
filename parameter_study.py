@@ -224,16 +224,20 @@ def parameter_study(
     # Setup the output paths
     ##################################################
 
-    # Define the path to the output directory
     study_name = "_".join(keys)
-    if validation:
-        output_path = f"{path}/validation/{study_name}"
-    else:
-        output_path = f"{path}/parametric/{study_name}"
-    setup_directory(output_path)
+    data_type = "validation" if validation else "training"
+
+    filepath = os.path.abspath(os.path.dirname(__file__))
+    outdir = f"{filepath}/outputs/{problem}"
+    rawdata_path = f"{outdir}/rawdata/{data_type}/{study_name}"
+    pickle_path = f"{outdir}/pickles/{data_type}"
+
+    setup_directory(rawdata_path)
+    if not os.path.isdir(pickle_path):
+        os.makedirs(pickle_path)
 
     # Save the parameters to a file
-    param_path = f"{output_path}/params.txt"
+    param_path = f"{rawdata_path}/params.txt"
     header = " ".join([f"{key:<13} " for key in keys])
     np.savetxt(param_path, values, fmt='%.8e', header=header)
 
@@ -241,7 +245,7 @@ def parameter_study(
     # Run the reference problem
     ##################################################
 
-    # sim_path = os.path.join(output_path, "reference")
+    # sim_path = os.path.join(outdir, "reference")
     # setup_directory(sim_path)
     #
     # cmd = f"python {filepath} output_directory={sim_path} "
@@ -256,7 +260,7 @@ def parameter_study(
     for n, params in enumerate(values):
 
         # Setup output path
-        sim_path = os.path.join(output_path, str(n).zfill(3))
+        sim_path = os.path.join(rawdata_path, str(n).zfill(3))
         setup_directory(sim_path)
 
         cmd = f"python {run_filepath} "
@@ -284,15 +288,8 @@ def parameter_study(
     print(f"Average Simulation Time = {total_time/len(values):.3e} s")
     print(f"Total Parameter Study Time = {total_time:.3e} s")
 
-    if validation:
-        pickle_path = f"{path}/pickles/validation"
-    else:
-        pickle_path = f"{path}/pickles/training"
-    if not os.path.isdir(pickle_path):
-        os.makedirs(pickle_path)
-
     obj_filepath = f"{pickle_path}/{study_name}.obj"
-    reader = NeutronicsDatasetReader(output_path).read()
+    reader = NeutronicsDatasetReader(rawdata_path).read()
     with open(obj_filepath, 'wb') as file:
         pickle.dump(reader, file)
 

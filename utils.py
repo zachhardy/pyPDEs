@@ -110,14 +110,12 @@ def get_reader(
     # Unpickle the data handler
     ##################################################
 
-    path = os.path.abspath(os.path.dirname(__file__))
-    path = f"{path}/Problems/{problem}/pickles/"
-    path += "training" if not validation else "validation"
-    if not os.path.isdir(path):
-        raise NotADirectoryError(f"{path} is not a valid directory.")
+    dtype = "validation" if validation else "training"
 
-    filepath = f"{path}/{study_name}.obj"
-    with open(filepath, 'rb') as file:
+    path = os.path.abspath(os.path.dirname(__file__))
+    path = f"{path}/outputs/{problem}/pickles/{dtype}/{study_name}.obj"
+
+    with open(path, 'rb') as file:
         data = pickle.load(file)
     return data
 

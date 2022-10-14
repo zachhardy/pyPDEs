@@ -231,7 +231,7 @@ if __name__ == "__main__":
     n_repeats = 250
     seed = None
     interior = False
-    logscale = True
+    log = True
 
     # Which particular problem
     case = 0
@@ -247,7 +247,7 @@ if __name__ == "__main__":
             elif "interior=" in arg:
                 interior = bool(int(argval))
             elif "logscale=" in arg:
-                logscale = bool(int(argval))
+                log = bool(int(argval))
             elif "nsplits=" in arg:
                 n_splits = int(argval)
             elif "nrepeats=" in arg:
@@ -288,17 +288,20 @@ if __name__ == "__main__":
     ##################################################
 
     # Define output filename
-    fname = None
+    path = None
     if save:
-        outpath = f"/Users/zhardy/Documents/Journal Papers/POD-MCI/figures"
-        outpath = f"{outpath}/{problem_name}/rom"
+        outdir = f"/Users/zhardy/projects/POD-MCI/papers/figures"
+        outdir = f"{outdir}/{problem_name}/rom"
         if problem_name == "Sphere3g":
-            outpath += f"{outpath}/oned" if study_num == 0 else \
-                       f"{outpath}/threed"
-        fname = f"{outpath}/error_distribution.pdf"
+            outdir = f"{outdir}/oned" if study_num == 0 else \
+                      f"{outdir}/threed"
+
+        filename = "error_distribution.pdf" if not interior else \
+                   "error_distribution_interior.pdf"
+        path = f"{outdir}/{filename}"
 
     rom = POD_MCI(**hyperparams)
     mask = None if not interior else reader.interior_mask
-    cross_validation(*data, cv, rom, mask, logscale=logscale, filename=fname)
+    cross_validation(*data, cv, rom, mask, logscale=log, filename=path)
 
     plt.show()

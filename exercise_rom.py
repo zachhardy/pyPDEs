@@ -185,8 +185,7 @@ if __name__ == "__main__":
     plt.tight_layout()
 
     if save and problem_name == "LRA" and study_num == 6:
-        outpath = "/Users/zhardy/Documents/Journal Papers"
-        outpath = f"{outpath}/POD-MCI/figures/LRA/rom"
-        path = f"{outpath}/qoi.pdf"
+        path = "/Users/zhardy/projects/POD-MCI/papers/figures/"
+        path = f"{path}/LRA/rom/qoi.pdf"
         plt.savefig(path)
     plt.show()

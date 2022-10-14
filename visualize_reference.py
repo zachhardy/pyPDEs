@@ -27,29 +27,29 @@ if __name__ == "__main__":
             save = bool(int(argval))
 
     path = os.path.abspath(os.path.dirname(__file__))
-    data_path = f"{path}/Problems/{problem_name}/reference"
-    outpath = "/Users/zhardy/Documents/Journal Papers/POD-MCI/journal"
-    outpath = f"{outpath}/{problem_name}/ref"
+    data_dir = f"{path}/Problems/{problem_name}/reference"
+    outpath = "/Users/zhardy/projects/POD-MCI/papers/journal"
+    outpath = f"{outpath}/figures/{problem_name}/ref"
     if not os.path.isdir(outpath):
         os.makedirs(outpath)
 
-    reader = NeutronicsSimulationReader(data_path).read()
+    reader = NeutronicsSimulationReader(data_dir).read()
 
     if problem_name == "Sphere3g":
-        fname = f"{outpath}/sflux" if save else None
+        fname = f"{outdir}/sflux" if save else None
         reader.plot_flux_moment(0, -1, [0.0, reader.times[-1]], filename=fname)
 
-        fname = f"{outpath}/power" if save else None
+        fname = f"{outdir}/power" if save else None
         reader.plot_power(filename=fname)
 
     if problem_name == "LRA":
-        fname = f"{outpath}/sflux" if save else None
+        fname = f"{outdir}/sflux" if save else None
         reader.plot_flux_moment(0, [0, 1], [0.0, 1.44], filename=fname)
 
-        fname = f"{outpath}/power_profile" if save else None
+        fname = f"{outdir}/power_profile" if save else None
         reader.plot_power("BOTH", True, filename=fname)
 
-        fname = f"{outpath}/temperature_profile" if save else None
+        fname = f"{outdir}/temperature_profile" if save else None
         reader.plot_fuel_temperature("BOTH", False, filename=fname)
 
     plt.show()

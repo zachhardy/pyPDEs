@@ -223,30 +223,30 @@ if __name__ == "__main__":
     pod.fit(X.T, Y)
     pod.print_summary()
 
-    outpath = "/Users/zhardy/Documents/Journal Papers/POD-MCI/journal"
-    outpath = f"{outpath}/figures/{problem_name}/rom"
+    outdir = "/Users/zhardy/projects/POD-MCI/papers/journal"
+    outdir = f"{outdir}/figures/{problem_name}/rom"
 
     if problem_name == "Sphere3g":
-        outpath = f"{outpath}/oned" if study_num == 0 else \
-                  f"{outpath}/threed"
+        outdir = f"{outdir}/oned" if study_num == 0 else \
+                  f"{outdir}/threed"
 
-        path = f"{outpath}/power_span.pdf" if save else None
+        path = f"{outdir}/power_span.pdf" if save else None
         plot_power_span(r, problem_name, filepath=path)
 
-        path = f"{outpath}/svd_{case}.pdf" if save else None
+        path = f"{outdir}/svd_{case}.pdf" if save else None
         pod.plot_singular_values(show_rank=True, filename=path)
 
-        path = f"{outpath}/coeffs.pdf" if save else None
+        path = f"{outdir}/coeffs.pdf" if save else None
         pod.plot_coefficients(filename=path)
 
     if problem_name == "LRA":
-        path = f"{outpath}/power_span_log.pdf" if save and log else \
-               f"{outpath}/power_span.pdf" if save and not log else \
+        path = f"{outdir}/power_span_log.pdf" if save and log else \
+               f"{outdir}/power_span.pdf" if save and not log else \
                None
         plot_power_span(r, problem_name, mode="PEAK",
                         logscale=log, filepath=path)
 
-        path = f"{outpath}/svd_{case}.pdf" if save else None
+        path = f"{outdir}/svd_{case}.pdf" if save else None
         pod.plot_singular_values(show_rank=True, filename=path)
 
     plt.show()
