@@ -26,7 +26,7 @@ density = 0.05
 sig_s01 = 1.46
 
 xsdir = os.path.join(path, "xs")
-outdir = os.path.join(path, "outputs")
+outdir = os.path.join(path, "reference")
 
 for i, arg in enumerate(sys.argv[1:]):
     print(f"Parsing argument {i}: {arg}")
@@ -39,7 +39,7 @@ for i, arg in enumerate(sys.argv[1:]):
     elif arg.find("scatter") == 0:
         sig_s01 = float(value)
     elif arg.find("output_directory") == 0:
-        outdir = value
+        outdir = os.path.join(path, value)
     elif arg.find("xs_directory") == 0:
         xsdir = value
 

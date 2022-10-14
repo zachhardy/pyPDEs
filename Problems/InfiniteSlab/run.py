@@ -28,7 +28,7 @@ duration = 1.0
 interface = 40.0
 
 xsdir = os.path.join(path, "xs")
-outdir = os.path.join(path, "outputs")
+outdir = os.path.join(path, "reference")
 
 for i, arg in enumerate(sys.argv[1:]):
     print(f"Parsing argument {i}: {arg}")

@@ -27,7 +27,7 @@ if __name__ == "__main__":
             save = bool(int(argval))
 
     path = os.path.abspath(os.path.dirname(__file__))
-    data_path = f"{path}/Problems/{problem_name}/outputs"
+    data_path = f"{path}/Problems/{problem_name}/reference"
     outpath = "/Users/zhardy/Documents/Journal Papers/POD-MCI/journal"
     outpath = f"{outpath}/{problem_name}/ref"
     if not os.path.isdir(outpath):
