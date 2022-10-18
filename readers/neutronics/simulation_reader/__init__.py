@@ -3,7 +3,10 @@ import struct
 import numpy as np
 import matplotlib.pyplot as plt
 
-from typing import Union
+from typing import Union, Optional
+from collections.abc import Iterable
+
+Variables = Union[str, Iterable[str]]
 
 
 class NeutronicsSimulationReader:
@@ -153,14 +156,14 @@ class NeutronicsSimulationReader:
 
     def create_simulation_matrix(
             self,
-            variables: Union[str, list[str]] = None
+            variables: Optional[Variables] = None
     ) -> np.ndarray:
         """
         Create a simulation matrix based on the specified variables.
 
         Parameters
         ----------
-        variables : list[str], default None
+        variables : str or Iterable[str], default None
             The variables to include in the matrix.
 
         Returns
@@ -180,14 +183,14 @@ class NeutronicsSimulationReader:
 
     def create_simulation_vector(
             self,
-            variables: Union[str, list[str]] = None
+            variables: Optional[Variables] = None
     ) -> np.ndarray:
         """
         Create a simulation vector based on the specified variables.
 
         Parameters
         ----------
-        variables : list[str], default None
+        variables : str or Iterable[str], default None
             The variables to include in the matrix.
 
         Returns
