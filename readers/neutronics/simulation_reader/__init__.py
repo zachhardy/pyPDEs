@@ -1,5 +1,7 @@
 import os
 import struct
+import pickle
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -155,8 +157,7 @@ class NeutronicsSimulationReader:
         return len(self.precursors[0])
 
     def create_simulation_matrix(
-            self,
-            variables: Optional[Variables] = None
+            self, variables: Optional[Variables] = None
     ) -> np.ndarray:
         """
         Create a simulation matrix based on the specified variables.
@@ -182,8 +183,7 @@ class NeutronicsSimulationReader:
         return X
 
     def create_simulation_vector(
-            self,
-            variables: Optional[Variables] = None
+            self, variables: Optional[Variables] = None
     ) -> np.ndarray:
         """
         Create a simulation vector based on the specified variables.
@@ -335,13 +335,13 @@ class NeutronicsSimulationReader:
                         self.temperatures[int(entry)] = T
         return self
 
-    def read_geometry_file(self, file_path: str) -> None:
+    def read_geometry_file(self, filename: str) -> None:
         """
         Read the geometry file for a time step.
 
         Parameters
         ----------
-        file_path : str
+        filename : str
 
         Returns
         -------
@@ -352,10 +352,10 @@ class NeutronicsSimulationReader:
         numpy.ndarray
             The material IDs.
         """
-        if not os.path.isfile(file_path):
-            raise FileNotFoundError(f"Cannot find file {file_path}.")
+        if not os.path.isfile(filename):
+            raise FileNotFoundError(f"Cannot find file {filename}.")
 
-        with open(file_path, 'rb') as file:
+        with open(filename, 'rb') as file:
             file.read(599)
 
             n_cells = self.read_uint64_t(file)
@@ -385,9 +385,7 @@ class NeutronicsSimulationReader:
         return centroids, nodes, matids
 
     def _interpolate(
-            self,
-            times: list[float],
-            data: np.ndarray
+            self, times: list[float], data: np.ndarray
     ) -> np.ndarray:
         """
         Return interpolated data for a specified time.
@@ -412,6 +410,35 @@ class NeutronicsSimulationReader:
                 w = [1.0, 0.0]
             vals[t] = w[0] * data[i[0]] + w[1] * data[i[1]]
         return vals
+
+    def save(self, filename: str) -> None:
+        """
+        Save the simulation reader.
+
+        Parameters
+        ----------
+        filename : str
+            A location to save the file.
+        """
+        with open(filename, 'wb') as f:
+            pickle.dump(self, f)
+
+    @staticmethod
+    def load(filename: str) -> 'NeutronicsSimulationReader':
+        """
+        Load a simulation reader.
+
+        Parameters
+        ----------
+        filename : str
+            The filename where the reader is saved.
+
+        Returns
+        -------
+        NeutronicsSimulationReader
+        """
+        with open(filename, 'rb') as f:
+            return pickle.load(f)
 
     @staticmethod
     def read_double(file) -> float:

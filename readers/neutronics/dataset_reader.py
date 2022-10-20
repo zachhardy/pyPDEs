@@ -1,4 +1,5 @@
 import os
+import pickle
 import numpy as np
 
 from typing import Union
@@ -265,8 +266,7 @@ class NeutronicsDatasetReader:
         return self
 
     def create_3d_matrix(
-            self,
-            variables: Union[str, list[str]] = None
+            self, variables: Union[str, list[str]] = None
     ) -> np.ndarray:
         """
         Create a 3D matrix, or list of 2D simulation matrices.
@@ -287,8 +287,7 @@ class NeutronicsDatasetReader:
         return np.array(X)
 
     def create_2d_matrix(
-            self,
-            variables: Union[str, list[str]] = None
+            self, variables: Union[str, list[str]] = None
     ) -> np.ndarray:
         """
         Create a 2D matrix whose columns contain full simulation results.
@@ -435,3 +434,31 @@ class NeutronicsDatasetReader:
                 simulation.max_precursors != self.max_precursors):
             raise AssertionError(err_msg)
 
+    def save(self, filename: str) -> None:
+        """
+        Save the data set reader.
+
+        Parameters
+        ----------
+        filename : str
+            A location to save the file.
+        """
+        with open(filename, 'wb') as f:
+            pickle.dump(self, f)
+
+    @staticmethod
+    def load(filename: str) -> 'NeutronicsDatasetReader':
+        """
+        Load a data set reader.
+
+        Parameters
+        ----------
+        filename : str
+            The filename where the reader is saved.
+
+        Returns
+        -------
+        NeutronicsSimulationReader
+        """
+        with open(filename, 'rb') as f:
+            return pickle.load(f)
