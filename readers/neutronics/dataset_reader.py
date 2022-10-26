@@ -236,7 +236,7 @@ class NeutronicsDatasetReader:
         """
         return self._simulations[0].max_precursors
 
-    def read(self) -> None:
+    def read(self) -> 'NeutronicsDatasetReader':
         """
         Read in the dataset.
 

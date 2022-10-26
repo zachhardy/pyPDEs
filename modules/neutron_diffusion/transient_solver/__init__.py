@@ -193,10 +193,10 @@ class TransientSolver(KEigenvalueSolver):
                 raise AssertionError(msg)
 
             print(f"Setting up output directories at {self.output_directory}")
-
             if not os.path.isdir(self.output_directory):
                 os.makedirs(self.output_directory)
-            os.system(f"rm -r {self.output_directory}/*")
+            elif len(os.listdir(self.output_directory)) > 0:
+                os.system(f"rm -r {self.output_directory}/*")
 
         # ========================================
         # Initialize auxiliary vectors

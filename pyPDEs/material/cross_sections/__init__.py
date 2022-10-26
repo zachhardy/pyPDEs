@@ -250,6 +250,7 @@ class CrossSections(MaterialProperty):
                 for j in range(self.n_precursors):
                     self.chi += (self.beta * self.precursor_yield[j] *
                                  self.chi_delayed[:, j])
+                self.chi /= self.chi.sum()
 
                 if any(self.nu < 1.0):
                     msg = "Total nu must be one or greater."

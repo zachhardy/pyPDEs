@@ -17,7 +17,7 @@ if __name__ == "__main__":
         raise AssertionError(msg)
 
     problem_name = sys.argv[1]
-    if problem_name not in ["Sphere3g", "InfiniteSlab", "TWIGL", "LRA"]:
+    if problem_name not in ["Sphere3g", "ReflectedSphere", "LRA"]:
         raise ValueError(f"{problem_name} is not a valid problem.")
 
     save = False
@@ -52,4 +52,7 @@ if __name__ == "__main__":
         fname = f"{outdir}/temperature_profile" if save else None
         reader.plot_fuel_temperature("BOTH", False, filename=fname)
 
+    if problem_name == "ReflectedSphere":
+        reader.plot_flux_moment(0, -1, [0.0, reader.times[-1]])
+        reader.plot_power()
     plt.show()

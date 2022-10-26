@@ -111,12 +111,11 @@ def read_xs_file(
 
         line_num = 0
         while line_num < len(lines):
-
-            # Get next non-empty line
+            line = lines[line_num].strip()
             words = lines[line_num].split()
-            while not words:
+            if not line or line[0] == "#":
                 line_num += 1
-                words = lines[line_num].split()
+                continue
 
             # ========================================
             # Get general information
