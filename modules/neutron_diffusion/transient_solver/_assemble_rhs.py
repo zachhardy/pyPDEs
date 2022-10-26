@@ -42,6 +42,7 @@ def _assemble_transient_rhs(
     with_fission : bool
     """
     eff_dt = self.effective_dt(step)
+    t = self.time + eff_dt
 
     # Loop over cells
     for cell in self.mesh.cells:
@@ -170,8 +171,10 @@ def _assemble_transient_rhs(
                     d_pf = cell.centroid.distance(face.centroid)
                     for g in range(self.n_groups):
                         bc: DirichletBoundary = self.boundaries[bid][g]
+                        bc_val = bc.boundary_value(face.centroid, t)
+
                         self._b[uk_map_g + g] += \
-                            D[g] / d_pf * bc.value * face.area
+                            D[g] / d_pf * bc_val * face.area
 
                 # ========================================
                 # Neumann boundary source term
@@ -180,7 +183,9 @@ def _assemble_transient_rhs(
                 elif btype == "NEUMANN":
                     for g in range(self.n_groups):
                         bc: NeumannBoundary = self.boundaries[bid][g]
-                        self._b[uk_map_g + g] += bc.value * face.area
+                        bc_val = bc.boundary_value(face.centroid, t)
+
+                        self._b[uk_map_g + g] += bc_val * face.area
 
                 # ========================================
                 # Robin boundary source term
@@ -191,5 +196,7 @@ def _assemble_transient_rhs(
                     d_pf = cell.centroid.distance(face.centroid)
                     for g in range(self.n_groups):
                         bc: RobinBoundary = self.boundaries[bid][g]
+                        bc_val = bc.boundary_value(face.centroid, t)
+
                         coeff = D[g] / (bc.b * D[g] + bc.a * d_pf)
-                        self._b[uk_map_g + g] += coeff * bc.f * face.area
+                        self._b[uk_map_g + g] += coeff * bc_val * face.area

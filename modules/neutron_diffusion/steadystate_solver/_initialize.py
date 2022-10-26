@@ -175,7 +175,7 @@ def _initialize_boundaries(self):
                 bc = RobinBoundary()
             else:
                 # Get the boundary values for group g
-                bvals = self.boundary_values[boundary[0][1]][g]
+                bvals = self.boundary_values[boundary[1]][g]
 
                 if btype == "DIRICHLET":
                     bc = DirichletBoundary(bvals[0])

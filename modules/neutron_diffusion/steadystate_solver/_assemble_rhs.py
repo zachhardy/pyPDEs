@@ -128,8 +128,10 @@ def _assemble_rhs(
                     d_pf = cell.centroid.distance(face.centroid)
                     for g in range(self.n_groups):
                         bc: DirichletBoundary = self.boundaries[bid][g]
+                        bc_val = bc.boundary_value(face.centroid)
+
                         self._b[uk_map + g] += \
-                            D[g] / d_pf * bc.value * face.area
+                            D[g] / d_pf * bc_val * face.area
 
                 # ========================================
                 # Neumann boundary source term
@@ -138,7 +140,12 @@ def _assemble_rhs(
                 elif btype == "NEUMANN":
                     for g in range(self.n_groups):
                         bc: NeumannBoundary = self.boundaries[bid][g]
-                        self._b[uk_map + g] += bc.value * face.area
+                        bc_val = bc.boundary_value(face.centroid)
+
+                        r, f = face.centroid, bc.value
+                        bc_val = f(r) if callable(f) else f
+
+                        self._b[uk_map + g] += bc_val * face.area
 
                 # ========================================
                 # Robin boundary source term
@@ -149,5 +156,7 @@ def _assemble_rhs(
                     d_pf = cell.centroid.distance(face.centroid)
                     for g in range(self.n_groups):
                         bc: RobinBoundary = self.boundaries[bid][g]
+                        bc_val = bc.boundary_value(face.centroid)
+
                         coeff = D[g] / (bc.b * D[g] + bc.a * d_pf)
-                        self._b[uk_map + g] += coeff * bc.f * face.area
+                        self._b[uk_map + g] += coeff * bc_val * face.area

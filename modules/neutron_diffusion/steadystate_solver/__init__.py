@@ -10,6 +10,12 @@ from pyPDEs.material import CrossSections
 from pyPDEs.material import IsotropicMultiGroupSource
 from pyPDEs.material import LightWeightCrossSections
 
+from typing import Union, Callable
+from pyPDEs.mesh import CartesianVector
+
+BCFunc = Callable[[CartesianVector, float], float]
+BCType = Union[float, BCFunc]
+
 from ..boundaries import Boundary
 
 
@@ -33,7 +39,7 @@ class SteadyStateSolver:
             discretization: FiniteVolume,
             materials: list[Material],
             boundary_info: list[tuple[str, int]],
-            boundary_values: list[list[list[float]]] = None
+            boundary_values: list[list[list[BCType]]] = None
     ) -> None:
         """
         Construct the solver from a discretization, list of materials,
@@ -80,7 +86,7 @@ class SteadyStateSolver:
         # ==================== Boundary Conditions ====================#
 
         self.boundary_info: list[tuple[str, int]] = boundary_info
-        self.boundary_values: list[list[list[float]]] = boundary_values
+        self.boundary_values: list[list[list[BCType]]] = boundary_values
 
         self.boundaries: list[list[Boundary]] = []
 

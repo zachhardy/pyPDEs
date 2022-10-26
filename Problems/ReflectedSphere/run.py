@@ -21,7 +21,7 @@ path = os.path.abspath(os.path.dirname(__file__))
 # Parse Arguments
 # ==================================================
 
-radius = 5.0
+radius = 4.25
 thickness = 1.0
 density = 0.05
 sig_s01 = 1.46
@@ -45,17 +45,6 @@ for i, arg in enumerate(sys.argv[1:]):
         outdir = os.path.join(path, value)
     elif arg.find("xs_directory") == 0:
         xsdir = value
-
-# ==================================================
-# Initial condition function
-# ==================================================
-
-
-def ic(r):
-    assert isinstance(r, CartesianVector)
-    r_b = mesh.vertices[-1]
-    return 1.0 - r.z ** 2 / r_b.z ** 2
-    # return 1.0
 
 # ==================================================
 # Create the spatial mesh
@@ -90,38 +79,58 @@ for i, (material, xs, xs_path) in enumerate(it):
 # materials = [material]
 
 # ==================================================
+# Temporal discretization
+# ==================================================
+
+def ic(r):
+    assert isinstance(r, CartesianVector)
+    r_b = mesh.vertices[-1]
+    # return 1.0 - r.z ** 2 / r_b.z ** 2
+    # return 1.0e8 if r.z > 0.95*(radius + thickness) else 0.0
+    return 0.0
+
+initial_conditions = {}
+
+normalization_method = None #"TOTAL_POWER"
+scale_fission_xs = False
+
+t_end = 1.0
+dt = 0.01
+time_stepping_method = "TBDF2"
+
+# ==================================================
 # Boundary conditions
 # ==================================================
 
-boundary_info = [("REFLECTIVE", -1), ("ZERO_FLUX", -1)]
+def boundary_source(r: CartesianVector, t: float = 0.0) -> float:
+    r_b = mesh.vertices[-1]
+    if r.z == r_b.z and 0 < t <= dt:
+        return 1.0e8
+    else:
+        return 0.0
+
+boundary_vals = [[[boundary_source], [0.0], [0.0]]]
+boundary_info = [("REFLECTIVE", -1), ("MARSHAK", 0)]
 
 # ==================================================
 # Create the solver
 # ==================================================
 
-solver = TransientSolver(fv, materials, boundary_info)
+solver = TransientSolver(fv, materials, boundary_info, boundary_vals)
 
-# ==================================================
-# Temporal discretization
-# ==================================================
+solver.initial_conditions = initial_conditions
 
-solver.initial_conditions = {0: ic, 1: ic}
+solver.normalization_method = normalization_method
+solver.scale_fission_xs = scale_fission_xs
 
-solver.normalization_method = "TOTAL_POWER"
-solver.scale_fission_xs = False
-
-solver.t_end = 10.0
-solver.dt = 0.1
-solver.time_stepping_method = "TBDF2"
-
-# ==================================================
-# Set options
-# ==================================================
+solver.t_end = t_end
+solver.dt = dt
+solver.time_stepping_method = time_stepping_method
 
 solver.use_precursors = False
 solver.lag_precursors = False
 
-solver.adaptive_time_stepping = True
+solver.adaptive_time_stepping = False
 solver.refine_threshold = 0.05
 solver.coarsen_threshold = 0.01
 
