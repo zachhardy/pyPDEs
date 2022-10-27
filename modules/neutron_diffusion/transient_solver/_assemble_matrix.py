@@ -10,8 +10,8 @@ from ..boundaries import RobinBoundary
 
 def _assemble_transient_matrices(
         self: 'TransientSolver',
-        with_scattering: bool = True,
-        with_fission: bool = True
+        with_scattering: bool = False,
+        with_fission: bool = False
 ) -> None:
     """
     Assemble the transient multi-group matrices.
@@ -189,7 +189,7 @@ def _assemble_transient_matrix(
                 # Dirichlet boundary term
                 # ========================================
 
-                if btype == "ZERO_FLUX" or type == "DIRICHLET":
+                if btype == "ZERO_FLUX" or btype == "DIRICHLET":
                     d_pf = cell.centroid.distance(face.centroid)
                     for g in range(self.n_groups):
                         val = D[g] / d_pf * face.area

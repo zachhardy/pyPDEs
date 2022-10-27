@@ -23,7 +23,8 @@ def _solve_timestep(
     # ========================================
 
     if reconstruct_matrices or self.has_dynamic_xs:
-        self._assemble_transient_matrices()
+        self._assemble_transient_matrices(with_scattering=True,
+                                          with_fission=True)
 
     # ========================================
     # Solve the time step
@@ -52,7 +53,9 @@ def _solve_timestep_step(self: 'TransientSolver', step: int = 0) -> None:
     # ========================================
 
     self._b[:] = 0.0
-    self._assemble_transient_rhs(step=step)
+    self._assemble_transient_rhs(step=step,
+                                 with_material_src=True,
+                                 with_boundary_src=True)
     self.phi = spsolve(self._A[step], self._b)
 
     # ========================================
@@ -108,4 +111,5 @@ def _coarsen_timestep(self: 'TransientSolver') -> None:
         self.dt *= 2.0
         if self.dt > self.output_frequency:
             self.dt = self.output_frequency
-        self._assemble_transient_matrices()
+        self._assemble_transient_matrices(with_scattering=True,
+                                          with_fission=True)

@@ -9,8 +9,8 @@ from ..boundaries import RobinBoundary
 
 def _assemble_transient_rhs(
         self: 'TransientSolver',
-        with_material_src: bool = True,
-        with_boundary_src: bool = True,
+        with_material_src: bool = False,
+        with_boundary_src: bool = False,
         with_scattering: bool = False,
         with_fission: bool = False,
         step=0

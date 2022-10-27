@@ -167,8 +167,10 @@ class SteadyStateSolver:
         msg = "\n".join(["", "*" * len(msg), msg, "*" * len(msg), ""])
         print(msg)
 
-        self._assemble_matrix()
-        self._assemble_rhs()
+        self._assemble_matrix(with_scattering=True,
+                              with_fission=True)
+        self._assemble_rhs(with_material_src=True,
+                           with_boundary_src=True)
         self.phi = spsolve(self._A[0], self._b)
         if self.use_precursors:
             self._compute_precursors()

@@ -242,7 +242,8 @@ class TransientSolver(KEigenvalueSolver):
         # Setup matrix
         # ========================================
 
-        self._assemble_transient_matrices()
+        self._assemble_transient_matrices(with_scattering=True,
+                                          with_fission=True)
 
         # ========================================
         # Start time stepping
@@ -261,10 +262,10 @@ class TransientSolver(KEigenvalueSolver):
             # and the end of the simulation
             # ========================================
 
-            if (self.write_outputs and
-                    self.time + self.dt > next_output + eps):
-                self.dt = next_output - self.time
-                reconstruct_matrices = True
+            if self.write_outputs:
+                if self.time + self.dt > next_output + eps:
+                    self.dt = next_output - self.time
+                    reconstruct_matrices = True
 
             if self.time + self.dt > self.t_end + eps:
                 self.dt = self.t_end - self.time
@@ -288,15 +289,16 @@ class TransientSolver(KEigenvalueSolver):
             step += 1
 
             # Output solutions
-            if abs(self.time - next_output) < eps:
-                self.write_snapshot(output_num)
-                output_num += 1
+            if self.write_outputs:
+                if abs(self.time - next_output) < eps:
+                    self.write_snapshot(output_num)
+                    output_num += 1
 
-                # Do not pass the end of the simulation
-                next_output += self.output_frequency
-                if (next_output > self.t_end or
-                        abs(next_output - self.t_end) < eps):
-                    next_output = self.t_end
+                    # Do not pass the end of the simulation
+                    next_output += self.output_frequency
+                    if (next_output > self.t_end or
+                            abs(next_output - self.t_end) < eps):
+                        next_output = self.t_end
 
             # Coarsen time step
             if self.adaptive_time_stepping:
@@ -309,7 +311,8 @@ class TransientSolver(KEigenvalueSolver):
             # time step size.
             elif self.dt != dt_initial:
                 self.dt = dt_initial
-                self._assemble_transient_matrices()
+                self._assemble_transient_matrices(with_scattering=True,
+                                                  with_fission=True)
 
             self._step_solutions()
 

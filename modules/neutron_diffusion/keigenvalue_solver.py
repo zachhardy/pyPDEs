@@ -58,10 +58,7 @@ class KEigenvalueSolver(SteadyStateSolver):
 
             # Set the fission source
             self._b[:] = 0.0
-            self._assemble_rhs(with_material_src=False,
-                               with_boundary_src=True,
-                               with_scattering=False,
-                               with_fission=True)
+            self._assemble_rhs(with_fission=True)
             self._b /= self.k_eff
 
             # Solve the system
