@@ -268,7 +268,7 @@ class NeutronicsSimulationReader:
             parse_precursors: bool = True,
             parse_fission_rate: bool = True,
             parse_temperature: bool = True
-    ) -> None:
+    ) -> 'NeutronicsSimulationReader':
         """
         Read transient simulation data.
 
