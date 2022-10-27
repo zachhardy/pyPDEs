@@ -21,10 +21,9 @@ path = os.path.abspath(os.path.dirname(__file__))
 # Parse Arguments
 # ==================================================
 
-radius = 4.25
-thickness = 1.0
+r_inner = 4.25
+r_outer = 5.25
 density = 0.05
-sig_s01 = 1.46
 
 xsdir = os.path.join(path, "xs")
 outdir = os.path.join(path, "reference")
@@ -33,14 +32,12 @@ for i, arg in enumerate(sys.argv[1:]):
     print(f"Parsing argument {i}: {arg}")
 
     value = arg.split("=")[1]
-    if arg.find("radius") == 0:
-        radius = float(value)
-    elif arg.find("thickness") == 0:
-        thickness = float(thickness)
+    if arg.find("r_inner") == 0:
+        r_inner = float(value)
+    elif arg.find("r_outer") == 0:
+        r_outer = float(value)
     elif arg.find("density") == 0:
         density = float(value)
-    elif arg.find("scatter") == 0:
-        sig_s01 = float(value)
     elif arg.find("output_directory") == 0:
         outdir = os.path.join(path, value)
     elif arg.find("xs_directory") == 0:
@@ -50,7 +47,7 @@ for i, arg in enumerate(sys.argv[1:]):
 # Create the spatial mesh
 # ==================================================
 
-mesh = create_1d_orthomesh([0.0, radius, radius + thickness],
+mesh = create_1d_orthomesh([0.0, r_inner, r_outer],
                            [100, 20], [0, 1], "SPHERICAL")
 # mesh = create_1d_orthomesh([0.0, radius], [100], [0], "SPHERICAL")
 fv = FiniteVolume(mesh)
@@ -63,6 +60,10 @@ materials = [Material(), Material()]
 xsecs = [CrossSections(), CrossSections()]
 xs_paths = [f"{xsdir}/fuel.xs", f"{xsdir}/reflector.xs"]
 
+# materials = [Material()]
+# xsecs = [CrossSections()]
+# xs_paths = [f"{xsdir}/fuel.xs"]
+
 it = zip(materials, xsecs, xs_paths)
 for i, (material, xs, xs_path) in enumerate(it):
     rho = density if i == 0 else 0.124
@@ -71,22 +72,11 @@ for i, (material, xs, xs_path) in enumerate(it):
         xs.inv_velocity[g] *= 1.0e6
     material.properties.append(xs)
 
-# material = Material()
-# xs = CrossSections()
-# xs.read_xs_file(f"{xsdir}/fuel.xs", density)
-# xs.inv_velocity *= 1.0e6
-# material.properties.append(xs)
-# materials = [material]
-
 # ==================================================
 # Temporal discretization
 # ==================================================
 
-def ic(r):
-    assert isinstance(r, CartesianVector)
-    r_b = mesh.vertices[-1]
-    # return 1.0 - r.z ** 2 / r_b.z ** 2
-    # return 1.0e8 if r.z > 0.95*(radius + thickness) else 0.0
+def ic(r: CartesianVector) -> float:
     return 0.0
 
 initial_conditions = {}
@@ -105,7 +95,7 @@ time_stepping_method = "TBDF2"
 def boundary_source(r: CartesianVector, t: float = 0.0) -> float:
     r_b = mesh.vertices[-1]
     if r.z == r_b.z and 0 < t <= dt:
-        return 1.0e8
+        return 1.0e10
     else:
         return 0.0
 
