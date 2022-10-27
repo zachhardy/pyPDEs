@@ -39,7 +39,7 @@ for i, arg in enumerate(sys.argv[1:]):
     elif arg.find("scatter") == 0:
         sig_s01 = float(value)
     elif arg.find("output_directory") == 0:
-        outdir = os.path.join(path, value)
+        outdir = value
     elif arg.find("xs_directory") == 0:
         xsdir = value
 

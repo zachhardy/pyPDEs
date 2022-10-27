@@ -22,7 +22,7 @@ path = os.path.abspath(os.path.dirname(__file__))
 # ==================================================
 
 r_inner = 4.25
-r_outer = 5.25
+r_outer = 5.0
 density = 0.05
 
 xsdir = os.path.join(path, "xs")
@@ -32,14 +32,14 @@ for i, arg in enumerate(sys.argv[1:]):
     print(f"Parsing argument {i}: {arg}")
 
     value = arg.split("=")[1]
-    if arg.find("r_inner") == 0:
+    if arg.find("rinner") == 0:
         r_inner = float(value)
-    elif arg.find("r_outer") == 0:
+    elif arg.find("router") == 0:
         r_outer = float(value)
     elif arg.find("density") == 0:
         density = float(value)
     elif arg.find("output_directory") == 0:
-        outdir = os.path.join(path, value)
+        outdir = value
     elif arg.find("xs_directory") == 0:
         xsdir = value
 
@@ -84,8 +84,8 @@ initial_conditions = {}
 normalization_method = None #"TOTAL_POWER"
 scale_fission_xs = False
 
-t_end = 1.0
-dt = 0.01
+t_end = 0.5
+dt = 0.005
 time_stepping_method = "TBDF2"
 
 # ==================================================
