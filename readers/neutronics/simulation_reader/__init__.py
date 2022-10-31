@@ -29,6 +29,8 @@ class NeutronicsSimulationReader:
     from ._plot import plot_power
     from ._plot import plot_fuel_temperature
 
+    from ._animate import animate_flux_moment
+
     def __init__(self, path: str) -> None:
         """
         Create a neutronics simulation readers.
