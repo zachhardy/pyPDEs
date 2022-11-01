@@ -30,6 +30,7 @@ class NeutronicsSimulationReader:
     from ._plot import plot_fuel_temperature
 
     from ._animate import animate_flux_moment
+    from ._animate import animate_spectrum
 
     def __init__(self, path: str) -> None:
         """

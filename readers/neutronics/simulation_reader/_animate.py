@@ -2,8 +2,10 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from . import NeutronicsSimulationReader
 
+import os
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 from matplotlib.animation import Animation
 from matplotlib.animation import FuncAnimation
@@ -17,7 +19,8 @@ def animate_flux_moment(
         self: 'NeutronicsSimulationReader',
         moment: int = 0,
         groups: Union[int, list[int]] = None,
-) -> FuncAnimation:
+        filename: str = None
+) -> Union[FuncAnimation, list[FuncAnimation]]:
     """
     Animate a group-wise flux moment.
 
@@ -70,7 +73,7 @@ def animate_flux_moment(
         ax.set_ylabel(r"$\phi_{m,g}(r)$")
         ax.grid(True)
 
-        title = fig.suptitle("")
+        title = plt.title("")
         lines: list[plt.Artist] = [
             ax.plot([], [], label=f"Group {group}")[0]
             for group in groups
@@ -86,17 +89,31 @@ def animate_flux_moment(
 
             # formatting
             x_margin = 0.05 * np.max(np.abs(x))
-            y_margin = 0.05 * np.max(np.abs(phi))
             ax.set_xlim(min(x) - x_margin, max(x) + x_margin)
-            ax.set_ylim(np.min(phi) - y_margin, np.max(phi) + y_margin)
+
+            if not np.min(phi) == np.max(phi):
+                y_margin = 0.05 * np.max(np.abs(phi))
+                ax.set_ylim(np.min(phi) - y_margin, np.max(phi) + y_margin)
+
             title.set_text(f"Time = {self.times[n]:.3g} $\mu$s")
             plt.tight_layout()
             return lines
 
-        return FuncAnimation(fig, _animate, frames=len(self.times),
-                             interval=20, blit=False)
+        anim = FuncAnimation(
+            fig, _animate, frames=len(self.times), blit=False
+        )
+
+        if filename:
+            base, ext = os.path.splitext(filename)
+            if ext == ".gif":
+                raise AssertionError("Invalid movie type.")
+            writer = animation.FFMpegWriter(fps=15)
+            anim.save(filename, writer=writer)
+        return anim
+
 
     elif self.dimension == 2:
+
 
         # get the grid
         x = [node[0] for node in self.nodes]
@@ -104,6 +121,7 @@ def animate_flux_moment(
         X, Y = np.meshgrid(np.unique(x), np.unique(y))
 
         # setup group-wise animations
+        anims = []
         for g, group in enumerate(groups):
 
             # setup figure
@@ -112,7 +130,7 @@ def animate_flux_moment(
             ax.set_xlabel("X")
             ax.set_ylabel("Y")
 
-            title = fig.suptitle("")
+            title = plt.title("")
             phi = self.flux_moments[0][moment][group]
             im: Collection = ax.pcolor(
                 X, Y, phi.reshape(X.shape), cmap='jet',
@@ -131,6 +149,69 @@ def animate_flux_moment(
                     im.set_clim(vmin=phi.min(), vmax=phi.max())
                 return im
 
-            mov = FuncAnimation(fig, _animate, frames=len(self.times),
-                                interval=20, blit=False)
-            plt.show()
+            anim = FuncAnimation(
+                fig, _animate, frames=len(self.times), blit=False
+            )
+            anims.append(anim)
+
+            if filename:
+                base, ext = os.path.splitext(filename)
+                if ext == ".gif":
+                    raise AssertionError("Invalid movie type.")
+                writer = animation.FFMpegWriter(fps=15)
+                anim.save(f"{base}_g{group}{ext}", writer=writer)
+        return anims
+
+
+def animate_spectrum(
+        self: 'NeutronicsSimulationReader',
+        filename: str = None
+) -> FuncAnimation:
+    """
+    Animate the energy spectrum.
+
+    Parameters
+    ----------
+    self : NeutronicsSimulationReader
+    filename : str
+
+    Returns
+    -------
+    FuncAnimation
+    """
+
+    def compute_spectrum(x):
+        y = np.linalg.norm(x, axis=1)[::-1]
+        return y / y.sum() if y.sum() != 0.0 else y
+
+    fig: plt.Figure = plt.figure()
+    ax: plt.Axes = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel("Energy Group")
+    ax.set_ylabel(r"$\phi(E)$")
+    ax.set_ylim(-0.05, 1.05)
+    ax.grid(True)
+
+    title = plt.title("")
+    y = compute_spectrum(self.flux_moments[0][0])
+    line: plt.Line2D = ax.plot(list(range(self.n_groups)), y, '-*b')[0]
+    line.set_xdata(list(range(self.n_groups)))
+
+    def _animate(n):
+        y = compute_spectrum(self.flux_moments[n][0])
+        line.set_data(list(range(self.n_groups)), y)
+        title.set_text(f"Time = {self.times[n]:<.3f} sh")
+        plt.tight_layout()
+        return line,
+
+    anim = FuncAnimation(
+        fig, _animate, frames=len(self.times), blit=False
+    )
+
+    if filename:
+        base, ext = os.path.splitext(filename)
+        if ext == ".gif":
+            raise AssertionError("Invalid movie type.")
+        writer = animation.FFMpegWriter(fps=15)
+        anim.save(filename, writer=writer)
+
+    return anim
