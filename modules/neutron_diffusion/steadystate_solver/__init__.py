@@ -39,7 +39,7 @@ class SteadyStateSolver:
             discretization: FiniteVolume,
             materials: list[Material],
             boundary_info: list[tuple[str, int]],
-            boundary_values: list[list[list[BCType]]] = None
+            boundary_values: list[dict] = None
     ) -> None:
         """
         Construct the solver from a discretization, list of materials,
@@ -86,7 +86,7 @@ class SteadyStateSolver:
         # ==================== Boundary Conditions ====================#
 
         self.boundary_info: list[tuple[str, int]] = boundary_info
-        self.boundary_values: list[list[list[BCType]]] = boundary_values
+        self.boundary_values: list[dict] = boundary_values
 
         self.boundaries: list[list[Boundary]] = []
 

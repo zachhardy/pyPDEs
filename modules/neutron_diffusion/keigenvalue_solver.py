@@ -20,7 +20,7 @@ class KEigenvalueSolver(SteadyStateSolver):
             discretization: FiniteVolume,
             materials: list[Material],
             boundary_info: list[tuple[str, int]],
-            boundary_values: list[list[list[float]]] = None
+            boundary_values: list[dict] = None
     ) -> None:
         super().__init__(discretization, materials,
                          boundary_info, boundary_values)

@@ -140,10 +140,14 @@ def _initialize_boundaries(self):
     # Check the number of boundaries
     # ==================================================
 
-    if self.mesh.dimension == 1:
-        assert len(self.boundary_info) == 2
-    elif self.mesh.dimension == 2:
-        assert len(self.boundary_info) == 4
+    if self.mesh.dimension == 1 and len(self.boundary_info) != 2:
+        raise AssertionError(
+            "One-dimensional problems must have two boundary conditions."
+        )
+    elif self.mesh.dimension == 2 and len(self.boundary_info) != 4:
+        raise AssertionError(
+            "Two-dimensional problems must have four boundary conditions."
+        )
 
     # ==================================================
     # Check boundary values
@@ -151,41 +155,49 @@ def _initialize_boundaries(self):
 
     if self.boundary_values is not None:
         for bndry_vals in self.boundary_values:
-            assert len(bndry_vals) == self.n_groups
-
+            for group in bndry_vals.keys():
+                if group < 0 or group >= self.n_groups:
+                    raise ValueError(
+                        "Invalid group encountered in boundary condition."
+                    )
     # ==================================================
     # Create the multi-group boundaries
     # ==================================================
 
     for boundary in self.boundary_info:
-        bcs: list[Boundary] = []
+        btype, bmap = boundary
 
         # Get the boundary condition type
-        btype = boundary[0]
-        assert btype in ["DIRICHLET", "ZERO_FLUX", "NEUMANN",
-                         "REFLECTIVE", "ROBIN", "VACUUM", "MARSHAK"]
+        valid_btypes = ["DIRICHLET", "ZERO_FLUX",
+                        "REFLECTIVE", "VACUUM", "MARSHAK"]
+        if btype not in valid_btypes:
+            raise ValueError("Invalid boundary type encountered.")
 
         # Construct a boundary condition for each group
-        for g in range(self.n_groups):
-            if btype == "ZERO_FLUX":
-                bc = DirichletBoundary()
-            elif btype == "REFLECTIVE":
-                bc = NeumannBoundary()
-            elif btype == "VACUUM":
-                bc = RobinBoundary()
-            else:
-                # Get the boundary values for group g
-                bvals = self.boundary_values[boundary[1]][g]
+        if btype == "ZERO_FLUX":
+            bcs = [DirichletBoundary() for _ in range(self.n_groups)]
+        elif btype == "REFLECTIVE":
+            bcs = [NeumannBoundary() for _ in range(self.n_groups)]
+        elif btype == "VACUUM":
+            bcs = [RobinBoundary() for _ in range(self.n_groups)]
+        elif btype == "DIRICHLET":
+            bcs: list[Boundary] = []
+            bndry_vals = self.boundary_values[bmap]
+            for g in range(self.n_groups):
+                bval = 0.0 if g not in bndry_vals else bndry_vals[g]
+                bcs.append(DirichletBoundary(bval))
+        elif btype == "MARSHAK":
+            bcs: list[Boundary] = []
+            bndry_vals = self.boundary_values[bmap]
+            for g in range(self.n_groups):
+                bval = 0.0 if g not in bndry_vals else bndry_vals[g]
+                bcs.append(RobinBoundary(f=bval))
+        else:
+            raise AssertionError(
+                "Invalid boundary condition type specified. Available "
+                "boundary conditions are [DIRICHLET, ZERO_FLUX, REFLECTIVE,"
+                "VACUUM, MARSHAK]."
+            )
 
-                if btype == "DIRICHLET":
-                    bc = DirichletBoundary(bvals[0])
-                elif btype == "NEUMANN":
-                    bc = NeumannBoundary(bvals[0])
-                elif btype == "MARSHAK":
-                    bc = RobinBoundary(f=bvals[0])
-                else:
-                    assert len(bvals) == 3
-                    bc = RobinBoundary(*bvals)
-            bcs.append(bc)
         self.boundaries.append(bcs)
     print(f"Boundaries initialized: {len(self.boundaries)}")
