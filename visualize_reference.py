@@ -17,7 +17,7 @@ if __name__ == "__main__":
         raise AssertionError(msg)
 
     problem_name = sys.argv[1]
-    if problem_name not in ["Sphere3g", "ReflectedSphere", "LRA"]:
+    if problem_name not in ["Sphere3g", "LRA"]:
         raise ValueError(f"{problem_name} is not a valid problem.")
 
     save = False
