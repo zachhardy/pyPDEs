@@ -7,7 +7,6 @@ import seaborn as sb
 import matplotlib.pyplot as plt
 
 from numpy.linalg import norm
-from scipy.stats.sampling import NumericalInversePolynomial
 from sklearn.model_selection import LeaveOneOut
 
 from typing import Union
@@ -33,14 +32,18 @@ def exercise_rom(
 
     Parameters
     ----------
-    dataset : NeutronicsDatasetReader
+    X, Y : numpy.ndarray
+        The training data snapshots/parameters.
     pod_mci : POD_MCI
     qoi_function : callable
         A callable expression to evaluate a QoI.
-    variables : str or list[str], default None
-        The variables from the dataset to fit the POD-MCI model to.
-    n_samples : int, default 20000
-        The number of queries to perform.
+    pts : numpy.ndarray
+        The samples to query.
+
+    Returns
+    -------
+    numpy.ndarray
+        The predicted QoIs
     """
 
     ##################################################
