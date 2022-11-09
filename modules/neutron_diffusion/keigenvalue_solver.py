@@ -12,7 +12,7 @@ from modules.neutron_diffusion import SteadyStateSolver
 
 class KEigenvalueSolver(SteadyStateSolver):
     """
-    Implementation of a k-eigenvalue multi-group neutron diffusion solver.
+    Implementation of a multi-group neutron diffusion k-eigenvalue solver.
     """
 
     def __init__(
@@ -35,7 +35,7 @@ class KEigenvalueSolver(SteadyStateSolver):
         Execute the k-eigenvalue multi-group diffusion solver.
         """
 
-        msg = "Executing the k-eigenvalue multi-group diffusion solver"
+        msg = "Executing the multi-group diffusion k-eigenvalue solver"
         msg = "\n".join(["", "*" * len(msg), msg, "*" * len(msg), ""])
         print(msg)
 

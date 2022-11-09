@@ -82,8 +82,8 @@ def plot_flux_moment(
     if self.dimension == 1:
         for t, time in enumerate(times):
             plt.figure()
-            plt.title(f"Time = {time:.3f}")
-            plt.xlabel(f"Position")
+            # plt.title(f"Time = {time:.3f}")
+            plt.xlabel(f"Position (cm)")
             plt.ylabel(r"$\phi_{m,g}(r)$")
 
             # Plot the group-wise moments
@@ -307,6 +307,7 @@ def plot_temperature_profile(
 def plot_power(
         self: 'NeutronicsSimulationReader',
         mode: str = "TOTAL",
+        normalize: bool = True,
         logscale: bool = False,
         filename: str = None
 ) -> None:
@@ -342,6 +343,9 @@ def plot_power(
         p = [self.peak_power_densities,
              self.average_power_densities]
         ylabel = "Power Density"
+
+    if normalize:
+        p = [p_i / max(p_i) for p_i in p]
 
     # Plot
     plt.figure()

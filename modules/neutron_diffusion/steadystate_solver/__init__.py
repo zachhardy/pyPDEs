@@ -13,10 +13,10 @@ from pyPDEs.material import LightWeightCrossSections
 from typing import Union, Callable
 from pyPDEs.mesh import CartesianVector
 
+from ..boundaries import Boundary
+
 BCFunc = Callable[[CartesianVector, float], float]
 BCType = Union[float, BCFunc]
-
-from ..boundaries import Boundary
 
 
 class SteadyStateSolver:
