@@ -63,9 +63,8 @@ argv = parser.parse_args()
 # Initial condition function
 # ==================================================
 
-def ic(r):
-    assert isinstance(r, CartesianVector)
-    return 1.0 - r.z ** 2 / argv.radius ** 2
+def ic(r: CartesianVector) -> float:
+    return 1.0  # - r.z ** 2 / argv.radius ** 2
 
 
 # ==================================================
@@ -104,7 +103,7 @@ solver = TransientSolver(fv, [material], boundary_info)
 # Temporal discretization
 # ==================================================
 
-solver.initial_conditions = {0: ic, 1: ic}
+solver.initial_conditions = {0: ic}  # , 1: ic}
 
 solver.normalization_method = "TOTAL_POWER"
 solver.scale_fission_xs = False

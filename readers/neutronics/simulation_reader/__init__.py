@@ -160,7 +160,7 @@ class NeutronicsSimulationReader:
         return len(self.precursors[0])
 
     def create_simulation_matrix(
-            self, variables: Optional[Variables] = None
+            self, variables: Variables = None
     ) -> np.ndarray:
         """
         Create a simulation matrix based on the specified variables.
@@ -186,7 +186,7 @@ class NeutronicsSimulationReader:
         return X
 
     def create_simulation_vector(
-            self, variables: Optional[Variables] = None
+            self, variables: Variables = None
     ) -> np.ndarray:
         """
         Create a simulation vector based on the specified variables.
@@ -194,14 +194,35 @@ class NeutronicsSimulationReader:
         Parameters
         ----------
         variables : str or Iterable[str], default None
-            The variables to include in the matrix.
+            The variables to include in the vector.
 
         Returns
         -------
-        numpy.ndarray (varies * n_snapshots,)
+        numpy.ndarray
         """
         x = self.create_simulation_matrix(variables)
         return x.reshape(x.size, 1)
+
+    def get_flux_moment_snapshot(self, time: float) -> np.ndarray:
+        """
+        Get a snapshot of the solution at a particular time.
+
+        Parameters
+        ----------
+        time : float
+        variables : str or Iterable[str], default None
+            The variables to include in the snapshot.
+
+        Returns
+        -------
+        numpy.ndarray
+        """
+        tmp = self._interpolate(time, self.flux_moments)[0][0]
+
+        phi = np.zeros(tmp.size)
+        for g in range(self.n_groups):
+            phi[g::self.n_groups] = tmp[g]
+        return phi
 
     @property
     def default_variables(self) -> list[str]:
@@ -404,6 +425,8 @@ class NeutronicsSimulationReader:
         numpy.ndarray
             The values of the specified data at the specified times.
         """
+        times = [times] if isinstance(times, float) else times
+
         dt = self.times[1] - self.times[0]
         vals = np.zeros((len(times), *data[0].shape))
         for t, time in enumerate(times):

@@ -1,5 +1,8 @@
 import os
 import sys
+import argparse
+import textwrap
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -14,50 +17,69 @@ from pyPDEs.material import IsotropicMultiGroupSource
 from modules.neutron_diffusion import AlphaEigenvalueSolver
 from modules.neutron_diffusion import KEigenvalueSolver
 
+from readers.neutronics import NeutronicsSimulationReader
 
 path = os.path.abspath(os.path.dirname(__file__))
+
 
 # ==================================================
 # Parse Arguments
 # ==================================================
 
-radius = 5.0
-density = 0.05
-sig_s01 = 1.46
+class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter,
+                      argparse.MetavarTypeHelpFormatter,
+                      argparse.RawTextHelpFormatter):
+    pass
 
-xsdir = os.path.join(path, "xs")
-outdir = os.path.join(path, "reference")
 
-for i, arg in enumerate(sys.argv[1:]):
-    print(f"Parsing argument {i}: {arg}")
+parser = argparse.ArgumentParser(
+    description=textwrap.dedent('''\
+    The alpha-eigenvalue problem for the three-group sphere problem.
+    '''),
+    formatter_class=CustomFormatter
+)
 
-    value = arg.split("=")[1]
-    if arg.find("radius") == 0:
-        radius = float(value)
-    elif arg.find("density") == 0:
-        density = float(value)
-    elif arg.find("scatter") == 0:
-        sig_s01 = float(value)
-    elif arg.find("output_directory") == 0:
-        outdir = value
-    elif arg.find("xs_directory") == 0:
-        xsdir = value
+parser.add_argument("--n_cells", default=100, type=int,
+                    help="The number of cells.")
+
+parser.add_argument("--radius", default=4.2, type=float,
+                    help="The sphere radius.")
+
+parser.add_argument("--density", default=0.05, type=float,
+                    help="The number density in atoms/b-cm.")
+
+parser.add_argument("--down_scatter", default=1.46, type=float,
+                    help="The down-scattering cross-section in b.")
+
+parser.add_argument("--n_modes", default=-1, type=int,
+                    help="The number of alpha-eigenfunctions to keep.")
+
+parser.add_argument("--output_directory",
+                    default=f"{path}/reference", type=str,
+                    help="The output directory.")
+
+argv = parser.parse_args()
 
 # ==================================================
 # Initial condition function
 # ==================================================
 
+reader = NeutronicsSimulationReader(f"{path}/reference").read()
 
-def ic(r):
-    assert isinstance(r, CartesianVector)
-    r_b = mesh.vertices[-1]
-    return 1.0 - r.z ** 2 / r_b.z ** 2
+def ic_func(r: CartesianVector) -> float:
+    return 0.0  # - r.z ** 2 / argv.radius ** 2
 
+
+ic = {0: ic_func}
+ic = reader.get_flux_moment_snapshot(reader.times[10])
 
 # ==================================================
 # Create the spatial mesh
 # ==================================================
-mesh = create_1d_orthomesh([0.0, radius], [100], [0], "SPHERICAL")
+
+mesh = create_1d_orthomesh(
+    [0.0, argv.radius], [argv.n_cells], [0], "SPHERICAL"
+)
 fv = FiniteVolume(mesh)
 
 # ==================================================
@@ -67,8 +89,8 @@ fv = FiniteVolume(mesh)
 material = Material()
 
 xs = CrossSections()
-xs.read_xs_file(f"{xsdir}/Sphere3g.xs", density)
-xs.transfer_matrices[0][1][0] = sig_s01 * density
+xs.read_xs_file(f"{path}/xs/Sphere3g.xs", argv.density)
+xs.transfer_matrices[0][1][0] = argv.down_scatter * argv.density
 material.properties.append(xs)
 
 # ==================================================
@@ -81,7 +103,10 @@ boundary_info = [("REFLECTIVE", -1), ("VACUUM", -1)]
 # Create the solver
 # ==================================================
 
-alpha_solver = AlphaEigenvalueSolver(fv, [material], boundary_info)
+alpha_solver = AlphaEigenvalueSolver(
+    fv, [material], boundary_info, n_modes=argv.n_modes, fit_data=ic
+)
+
 k_solver = KEigenvalueSolver(fv, [material], boundary_info)
 
 # ==================================================
@@ -89,7 +114,7 @@ k_solver = KEigenvalueSolver(fv, [material], boundary_info)
 # ==================================================
 
 alpha_solver.write_outputs = True
-alpha_solver.output_directory = outdir
+alpha_solver.output_directory = argv.output_directory
 
 # ==================================================
 # Execute
@@ -100,3 +125,5 @@ k_solver.execute()
 
 alpha_solver.initialize()
 alpha_solver.execute()
+
+plt.show()
