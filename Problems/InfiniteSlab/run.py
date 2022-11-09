@@ -1,5 +1,6 @@
 import os
 import sys
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -23,27 +24,37 @@ path = os.path.abspath(os.path.dirname(__file__))
 # Parse Arguments
 # ==================================================
 
-magnitude = -0.01
-duration = 1.0
-interface = 40.0
+class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter,
+                      argparse.MetavarTypeHelpFormatter,
+                      argparse.RawTextHelpFormatter):
+    pass
 
-xsdir = os.path.join(path, "xs")
-outdir = os.path.join(path, "reference")
 
-for i, arg in enumerate(sys.argv[1:]):
-    print(f"Parsing argument {i}: {arg}")
+parser = argparse.ArgumentParser(
+    description="The supercritical infinite slab problem.",
+    formatter_class=CustomFormatter
+)
 
-    value = arg.split("=")[1]
-    if arg.find("magnitude") == 0:
-        magnitude = float(value)
-    elif arg.find("duration") == 0:
-        duration = float(value)
-    elif arg.find("interface") == 0:
-        interface = float(value)
-    elif arg.find("output_directory") == 0:
-        outdir = value
-    elif arg.find("xs_directory") == 0:
-        xsdir = value
+parser.add_argument("--t_end", default=2.0, type=float,
+                    help="The simulation end time.")
+
+parser.add_argument("--dt", default=0.04, type=float,
+                    help="The time step size.")
+
+parser.add_argument("--magnitude", default=-0.01, type=float,
+                    help="The cross-section ramp magnitude.")
+
+parser.add_argument("--duration", default=1.0, type=float,
+                    help="The duration of the cross-section ramp.")
+
+parser.add_argument("--interface", default=40.0, type=float,
+                    help="The interface location in cm.")
+
+parser.add_argument("--output_directory",
+                    default=f"{path}/reference", type=str,
+                    help="The output directory.")
+
+argv = parser.parse_args()
 
 
 # ==================================================
@@ -54,10 +65,10 @@ for i, arg in enumerate(sys.argv[1:]):
 def f(group_num, args, reference):
     t = args[0]
     if group_num == 1:
-        if 0.0 < t <= duration:
-            return (1.0 + t / duration * magnitude) * reference
+        if 0.0 < t <= argv.duration:
+            return (1.0 + t / argv.duration * argv.magnitude) * reference
         else:
-            return (1.0 + magnitude) * reference
+            return (1.0 + argv.magnitude) * reference
     else:
         return reference
 
@@ -66,7 +77,7 @@ def f(group_num, args, reference):
 # Create the spatial mesh
 # ==================================================
 
-zone_edges = [0.0, interface, 200.0, 240.0]
+zone_edges = [0.0, argv.interface, 200.0, 240.0]
 zone_subdivs = [20, 80, 20]
 material_ids = [0, 1, 2]
 mesh = create_1d_orthomesh(zone_edges, zone_subdivs, material_ids)
@@ -107,8 +118,8 @@ solver = TransientSolver(fv, materials, boundary_info)
 solver.normalization_method = "TOTAL_POWER"
 solver.scale_fission_xs = True
 
-solver.t_end = 2.0
-solver.dt = 0.04
+solver.t_end = argv.t_end
+solver.dt = argv.dt
 solver.time_stepping_method = "TBDF2"
 
 # ==================================================
@@ -126,7 +137,7 @@ solver.refine_threshold = 0.05
 solver.coarsen_threshold = 0.01
 
 solver.write_outputs = True
-solver.output_directory = outdir
+solver.output_directory = argv.output_directory
 
 # ==================================================
 # Execute

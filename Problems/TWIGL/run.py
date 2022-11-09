@@ -1,6 +1,7 @@
 import os
 import sys
 import pickle
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -23,27 +24,37 @@ path = os.path.abspath(os.path.dirname(__file__))
 # Parse Arguments
 # ==================================================
 
-magnitude = 0.97667 - 1.0
-duration = 0.2
-sig_s01 = 0.01
+class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter,
+                      argparse.MetavarTypeHelpFormatter,
+                      argparse.RawTextHelpFormatter):
+    pass
 
-xsdir = os.path.join(path, "xs")
-outdir = os.path.join(path, "reference")
 
-for i, arg in enumerate(sys.argv[1:]):
-    print(f"Parsing argument {i}: {arg}")
+parser = argparse.ArgumentParser(
+    description="The TWIGL benchmark problem.",
+    formatter_class=CustomFormatter
+)
 
-    value = arg.split("=")[1]
-    if arg.find("magnitude") == 0:
-        magnitude = float(value)
-    elif arg.find("duration") == 0:
-        duration = float(value)
-    elif arg.find("scatter") == 0:
-        sig_s01 = float(value)
-    elif arg.find("output_directory") == 0:
-        outdir = value
-    elif arg.find("xs_directory") == 0:
-        xsdir = value
+parser.add_argument("--t_end", default=0.5, type=float,
+                    help="The simulation end time.")
+
+parser.add_argument("--dt", default=0.01, type=float,
+                    help="The time step size.")
+
+parser.add_argument("--magnitude", default=-0.02333, type=float,
+                    help="The cross-section ramp magnitude.")
+
+parser.add_argument("--duration", default=0.2, type=float,
+                    help="The cross-section ramp duration.")
+
+parser.add_argument("--down_scatter", default=0.01, type=float,
+                    help="The down-scattering cross-section in 1/cm.")
+
+parser.add_argument("--output_directory",
+                    default=f"{path}/reference", type=str,
+                    help="The output directory.")
+
+argv = parser.parse_args()
 
 # ==================================================
 # Cross-section function
@@ -53,10 +64,10 @@ for i, arg in enumerate(sys.argv[1:]):
 def f(group_num, args, reference):
     t = args[0]
     if group_num == 1:
-        if 0.0 < t <= duration:
-            return (1.0 + t/duration * magnitude) * reference
+        if 0.0 < t <= argv.duration:
+            return (1.0 + t / argv.duration * argv.magnitude) * reference
         else:
-            return (1.0 + magnitude) * reference
+            return (1.0 + argv.magnitude) * reference
     else:
         return reference
 
@@ -65,13 +76,10 @@ def f(group_num, args, reference):
 # Create the spatial mesh
 # ==================================================
 
-path = os.path.abspath(os.path.dirname(__file__))
-path = os.path.join(path, "mesh.obj")
-
 # Load a pickled mesh
 if os.path.isfile(path):
-    print(f"Using a mesh pickled at {path}.")
-    with open(path, 'rb') as file:
+    print(f"Using a mesh pickled at {path}/mesh.obj.")
+    with open(f"{path}/mesh.obj", 'rb') as file:
         mesh = pickle.load(file)
 
 # Define the mesh and pickle it
@@ -90,7 +98,7 @@ else:
         else:
             cell.material_id = 2
 
-    with open(path, 'wb') as file:
+    with open(f"{path}/mesh.obj", 'wb') as file:
         pickle.dump(mesh, file)
 
 fv = FiniteVolume(mesh)
@@ -101,16 +109,16 @@ fv = FiniteVolume(mesh)
 
 materials = [Material() for _ in range(3)]
 xsecs = [CrossSections() for _ in range(3)]
-xs_paths = [f"{xsdir}/fuel0.xs",
-            f"{xsdir}/fuel0.xs",
-            f"{xsdir}/fuel1.xs"]
+xs_paths = [f"{path}/xs/fuel0.xs",
+            f"{path}/xs/fuel0.xs",
+            f"{path}/xs/fuel1.xs"]
 
 it = zip(materials, xsecs, xs_paths)
 for i, (material, xs, xs_path) in enumerate(it):
     xs.read_xs_file(xs_path)
     xs.sigma_a_function = f if i == 0 else None
     if i == 2:
-        xs.transfer_matrices[0][1][0] = sig_s01
+        xs.transfer_matrices[0][1][0] = argv.down_scatter
     material.properties.append(xs)
 
 # ==================================================
@@ -133,8 +141,8 @@ solver = TransientSolver(fv, materials, boundary_info)
 solver.normalization_method = "TOTAL_POWER"
 solver.scale_fission_xs = True
 
-solver.t_end = 0.5
-solver.dt = 1.0e-2
+solver.t_end = argv.t_end
+solver.dt = argv.dt
 solver.time_stepping_method = "TBDF2"
 
 # ==================================================
@@ -152,7 +160,7 @@ solver.refine_threshold = 0.05
 solver.coarsen_threshold = 0.01
 
 solver.write_outputs = True
-solver.output_directory = outdir
+solver.output_directory = argv.output_directory
 
 # ==================================================
 # Execute
