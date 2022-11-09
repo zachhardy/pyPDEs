@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import pylab as pl
 
 from .cell import Cell
 from .cartesian_vector import CartesianVector
@@ -257,5 +256,5 @@ class Mesh:
             plt.colorbar()
 
         plt.xlabel(xlabel)
-        pl.ylabel(ylabel)
+        plt.ylabel(ylabel)
         plt.tight_layout()
