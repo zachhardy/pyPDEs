@@ -144,7 +144,7 @@ class AlphaEigenvalueSolver(SteadyStateSolver):
 
         # plot dominant mode
         plt.figure()
-        plt.title("Dominant Mode")
+        plt.title(f"Dominant Mode Index: {idx}")
         z = [cell.centroid.z for cell in self.mesh.cells]
         for g in range(self.n_groups):
             b = self.amplitudes[idx]
@@ -167,10 +167,16 @@ class AlphaEigenvalueSolver(SteadyStateSolver):
 
         z = [cell.centroid.z for cell in self.mesh.cells]
         for g in range(self.n_groups):
-            ax[0].plot(z, self.phi[g::self.n_groups], label=f"Group {g}")
+            color = 'b' if g == 0 else 'r' if g == 1 else 'g'
+            ax[0].plot(z, self.phi[g::self.n_groups], f'{color}-',
+                       linewidth=1.5, label=f"Group {g}")
+            ax[0].plot(z, phi[g::self.n_groups], 'o', ms=4.0, alpha=0.6)
 
-            err = self.phi[g::self.n_groups] - phi[g::self.n_groups]
-            ax[1].semilogy(z, np.abs(err), label=f"Group {g}")
+
+            c = np.linalg.norm(phi[g::self.n_groups])
+            if c > 0.0:
+                err = self.phi[g::self.n_groups] - phi[g::self.n_groups]
+                ax[1].semilogy(z, np.abs(err) / c, label=f"Group {g}")
 
         for iax in ax:
             iax.grid(True)

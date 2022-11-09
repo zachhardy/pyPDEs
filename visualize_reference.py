@@ -40,7 +40,9 @@ if __name__ == "__main__":
         reader.plot_flux_moment(0, -1, [0.0, reader.times[-1]], filename=fname)
 
         fname = f"{outdir}/power" if save else None
-        reader.plot_power(filename=fname)
+        reader.plot_power(normalize=False, filename=fname)
+
+        anim = reader.animate_flux_moment(0, -1)
 
     if problem_name == "LRA":
         fname = f"{outdir}/sflux" if save else None

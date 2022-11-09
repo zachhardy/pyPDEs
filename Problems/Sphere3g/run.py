@@ -64,7 +64,7 @@ argv = parser.parse_args()
 # ==================================================
 
 def ic(r: CartesianVector) -> float:
-    return 1.0  # - r.z ** 2 / argv.radius ** 2
+    return 0.0  # - r.z ** 2 / argv.radius ** 2
 
 
 # ==================================================
@@ -91,13 +91,18 @@ material.properties.append(xs)
 # Boundary conditions
 # ==================================================
 
-boundary_info = [("REFLECTIVE", -1), ("ZERO_FLUX", -1)]
+def bndry_src(r: CartesianVector, t: float) -> float:
+    return 1.0e8 if t <= argv.dt else 0.0
+
+
+boundary_vals = [{0: bndry_src}]
+boundary_info = [("REFLECTIVE", -1), ("MARSHAK", 0)]
 
 # ==================================================
 # Create the solver
 # ==================================================
 
-solver = TransientSolver(fv, [material], boundary_info)
+solver = TransientSolver(fv, [material], boundary_info, boundary_vals)
 
 # ==================================================
 # Temporal discretization
@@ -105,7 +110,7 @@ solver = TransientSolver(fv, [material], boundary_info)
 
 solver.initial_conditions = {0: ic}  # , 1: ic}
 
-solver.normalization_method = "TOTAL_POWER"
+solver.normalization_method = None
 solver.scale_fission_xs = False
 
 solver.t_end = argv.t_end
@@ -119,7 +124,7 @@ solver.time_stepping_method = "TBDF2"
 solver.use_precursors = False
 solver.lag_precursors = False
 
-solver.adaptive_time_stepping = False
+solver.adaptive_time_stepping = True
 solver.refine_threshold = 0.05
 solver.coarsen_threshold = 0.01
 
