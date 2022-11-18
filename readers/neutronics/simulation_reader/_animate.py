@@ -66,7 +66,7 @@ def animate_flux_moment(
         # get the grid
         x = self.nodes[:, 2]
 
-        # setup the plot
+        # set up the plot
         fig: plt.Figure = plt.figure()
         ax: plt.Axes = fig.add_subplot(1, 1, 1)
         ax.set_xlabel("Position")
@@ -74,7 +74,7 @@ def animate_flux_moment(
         ax.grid(True)
 
         title = plt.title("")
-        lines: list[plt.Artist] = [
+        lines: list[plt.Line2D] = [
             ax.plot([], [], label=f"Group {group}")[0]
             for group in groups
         ]
@@ -83,17 +83,17 @@ def animate_flux_moment(
 
         def _animate(n):
             # update plots
-            phi = self.flux_moments[n][moment]
+            y = self.flux_moments[n][moment]
             for g, group in enumerate(groups):
-                lines[g].set_data(self.nodes[:, 2], phi[group])
+                lines[g].set_data(x, y[group])
 
             # formatting
             x_margin = 0.05 * np.max(np.abs(x))
             ax.set_xlim(min(x) - x_margin, max(x) + x_margin)
 
-            if not np.min(phi) == np.max(phi):
-                y_margin = 0.05 * np.max(np.abs(phi))
-                ax.set_ylim(np.min(phi) - y_margin, np.max(phi) + y_margin)
+            if not np.min(y) == np.max(y):
+                y_margin = 0.05 * np.max(np.abs(y))
+                ax.set_ylim(np.min(y) - y_margin, np.max(y) + y_margin)
 
             title.set_text(f"Time = {self.times[n]:.3g} $\mu$s")
             plt.tight_layout()
@@ -111,9 +111,7 @@ def animate_flux_moment(
             anim.save(filename, writer=writer)
         return anim
 
-
     elif self.dimension == 2:
-
 
         # get the grid
         x = [node[0] for node in self.nodes]
@@ -139,14 +137,14 @@ def animate_flux_moment(
             fig.colorbar(im)
 
             def _animate(n):
-                phi = self.flux_moments[n][moment][group]
+                vals = self.flux_moments[n][moment][group]
                 title.set_text(f"Group {group}, "
                                f"Time = {self.times[n]:.3g} s")
 
-                im.set_array(phi)
+                im.set_array(vals)
                 vmin, vmax = im.get_clim()
-                if any(phi > vmax) or phi.max() < 0.1 * vmax:
-                    im.set_clim(vmin=phi.min(), vmax=phi.max())
+                if any(vals > vmax) or vals.max() < 0.1 * vmax:
+                    im.set_clim(vmin=vals.min(), vmax=vals.max())
                 return im
 
             anim = FuncAnimation(
@@ -192,8 +190,8 @@ def animate_spectrum(
     ax.grid(True)
 
     title = plt.title("")
-    y = compute_spectrum(self.flux_moments[0][0])
-    line: plt.Line2D = ax.plot(list(range(self.n_groups)), y, '-*b')[0]
+    phi = compute_spectrum(self.flux_moments[0][0])
+    line: plt.Line2D = ax.plot(list(range(self.n_groups)), phi, '-*b')[0]
     line.set_xdata(list(range(self.n_groups)))
 
     def _animate(n):
