@@ -76,19 +76,19 @@ class SteadyStateSolver:
         # ==================== Materials ====================#
 
         self.materials: list[Material] = materials
-        self.material_xs: list[CrossSections] = []
-        self.material_src: list[IsotropicMultiGroupSource] = []
-        self.cellwise_xs: list[LightWeightCrossSections] = []
+        self.material_xs: list[CrossSections] = list()
+        self.material_src: list[IsotropicMultiGroupSource] = list()
+        self.cellwise_xs: list[LightWeightCrossSections] = list()
 
-        self.matid_to_xs_map: list[int] = []
-        self.matid_to_src_map: list[int] = []
+        self.matid_to_xs_map: list[int] = list()
+        self.matid_to_src_map: list[int] = list()
 
         # ==================== Boundary Conditions ====================#
 
         self.boundary_info: list[tuple[str, int]] = boundary_info
         self.boundary_values: list[dict] = boundary_values
 
-        self.boundaries: list[list[Boundary]] = []
+        self.boundaries: list[list[Boundary]] = list()
 
         # ==================== Problem Information ====================#
 

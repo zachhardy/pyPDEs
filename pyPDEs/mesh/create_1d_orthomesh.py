@@ -67,7 +67,7 @@ def create_1d_orthomesh(
 
     mesh.vertices.clear()
     for vertex in vertices:
-        mesh.vertices.append(CartesianVector(z=vertex))
+        mesh.vertices.append(CartesianVector(vertex))
 
     # ========================================
     # Create the cells
@@ -97,14 +97,14 @@ def create_1d_orthomesh(
             left_face.vertex_ids = [n]
             left_face.has_neighbor = n > 0
             left_face.neighbor_id = n - 1 if n > 0 else 0
-            left_face.normal = CartesianVector(z=-1.0)
+            left_face.normal = CartesianVector(-1.0)
             cell.faces.append(left_face)
 
             # Define the right face info
             right_face.vertex_ids = [n + 1]
             right_face.has_neighbor = n < n_cells - 1
             right_face.neighbor_id = n + 1 if n < n_cells - 1 else 1
-            right_face.normal = CartesianVector(z=1.0)
+            right_face.normal = CartesianVector(1.0)
             cell.faces.append(right_face)
 
             mesh.cells.append(cell)

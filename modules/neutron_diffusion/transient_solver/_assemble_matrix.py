@@ -168,8 +168,8 @@ def _assemble_transient_matrix(
                 nbr_xs = self.material_xs[nbr_xs_id]
                 D_nbr = nbr_xs.diffusion_coeff
 
-                d_pn = cell.centroid.distance(nbr_cell.centroid)
-                d_pf = cell.centroid.distance(face.centroid)
+                d_pn = (cell.centroid - nbr_cell.centroid).norm()
+                d_pf = (cell.centroid - face.centroid).norm()
                 w = d_pf / d_pn
 
                 # Loop over groups
@@ -190,7 +190,7 @@ def _assemble_transient_matrix(
                 # ========================================
 
                 if btype == "ZERO_FLUX" or btype == "DIRICHLET":
-                    d_pf = cell.centroid.distance(face.centroid)
+                    d_pf = (cell.centroid - face.centroid).norm()
                     for g in range(self.n_groups):
                         val = D[g] / d_pf * face.area
 
@@ -201,15 +201,14 @@ def _assemble_transient_matrix(
                 elif (btype == "VACUUM" or
                       btype == "MARSHAK" or
                       btype == "ROBIN"):
-                    d_pf = cell.centroid.distance(face.centroid)
+                    d_pf = (cell.centroid - face.centroid).norm()
                     for g in range(self.n_groups):
                         bc: RobinBoundary = self.boundaries[bid][g]
-                        val = (bc.a * D[g] /
-                               (bc.b * D[g] + bc.a * d_pf) * face.area)
+                        val = bc.a * D[g] / (bc.b * D[f] + bc.a * d_pf)
 
                         rows.append(uk_map + g)
                         cols.append(uk_map + g)
-                        data.append(val)
+                        data.append(val * face.area)
 
     # Construct the sparse matrix
     self._A.append(csr_matrix((data, (rows, cols))))
