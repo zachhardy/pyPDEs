@@ -78,15 +78,15 @@ class Mesh:
             # ========================================
 
             if self.dimension == 1:
-                v1 = self.vertices[cell.vertex_ids[1]].z
-                v0 = self.vertices[cell.vertex_ids[0]].z
+                v1 = self.vertices[cell.vertex_ids[1]].x
+                v0 = self.vertices[cell.vertex_ids[0]].x
 
                 if cell.type == "SLAB":
                     cell.volume = v1 - v0
                 elif cell.type == "ANNULUS":
-                    cell.volume = np.pi * (v1*v1 - v0*v0)
+                    cell.volume = np.pi * (v1 * v1 - v0 * v0)
                 elif cell.type == "SHELL":
-                    cell.volume = 4.0 / 3.0 * np.pi * (v1**3 - v0**3)
+                    cell.volume = 4.0 / 3.0 * np.pi * (v1 ** 3 - v0 ** 3)
                 else:
                     msg = f"Unrecognized 1D cell type {cell.type}"
                     raise AssertionError(msg)
@@ -123,7 +123,7 @@ class Mesh:
                 # ========================================
 
                 if self.dimension == 1:
-                    v = self.vertices[face.vertex_ids[0]].z
+                    v = self.vertices[face.vertex_ids[0]].x
 
                     if cell.type == "SLAB":
                         face.area = 1.0
@@ -140,7 +140,7 @@ class Mesh:
                     if cell.type == "QUADRILATERAL":
                         v1 = self.vertices[face.vertex_ids[1]]
                         v0 = self.vertices[face.vertex_ids[0]]
-                        face.area = v1.distance(v0)
+                        face.area = (v1 - v0).norm()
                     else:
                         msg = f"Unrecognized 2D cell type {cell.type}"
                         raise AssertionError(msg)

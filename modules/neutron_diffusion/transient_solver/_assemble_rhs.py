@@ -193,7 +193,7 @@ def _assemble_transient_rhs(
 
                 elif btype == "MARSHAK" or btype == "ROBIN":
                     D = xs.diffusion_coeff
-                    d_pf = cell.centroid.distance(face.centroid)
+                    d_pf = (cell.centroid - face.centroid).norm()
                     for g in range(self.n_groups):
                         bc: RobinBoundary = self.boundaries[bid][g]
                         bc_val = bc.boundary_value(face.centroid, t)

@@ -47,9 +47,9 @@ def create_2d_orthomesh(
     # Create the cells
     # ========================================
 
-    ihat = CartesianVector(x=1.0)
-    jhat = CartesianVector(y=1.0)
-    khat = CartesianVector(z=1.0)
+    ihat = CartesianVector(1.0, 0.0, 0.0)
+    jhat = CartesianVector(0.0, 1.0, 0.0)
+    khat = CartesianVector(0.0, 0.0, 1.0)
 
     x_min, x_max = np.min(x_vertices), np.max(x_vertices)
     y_min, y_max = np.min(y_vertices), np.max(y_vertices)
@@ -81,7 +81,7 @@ def create_2d_orthomesh(
                 v0 = mesh.vertices[face.vertex_ids[0]]
                 v1 = mesh.vertices[face.vertex_ids[1]]
                 face.normal = khat.cross(v0 - v1)
-                face.normal /= face.normal.length()
+                face.normal /= face.normal.norm()
 
                 # Define neighbors
                 if face.normal == -jhat:  # bottom face
