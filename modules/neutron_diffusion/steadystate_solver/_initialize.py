@@ -15,42 +15,49 @@ from ..boundaries import RobinBoundary
 def _initialize_materials(self: 'SteadyStateSolver') -> None:
     """
     Initialize the materials for the problem.
-
-    This routine ensures that the mesh has the same number of
-    material IDs as the number of materials stored by the solver,
-    pulls out the cross-section and isotropic source properties,
-    and performs compatibility checks along the way.
-
-    Parameters
-    ----------
-    self : SteadyStateSolver
     """
     print("Initializing materials.")
 
-    # ==================================================
-    # Check the material IDS
-    # ==================================================
+    # ------------------------------------------------------------
+    # Check the material IDS to see if any are invalid.
+    #
+    # If all material IDs are -1, it is assumed that the entire
+    # domain is made up of a single material and cells are
+    # assigned a 0 material ID.
+    #
+    # If any material IDs are set to something other than -1,
+    # all must be set to something other than -1.
+    #
+    # If the number of unique material IDs is larger than the
+    # number of materials attached to the solver, an error is
+    # thrown.
+    # ------------------------------------------------------------
 
+    # find unique material ideas and potentially invalid cells
     unique_matids = set()
-    invalid_cells = []
+    invalid_cells = list()
     for cell in self.mesh.cells:
         unique_matids.add(cell.material_id)
         if cell.material_id == -1:
             invalid_cells.append(cell.id)
+
+    # throw an error if some material IDs, but not all, are -1
     assert (len(invalid_cells) == 0 or
             len(invalid_cells) == len(self.mesh.cells))
 
-    # If all cells material IDs are invalid, set to zero
+    # if all cells material IDs are invalid, set to zero
     if len(invalid_cells) == len(self.mesh.cells):
         unique_matids.clear()
         unique_matids.add(0)
         for cell in self.mesh.cells:
             cell.material_id = 0
-    assert len(unique_matids) == len(self.materials)
 
-    # ==================================================
+    # throw an error if not enough materials
+    assert len(unique_matids) <= len(self.materials)
+
+    # ------------------------------------------------------------
     # Clear current material information
-    # ==================================================
+    # ------------------------------------------------------------
 
     self.material_xs.clear()
     self.material_src.clear()
@@ -59,20 +66,23 @@ def _initialize_materials(self: 'SteadyStateSolver') -> None:
     self.matid_to_xs_map = [-1 for _ in range(n_materials)]
     self.matid_to_src_map = [-1 for _ in range(n_materials)]
 
-    # ==================================================
-    # Go through the materials
-    # ==================================================
-
+    # ------------------------------------------------------------
+    # Go through the materials.
+    #
     # For each material, go through its properties to search for
-    # cross-sections and multi-group sources. Perform compatibility
-    # checks along the way.
+    # cross-sections and multi-group sources.
+    #
+    # Perform compatibility  checks along the way to ensure
+    # consistency with group-structures.
+    # ------------------------------------------------------------
+
     for matid in unique_matids:
         material = self.materials[matid]
 
         found_xs = False
         for matprop in material.properties:
 
-            # Get cross-section property
+            # ------------------------------ cross-sections
             if matprop.type == "XS":
                 xs: CrossSections = matprop
                 if self.n_groups == 0:
@@ -83,7 +93,7 @@ def _initialize_materials(self: 'SteadyStateSolver') -> None:
                 self.matid_to_xs_map[matid] = len(self.material_xs) - 1
                 found_xs = True
 
-            # Get multi-group source property
+            # ------------------------------ multi-group sources
             elif matprop.type == "ISOTROPIC_SOURCE":
                 src: IsotropicMultiGroupSource = matprop
                 if self.n_groups != 0:
@@ -93,18 +103,18 @@ def _initialize_materials(self: 'SteadyStateSolver') -> None:
                 self.matid_to_src_map[matid] = len(self.material_src) - 1
         assert found_xs
 
-    # ==================================================
+    # ------------------------------------------------------------
     # Define cell-wise cross-sections
-    # ==================================================
+    # ------------------------------------------------------------
 
     for cell in self.mesh.cells:
         xs_id = self.matid_to_xs_map[cell.material_id]
         xs: CrossSections = self.material_xs[xs_id]
         self.cellwise_xs.append(LightWeightCrossSections(xs))
 
-    # ==================================================
-    # Define precursor quantities
-    # ==================================================
+    # ------------------------------------------------------------
+    # Define precursor information
+    # ------------------------------------------------------------
 
     if self.use_precursors:
         self.max_precursors = 0
@@ -129,17 +139,14 @@ def _initialize_boundaries(self):
 
     This routine takes the boundary condition inputs and creates
     the associated multi-group boundary conditions per boundary.
-
-    Parameters
-    ----------
-    self : SteadyStateSolver
     """
     print("Initializing boundary conditions.")
 
-    # ==================================================
-    # Check the number of boundaries
-    # ==================================================
+    # ------------------------------------------------------------
+    # Check boundary condition specification
+    # ------------------------------------------------------------
 
+    # ------------------------------ check the number of boundaries
     if self.mesh.dimension == 1 and len(self.boundary_info) != 2:
         raise AssertionError(
             "One-dimensional problems must have two boundary conditions."
@@ -149,10 +156,7 @@ def _initialize_boundaries(self):
             "Two-dimensional problems must have four boundary conditions."
         )
 
-    # ==================================================
-    # Check boundary values
-    # ==================================================
-
+    # ------------------------------ check boundary values
     if self.boundary_values is not None:
         for bndry_vals in self.boundary_values:
             for group in bndry_vals.keys():
@@ -160,38 +164,44 @@ def _initialize_boundaries(self):
                     raise ValueError(
                         "Invalid group encountered in boundary condition."
                     )
-    # ==================================================
-    # Create the multi-group boundaries
-    # ==================================================
+
+    # ------------------------------------------------------------
+    # Create the group-wise boundary conditions
+    # ------------------------------------------------------------
 
     for boundary in self.boundary_info:
         btype, bmap = boundary
 
-        # Get the boundary condition type
+        # check the boundary condition type
         valid_btypes = ["DIRICHLET", "ZERO_FLUX",
                         "REFLECTIVE", "VACUUM", "MARSHAK"]
         if btype not in valid_btypes:
             raise ValueError("Invalid boundary type encountered.")
 
-        # Construct a boundary condition for each group
+        # construct a boundary condition
         if btype == "ZERO_FLUX":
             bcs = [DirichletBoundary() for _ in range(self.n_groups)]
+
         elif btype == "REFLECTIVE":
             bcs = [NeumannBoundary() for _ in range(self.n_groups)]
+
         elif btype == "VACUUM":
             bcs = [RobinBoundary() for _ in range(self.n_groups)]
+
         elif btype == "DIRICHLET":
             bcs: list[Boundary] = []
             bndry_vals = self.boundary_values[bmap]
             for g in range(self.n_groups):
                 bval = 0.0 if g not in bndry_vals else bndry_vals[g]
                 bcs.append(DirichletBoundary(bval))
+
         elif btype == "MARSHAK":
             bcs: list[Boundary] = []
             bndry_vals = self.boundary_values[bmap]
             for g in range(self.n_groups):
                 bval = 0.0 if g not in bndry_vals else bndry_vals[g]
                 bcs.append(RobinBoundary(f=bval))
+
         else:
             raise AssertionError(
                 "Invalid boundary condition type specified. Available "

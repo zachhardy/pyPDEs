@@ -17,7 +17,6 @@ def write_temperature(
 
     Parameters
     ----------
-    self : TransientSolver
     directory : str, The output directory.
     file_prefix : str, The filename.
     """
@@ -25,7 +24,7 @@ def write_temperature(
         os.makedirs(directory)
     assert os.path.isdir(directory)
 
-    filepath = f"{directory}/{file_prefix}"
+    filepath = os.path.join(directory, file_prefix)
     if "." in filepath:
         assert filepath.count(".") == 1
         filepath = filepath.split(".")[0]
@@ -38,25 +37,18 @@ def write_snapshot(self: 'TransientSolver', output_index: int) -> None:
 
     Parameters
     ----------
-    self : TransientSolver
     output_index : int
     """
 
-    # ========================================
-    # Create directory for output
-    # ========================================
-
+    # ------------------------------ create output directory
     directory = str(output_index)
     directory = directory.zfill(4)
-    directory = f"{self.output_directory}/{directory}"
+    directory = os.path.join(self.output_directory, directory)
     if not os.path.isdir(directory):
         os.makedirs(directory)
 
-    # ========================================
-    # Append the snapshot information
-    # ========================================
-
-    filepath = f"{self.output_directory}/summary.txt"
+    # ------------------------------ write snapshot information
+    filepath = os.path.join(directory, "summary.txt")
     with open(filepath, 'a') as file:
         if os.path.getsize(filepath) == 0:
             file.write(f"# {'Time':<18}{'Pwr':<18}"
@@ -70,10 +62,7 @@ def write_snapshot(self: 'TransientSolver', output_index: int) -> None:
                    f"{self.peak_fuel_temperature:<18.10e}"
                    f"{self.average_fuel_temperature:<18.10e}\n")
 
-    # ========================================
-    # Write the simulation data
-    # ========================================
-
+    # ------------------------------ write simulation data
     self.write_scalar_flux(directory)
     self.write_fission_rate(directory)
     self.write_precursors(directory)

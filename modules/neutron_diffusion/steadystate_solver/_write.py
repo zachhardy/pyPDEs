@@ -17,7 +17,6 @@ def write_scalar_flux(
 
     Parameters
     ----------
-    self : SteadyStateSolver
     directory : str, The output directory.
     file_prefix : str, The filename.
     """
@@ -25,7 +24,7 @@ def write_scalar_flux(
         os.makedirs(directory)
     assert os.path.isdir(directory)
 
-    filepath = f"{directory}/{file_prefix}"
+    filepath = os.path.join(directory, file_prefix)
     if "." in filepath:
         assert filepath.count(".") == 1
         filepath = filepath.split(".")[0]
@@ -47,15 +46,15 @@ def write_precursors(
 
     Parameters
     ----------
-    self : SteadyStateSolver
     directory : str, The output directory.
     file_prefix : str, The filename.
     """
+
     if not os.path.isdir(directory):
         os.makedirs(directory)
     assert os.path.isdir(directory)
 
-    filepath = f"{directory}/{file_prefix}"
+    filepath = os.path.join(directory, file_prefix)
     if "." in filepath:
         assert filepath.count(".") == 1
         filepath = filepath.split(".")[0]
@@ -76,7 +75,6 @@ def write_fission_rate(
 
     Parameters
     ----------
-    self : SteadyStateSolver
     directory : str, The output directory.
     file_prefix : str, The filename.
     """
@@ -84,7 +82,7 @@ def write_fission_rate(
         os.makedirs(directory)
     assert os.path.isdir(directory)
 
-    filepath = f"{directory}/{file_prefix}"
+    filepath = os.path.join(directory, file_prefix)
     if "." in filepath:
         assert filepath.count(".") == 1
         filepath = filepath.split(".")[0]

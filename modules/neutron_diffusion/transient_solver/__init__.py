@@ -50,7 +50,9 @@ class TransientSolver(KEigenvalueSolver):
         super().__init__(discretization, materials,
                          boundary_info, boundary_values)
 
-        # ==================== General Options ==================== #
+        # ------------------------------------------------------------
+        # General Options
+        # ------------------------------------------------------------
 
         self.write_outputs: bool = False
         self.output_directory: str = None
@@ -80,7 +82,9 @@ class TransientSolver(KEigenvalueSolver):
         self.nonlinear_tolerance: float = 1.0e-8
         self.nonlinear_max_iterations: int = 50
 
-        # ==================== Initial Conditions ==================== #
+        # ------------------------------------------------------------
+        # Initial Conditions
+        # ------------------------------------------------------------
 
         self.initial_power: float = 1.0
         self.initial_temperature: float = 300.0
@@ -90,7 +94,9 @@ class TransientSolver(KEigenvalueSolver):
         # initial condition is used.
         self.initial_conditions: dict = None
 
-        # ==================== Time Stepping ==================== #
+        # ------------------------------------------------------------
+        # Time Discretization Options
+        # ------------------------------------------------------------
 
         self.t_start: float = 0.0
         self.t_end: float = 1.0
@@ -113,7 +119,9 @@ class TransientSolver(KEigenvalueSolver):
         self.coarsen_threshold: float = 0.01
         self.dt_min: float = 1.0e-6
 
-        # ==================== Problem Information ==================== #
+        # ------------------------------------------------------------
+        # Problem Data
+        # ------------------------------------------------------------
 
         # A flag for whether the problem has dynamic cross-sections.
         self.has_dynamic_xs: bool = False
@@ -142,10 +150,7 @@ class TransientSolver(KEigenvalueSolver):
         KEigenvalueSolver.initialize(self)
         KEigenvalueSolver.execute(self)
 
-        # ========================================
-        # Physics option checks and sets
-        # ========================================
-
+        # ------------------------------ check physics options
         for xs in self.material_xs:
             if xs.sigma_a_function is not None:
                 self.has_dynamic_xs = True
@@ -156,10 +161,7 @@ class TransientSolver(KEigenvalueSolver):
             msg = "Invalid scalar flux normalization method."
             raise ValueError(msg)
 
-        # ========================================
-        # Check time discretization
-        # ========================================
-
+        # ------------------------------ check time discretization options
         if self.t_start >= self.t_end:
             msg = "The start time must be less than the end time."
             raise AssertionError(msg)
@@ -170,21 +172,18 @@ class TransientSolver(KEigenvalueSolver):
             msg = f"Unrecognized time stepping method"
             raise ValueError(msg)
 
-        # ========================================
-        # Check output options
-        # ========================================
-
+        # ------------------------------ check output options
         if self.write_outputs:
 
-            # Set output frequency to time step size if not specified
+            # set output frequency to time step size if not specified
             if self.output_frequency is None:
                 self.output_frequency = self.dt
 
-            # Set time step size to output frequency if larger
+            # set time step size to output frequency if larger
             if self.dt > self.output_frequency:
                 self.dt = self.output_frequency
 
-            # For non-adaptive time stepping, ensure that the output
+            # for non-adaptive time stepping, ensure that the output
             # frequency is an integer multiple of the time step size
             if (not self.adaptive_time_stepping and
                     self.output_frequency % self.dt):
@@ -192,16 +191,14 @@ class TransientSolver(KEigenvalueSolver):
                       "the time step size when adaptive time stepping is off."
                 raise AssertionError(msg)
 
+            # setup output directories
             print(f"Setting up output directories at {self.output_directory}")
             if not os.path.isdir(self.output_directory):
                 os.makedirs(self.output_directory)
             elif len(os.listdir(self.output_directory)) > 0:
                 os.system(f"rm -r {self.output_directory}/*")
 
-        # ========================================
-        # Initialize auxiliary vectors
-        # ========================================
-
+        # ------------------------------ initialize auxiliary storage
         self.phi_old = np.zeros(self.phi.size)
         if self.use_precursors:
             self.precursors_old = np.zeros(self.precursors.size)
@@ -221,16 +218,10 @@ class TransientSolver(KEigenvalueSolver):
         msg = "\n".join(["", "*" * len(msg), msg, "*" * len(msg), ""])
         print(msg)
 
-        # ========================================
-        # Compute initial values
-        # ========================================
-
+        # ------------------------------ compute initial values
         self._compute_initial_values()
 
-        # ========================================
-        # Setup for outputting
-        # ========================================
-
+        # ------------------------------ setup outputting
         output_num = 0
         next_output = self.output_frequency
         if self.write_outputs:
@@ -238,30 +229,28 @@ class TransientSolver(KEigenvalueSolver):
             self.write_snapshot(output_num)
             output_num += 1
 
-        # ========================================
-        # Setup matrix
-        # ========================================
+        # ------------------------------ construct initial matrices
+        self._assemble_transient_matrices(
+            with_scattering=True, with_fission=True
+        )
 
-        self._assemble_transient_matrices(with_scattering=True,
-                                          with_fission=True)
-
-        # ========================================
-        # Start time stepping
-        # ========================================
+        # ------------------------------------------------------------
+        # Time step until the final simulation time is reached
+        # ------------------------------------------------------------
 
         step = 0
         dt_initial = self.dt
         self.time = self.t_start
         while self.time < self.t_end - eps:
 
-            # A flag for reconstructing the system matrix.
+            # --------------------------------------------------
+            # Check the time-step configuration
+            # --------------------------------------------------
+
+            # a flag for reconstructing the system matrix.
             reconstruct_matrices = False
 
-            # ========================================
-            # Modify time steps to coincide with output times
-            # and the end of the simulation
-            # ========================================
-
+            # ------------------------------ check time-step size
             if self.write_outputs:
                 if self.time + self.dt > next_output + eps:
                     self.dt = next_output - self.time
@@ -271,9 +260,9 @@ class TransientSolver(KEigenvalueSolver):
                 self.dt = self.t_end - self.time
                 reconstruct_matrices = True
 
-            # ========================================
-            # Solve the time step
-            # ========================================
+            # --------------------------------------------------
+            # Solve time-step
+            # --------------------------------------------------
 
             self._solve_timestep(reconstruct_matrices)
             self._compute_bulk_properties()
@@ -281,26 +270,26 @@ class TransientSolver(KEigenvalueSolver):
             if self.adaptive_time_stepping:
                 self._refine_timestep()
 
-            # ========================================
-            # Finalize time step
-            # ========================================
+            # --------------------------------------------------
+            # Finalize time-step
+            # --------------------------------------------------
 
             self.time += self.dt
             step += 1
 
-            # Output solutions
+            # ------------------------------ output solutions
             if self.write_outputs:
                 if abs(self.time - next_output) < eps:
                     self.write_snapshot(output_num)
                     output_num += 1
 
-                    # Do not pass the end of the simulation
+                    # do not pass the end of the simulation
                     next_output += self.output_frequency
                     if (next_output > self.t_end or
                             abs(next_output - self.t_end) < eps):
                         next_output = self.t_end
 
-            # Coarsen time step
+            # ------------------------------ coarsen time step
             if self.adaptive_time_stepping:
                 self._coarsen_timestep()
 
@@ -311,11 +300,14 @@ class TransientSolver(KEigenvalueSolver):
             # time step size.
             elif self.dt != dt_initial:
                 self.dt = dt_initial
-                self._assemble_transient_matrices(with_scattering=True,
-                                                  with_fission=True)
+                self._assemble_transient_matrices(
+                    with_scattering=True, with_fission=True
+                )
 
+            # ------------------------------ copy new to old
             self._step_solutions()
 
+            # ------------------------------ print summary
             print(f"***** Time Step {step} *****")
             print(f"Simulation Time         : {self.time:.3g} s")
             print(f"Time Step Size          : {self.dt:.3e} s")
@@ -348,49 +340,36 @@ class TransientSolver(KEigenvalueSolver):
         """
         print("Computing initial conditions.")
 
-        # ========================================
-        # Evaluate initial condition functions
-        # ========================================
-
+        # ------------------------------ callable initial conditions
         if isinstance(self.initial_conditions, dict):
 
-            # Zero the flux moment vector
             self.phi[:] = 0.0
-
-            # Loop over cells
             for cell in self.mesh.cells:
-
-                # Get the nodes on the cell
                 nodes = self.discretization.nodes(cell)
 
-                # Loop over the nodes on the cell
                 for i in range(len(nodes)):
 
-                    # Go through initial condition dictionary
                     for g, f in self.initial_conditions.items():
                         dof = self.n_groups * len(nodes) * cell.id + g
                         self.phi[dof] = f(nodes[i])
 
-        # ========================================
-        # k-eigenvalue initial conditions
-        # ========================================
+        # ------------------------------ steady-state initial conditions
+        elif self.scale_fission_xs:
+            for xs in self.material_xs:
+                xs.sigma_f /= self.k_eff
+                xs.nu_sigma_f /= self.k_eff
+                xs.nu_prompt_sigma_f /= self.k_eff
+                xs.nu_delayed_sigma_f /= self.k_eff
 
-        else:
-
-            # Scale the fission cross-sections for perfectly steady-state
-            if self.scale_fission_xs:
-                for xs in self.material_xs:
-                    xs.sigma_f /= self.k_eff
-                    xs.nu_sigma_f /= self.k_eff
-                    xs.nu_prompt_sigma_f /= self.k_eff
-                    xs.nu_delayed_sigma_f /= self.k_eff
-
-        # ========================================
-        # Normalization of initial conditions
-        # ========================================
-
-        # Normalize the scalar flux for a reactor power level
+        # ------------------------------ normalize, if applicable
         if self.normalization_method is not None:
+
+            self._compute_bulk_properties()
+            if self.normalization_method == "TOTAL_POWER":
+                self.phi *= self.initial_power / self.power
+            elif self.normalization_method == "AVERAGE_POWER_DENSITY":
+                self.phi *= self.initial_power / self.average_power_density
+
             msg = "Normalizing the initial condition to the specified "
             if self.normalization_method == "TOTAL_POWER":
                 msg += "total power"
@@ -399,14 +378,7 @@ class TransientSolver(KEigenvalueSolver):
             msg += f" ({self.initial_power:.3e})"
             print(msg)
 
-            self._compute_bulk_properties()
-
-            if self.normalization_method == "TOTAL_POWER":
-                self.phi *= self.initial_power / self.power
-            elif self.normalization_method == "AVERAGE_POWER_DENSITY":
-                self.phi *= self.initial_power / self.average_power_density
-
-        # Initialize bulk properties
+        # ------------------------------ initialize bulk properties
         self._compute_bulk_properties()
         if self.use_precursors:
             if self.initial_conditions is None:
@@ -414,7 +386,7 @@ class TransientSolver(KEigenvalueSolver):
             else:
                 self.precursors[:] = 0.0
 
-        # Set old vectors
+        # ------------------------------ initialize old vectors
         self._step_solutions()
 
     def effective_dt(self, step: int = 0) -> float:
@@ -423,14 +395,6 @@ class TransientSolver(KEigenvalueSolver):
 
         The step parameter is used for designating the step of a multistep
         method.
-
-        Parameters
-        ----------
-        step : int
-
-        Returns
-        -------
-        float
         """
         if self.time_stepping_method == "BACKWARD_EULER":
             return self.dt

@@ -30,17 +30,11 @@ def _assemble_rhs(
 
     This routine is additive, so the right-hand side must be cleared
     before calling the method, if necessary.
-
-    Parameters
-    ----------
-    self : SteadyStateSolver
-    with_material_src : bool
-    with_scattering : bool
-    with_fission : bool
     """
 
-    # Loop over cells
+    # ---------------------------------------- loop over cells
     for cell in self.mesh.cells:
+
         volume = cell.volume
         uk_map = self.n_groups * cell.id
 
@@ -52,32 +46,23 @@ def _assemble_rhs(
         if with_material_src and src_id >= 0:
             src = self.material_src[src_id].values
 
-        # Loop over groups
+        # ---------------------------------------- loop over groups
         for g in range(self.n_groups):
             rhs = 0.0
 
-            # ========================================
-            # Material source term
-            # ========================================
-
+            # ------------------------------ material source
             rhs += 0.0 if src is None else src[g]
 
-            # ========================================
-            # Scattering source term
-            # ========================================
-
+            # ------------------------------ scattering source
             if with_scattering:
                 sig_s = xs.transfer_matrices[0][g]
                 for gp in range(self.n_groups):
                     rhs += sig_s[gp] * self.phi[uk_map + gp]
 
-            # ========================================
-            # Fission source term
-            # ========================================
-
+            # ------------------------------ fission source
             if with_fission and xs.is_fissile:
 
-                # Total fission
+                # -------------------- total
                 if not self.use_precursors:
                     chi = xs.chi[g]
                     nu_sigf = xs.nu_sigma_f
@@ -85,7 +70,7 @@ def _assemble_rhs(
                         rhs += (chi * nu_sigf[gp] *
                                 self.phi[uk_map + gp])
 
-                # Prompt + delayed fission
+                # -------------------- prompt + delayed
                 else:
                     chi_p = xs.chi_prompt[g]
                     chi_d = xs.chi_delayed[g]
@@ -94,69 +79,60 @@ def _assemble_rhs(
                     gamma = xs.precursor_yield
 
                     for gp in range(self.n_groups):
-                        rhs += (chi_p * nup_sigf[gp] *
-                                self.phi[uk_map + gp])
+                        rhs += chi_p * nup_sigf[gp] * self.phi[uk_map + gp]
 
                         for j in range(xs.n_precursors):
-                            rhs += (chi_d[j] * gamma[j] *
-                                    nud_sigf[gp] * self.phi[uk_map + gp])
+                            rhs += chi_d[j] * gamma[j] * \
+                                   nud_sigf[gp] * self.phi[uk_map + gp]
 
             self._b[uk_map + g] += rhs * volume
 
-        # ========================================
-        # Boundary source terms
-        # ========================================
-
+        # ------------------------------ boundary sources
         if with_boundary_src:
 
-            # Loop over faces
+            # -------------------- loop over faces
             for face in cell.faces:
 
-                # Skip interior faces
+                # skip interior faces, only stop on boundaries
                 if face.has_neighbor:
                     continue
 
+                # get boundary info
                 bid = face.neighbor_id
                 btype = self.boundary_info[bid][0]
 
-                # ========================================
-                # Dirichlet boundary source term
-                # ========================================
-
+                # ------------------------------ Dirichlet source
                 if btype == "DIRICHLET":
                     D = xs.diffusion_coeff
                     d_pf = cell.centroid.distance(face.centroid)
                     for g in range(self.n_groups):
                         bc: DirichletBoundary = self.boundaries[bid][g]
-                        bc_val = bc.boundary_value(face.centroid)
+
+                        r, f = face.centroid, bc.value
+                        bc_val = f(r) if callable(f) else f
 
                         self._b[uk_map + g] += \
                             D[g] / d_pf * bc_val * face.area
 
-                # ========================================
-                # Neumann boundary source term
-                # ========================================
-
+                # ------------------------------ Neumann source
                 elif btype == "NEUMANN":
                     for g in range(self.n_groups):
                         bc: NeumannBoundary = self.boundaries[bid][g]
-                        bc_val = bc.boundary_value(face.centroid)
 
                         r, f = face.centroid, bc.value
                         bc_val = f(r) if callable(f) else f
 
                         self._b[uk_map + g] += bc_val * face.area
 
-                # ========================================
-                # Robin boundary source term
-                # ========================================
-
-                elif btype == "MARSHAK" or btype == "ROBIN":
+                # ------------------------------ Robin source
+                elif btype in ["MARSHAK", "ROBIN"]:
                     D = xs.diffusion_coeff
                     d_pf = cell.centroid.distance(face.centroid)
                     for g in range(self.n_groups):
                         bc: RobinBoundary = self.boundaries[bid][g]
-                        bc_val = bc.boundary_value(face.centroid)
+
+                        r, f = face.centroid, bc.value
+                        bc_val = f(r) if callable(f) else f
 
                         coeff = D[g] / (bc.b * D[g] + bc.a * d_pf)
                         self._b[uk_map + g] += coeff * bc_val * face.area

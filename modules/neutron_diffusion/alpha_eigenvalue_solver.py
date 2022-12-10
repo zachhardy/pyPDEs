@@ -46,18 +46,22 @@ class AlphaEigenvalueSolver(SteadyStateSolver):
         msg = "\n".join(["", "*" * len(msg), msg, "*" * len(msg), ""])
         print(msg)
 
+        # ------------------------------ compute the eigen-decomposition
         self._assemble_eigensystem()
         evals, evecs_l, evecs_r = eig(self._A[0].todense(), left=True)
 
+        # ------------------------------ set the number of modes
         self.n_modes = len(evals) if self.n_modes == -1 else self.n_modes
         if self.n_modes > len(evals):
             raise ValueError("Invalid number of modes.")
 
+        # ------------------------------ sort the modes by eigenvalue
         idx = np.argsort(evals.real)[::-1][:self.n_modes]
         self.alphas = evals[idx]
         self.modes = evecs_r[:, idx]
         self.adjoint_modes = evecs_l[:, idx]
 
+        # ------------------------------ fit to data, if applicable
         if self._fit_data is not None:
             self._compute_amplitudes()
 
@@ -65,14 +69,15 @@ class AlphaEigenvalueSolver(SteadyStateSolver):
         """
         Assemble the operator for the alpha-eigensystem.
 
-        Returns
-        -------
-        csr_matrix
+        This is done by initializing the standard multi-group matrix,
+        negating it, multiplying by group-wise velocities, and dividing
+        by cell volumes.
         """
+        # ------------------------------ initialize matrix
         self._assemble_matrix(with_scattering=True, with_fission=True)
         A = self._A[0].todense()
 
-        # loop over cells
+        # ------------------------------ modify for alpha-eigensystem
         for cell in self.mesh.cells:
             uk_map = self.n_groups * cell.id
 
@@ -81,9 +86,9 @@ class AlphaEigenvalueSolver(SteadyStateSolver):
             xs = self.material_xs[xs_id]
             vel = 1.0 / xs.inv_velocity
 
-            # loop over groups
             for g in range(self.n_groups):
                 A[uk_map + g] *= -vel[g] / cell.volume
+
         self._A = [csr_matrix(A)]
 
     def _compute_amplitudes(self) -> None:
@@ -91,18 +96,19 @@ class AlphaEigenvalueSolver(SteadyStateSolver):
         Fit the alpha-eigenfunctions to the provided data.
         """
 
-        # evaluate callable ICs
+        # ------------------------------------------------------------
+        # Evaluate initial conditions
+        # ------------------------------------------------------------
+
+        # ------------------------------ callable ICs
         phi = np.zeros(self.phi.shape)
         if isinstance(self._fit_data, dict):
 
-            # loop over cells
             for cell in self.mesh.cells:
 
-                # loop over nodes
                 nodes = self.discretization.nodes(cell)
                 for i in range(len(nodes)):
 
-                    # loop over initial conditions
                     for g, f in self._fit_data.items():
                         if not callable(f):
                             raise TypeError("Initial condition must be callable.")
@@ -110,7 +116,7 @@ class AlphaEigenvalueSolver(SteadyStateSolver):
                         dof = (cell.id * len(nodes) + i) * self.n_groups + g
                         phi[dof] = f(nodes[i])
 
-        # set vector ICs
+        # ------------------------------ vector ICs
         elif isinstance(self._fit_data, np.ndarray):
             if len(self._fit_data) != len(phi):
                 raise AssertionError("Invalid initial condition vector.")
@@ -119,7 +125,10 @@ class AlphaEigenvalueSolver(SteadyStateSolver):
         else:
             raise TypeError("Unrecognized type for fit data.")
 
-        # compute amplitudes
+        # ------------------------------------------------------------
+        # Compute amplitudes
+        # ------------------------------------------------------------
+
         evecs_l_star = self.adjoint_modes.conj().transpose()
         A = evecs_l_star @ self.modes
         b = evecs_l_star @ phi.reshape(-1, 1)
@@ -132,17 +141,23 @@ class AlphaEigenvalueSolver(SteadyStateSolver):
                 self.modes[:, m] *= -1.0
                 self.adjoint_modes[:, m] *= -1.0
 
-        # compute alpha representation to data
+        # ------------------------------------------------------------
+        # Compute alpha-expansion fit
+        # ------------------------------------------------------------
+
         self.phi = self.modes @ self.amplitudes
         diff = np.linalg.norm(phi - self.phi) / np.linalg.norm(phi)
         print(f"Difference in fit:  {diff:.4g}")
         print(f"Number of modes:  {len(self.alphas)}")
 
-        # define dominant mode index
         idx = np.argmax(self.amplitudes.real)
         print(f"Dominant mode:  {idx}, {self.amplitudes[idx]:.3e}\n")
 
-        # plot dominant mode
+        # ------------------------------------------------------------
+        # Plotting
+        # ------------------------------------------------------------
+
+        # ------------------------------ plot dominant mode
         plt.figure()
         plt.title(f"Dominant Mode Index: {idx}")
         z = [cell.centroid.z for cell in self.mesh.cells]
@@ -154,7 +169,7 @@ class AlphaEigenvalueSolver(SteadyStateSolver):
         plt.legend()
         plt.tight_layout()
 
-        # plot error in fit
+        # ------------------------------ plot fit error
         fig, ax = plt.subplots(ncols=2, figsize=(8, 4))
         ax[0].set_title("Alpha Expansion")
         ax[1].set_title("Alpha Expansion Error")
@@ -171,7 +186,6 @@ class AlphaEigenvalueSolver(SteadyStateSolver):
             ax[0].plot(z, self.phi[g::self.n_groups], f'{color}-',
                        linewidth=1.5, label=f"Group {g}")
             ax[0].plot(z, phi[g::self.n_groups], 'o', ms=4.0, alpha=0.6)
-
 
             c = np.linalg.norm(phi[g::self.n_groups])
             if c > 0.0:

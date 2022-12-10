@@ -18,7 +18,7 @@ class Boundary:
         Parameters
         ----------
         boundary_type : str
-            The boundary type. This is provided by sub-classes.
+            The boundary type. This is provided by subclasses.
         boundary_value : float or callable
             The boundary value or boundary value function. If the
             latter, the function must be callable via position

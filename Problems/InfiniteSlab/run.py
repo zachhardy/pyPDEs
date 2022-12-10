@@ -20,9 +20,9 @@ from modules.neutron_diffusion import TransientSolver
 path = os.path.abspath(os.path.dirname(__file__))
 
 
-# ==================================================
-# Parse Arguments
-# ==================================================
+# ------------------------------------------------------------
+# Argument Parser
+# ------------------------------------------------------------
 
 class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter,
                       argparse.MetavarTypeHelpFormatter,
@@ -57,9 +57,9 @@ parser.add_argument("--output_directory",
 argv = parser.parse_args()
 
 
-# ==================================================
-# Cross-section function
-# ==================================================
+# ------------------------------------------------------------
+# Cross-Section Functions
+# ------------------------------------------------------------
 
 
 def f(group_num, args, reference):
@@ -73,9 +73,9 @@ def f(group_num, args, reference):
         return reference
 
 
-# ==================================================
-# Create the spatial mesh
-# ==================================================
+# ------------------------------------------------------------
+# Mesh
+# ------------------------------------------------------------
 
 zone_edges = [0.0, argv.interface, 200.0, 240.0]
 zone_subdivs = [20, 80, 20]
@@ -83,9 +83,9 @@ material_ids = [0, 1, 2]
 mesh = create_1d_orthomesh(zone_edges, zone_subdivs, material_ids)
 fv = FiniteVolume(mesh)
 
-# ==================================================
-# Create the materials
-# ==================================================
+# ------------------------------------------------------------
+# Materials
+# ------------------------------------------------------------
 
 materials = [Material() for _ in range(3)]
 xsecs = [CrossSections() for _ in range(3)]
@@ -99,21 +99,21 @@ for i, (material, xs, xs_path) in enumerate(it):
     xs.sigma_a_function = f if i == 0 else None
     material.properties.append(xs)
 
-# ==================================================
-# Boundary conditions
-# ==================================================
+# ------------------------------------------------------------
+# Boundary Conditions
+# ------------------------------------------------------------
 
 boundary_info = [("ZERO_FLUX", -1), ("ZERO_FLUX", -1)]
 
-# ==================================================
-# Create the solver
-# ==================================================
+# ------------------------------------------------------------
+# Solver
+# ------------------------------------------------------------
 
 solver = TransientSolver(fv, materials, boundary_info)
 
-# ==================================================
-# Temporal discretization
-# ==================================================
+# ------------------------------------------------------------
+# Temporal Discretization
+# ------------------------------------------------------------
 
 solver.normalization_method = "TOTAL_POWER"
 solver.scale_fission_xs = True
@@ -122,9 +122,9 @@ solver.t_end = argv.t_end
 solver.dt = argv.dt
 solver.time_stepping_method = "TBDF2"
 
-# ==================================================
-# Set options
-# ==================================================
+# ------------------------------------------------------------
+# Options
+# ------------------------------------------------------------
 
 solver.use_precursors = True
 solver.lag_precursors = False
@@ -139,9 +139,9 @@ solver.coarsen_threshold = 0.01
 solver.write_outputs = True
 solver.output_directory = argv.output_directory
 
-# ==================================================
+# ------------------------------------------------------------
 # Execute
-# ==================================================
+# ------------------------------------------------------------
 
 solver.initialize()
 solver.execute()

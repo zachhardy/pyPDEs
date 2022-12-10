@@ -19,9 +19,9 @@ from modules.neutron_diffusion import TransientSolver
 path = os.path.abspath(os.path.dirname(__file__))
 
 
-# ==================================================
-# Parse Arguments
-# ==================================================
+# ------------------------------------------------------------
+# Argument Parser
+# ------------------------------------------------------------
 
 class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter,
                       argparse.MetavarTypeHelpFormatter,
@@ -58,27 +58,18 @@ parser.add_argument("--output_directory",
 
 argv = parser.parse_args()
 
-
-# ==================================================
-# Initial condition function
-# ==================================================
-
-def ic(r: CartesianVector) -> float:
-    return 0.0  # - r.z ** 2 / argv.radius ** 2
-
-
-# ==================================================
-# Create the spatial mesh
-# ==================================================
+# ------------------------------------------------------------
+# Mesh
+# ------------------------------------------------------------
 
 mesh = create_1d_orthomesh(
     [0.0, argv.radius], [argv.n_cells], [0], "SPHERICAL"
 )
 fv = FiniteVolume(mesh)
 
-# ==================================================
-# Create the materials
-# ==================================================
+# ------------------------------------------------------------
+# Materials
+# ------------------------------------------------------------
 
 material = Material()
 
@@ -87,9 +78,9 @@ xs.read_xs_file(f"{path}/xs/Sphere3g.xs", argv.density)
 xs.transfer_matrices[0][1][0] = argv.down_scatter * argv.density
 material.properties.append(xs)
 
-# ==================================================
-# Boundary conditions
-# ==================================================
+# ------------------------------------------------------------
+# Boundary Conditions
+# ------------------------------------------------------------
 
 def bndry_src(r: CartesianVector, t: float) -> float:
     return 1.0e8 if t <= argv.dt else 0.0
@@ -98,15 +89,19 @@ def bndry_src(r: CartesianVector, t: float) -> float:
 boundary_vals = [{0: bndry_src}]
 boundary_info = [("REFLECTIVE", -1), ("MARSHAK", 0)]
 
-# ==================================================
-# Create the solver
-# ==================================================
+# ------------------------------------------------------------
+# Solver
+# ------------------------------------------------------------
 
 solver = TransientSolver(fv, [material], boundary_info, boundary_vals)
 
-# ==================================================
-# Temporal discretization
-# ==================================================
+# ------------------------------------------------------------
+# Temporal Discretization
+# ------------------------------------------------------------
+
+def ic(r: CartesianVector) -> float:
+    return 1.0 - r.z ** 2 / argv.radius ** 2
+
 
 solver.initial_conditions = {0: ic}  # , 1: ic}
 
@@ -117,9 +112,9 @@ solver.t_end = argv.t_end
 solver.dt = argv.dt
 solver.time_stepping_method = "TBDF2"
 
-# ==================================================
-# Set options
-# ==================================================
+# ------------------------------------------------------------
+# Options
+# ------------------------------------------------------------
 
 solver.use_precursors = False
 solver.lag_precursors = False
@@ -131,9 +126,9 @@ solver.coarsen_threshold = 0.01
 solver.write_outputs = True
 solver.output_directory = argv.output_directory
 
-# ==================================================
+# ------------------------------------------------------------
 # Execute
-# ==================================================
+# ------------------------------------------------------------
 
 solver.initialize()
 solver.execute()

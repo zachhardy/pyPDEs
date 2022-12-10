@@ -31,54 +31,54 @@ class KEigenvalueSolver(SteadyStateSolver):
         self.max_iterations: int = 500
 
     def execute(self) -> None:
-        """
-        Execute the k-eigenvalue multi-group diffusion solver.
-        """
+        """Execute the k-eigenvalue multi-group diffusion solver."""
 
         msg = "Executing the multi-group diffusion k-eigenvalue solver"
         msg = "\n".join(["", "*" * len(msg), msg, "*" * len(msg), ""])
         print(msg)
 
-        # Initialize the system with unit flux
+        # -------------------- initialize the system with unit flux
         self.phi[:] = 1.0 / self.phi.size
         self.phi_ell[:] = self.phi
 
-        # Bookkeeping
+        # -------------------- book-keeping
         production = self._compute_fission_production()
         production_ell = production
         k_ell = k_change = phi_change = 1.0
 
-        # Assemble the matrix without fission
+        # -------------------- assemble the matrix
         self._assemble_matrix(with_scattering=True,
                               with_fission=False)
 
-        # Start iterating
+        # ------------------------------------------------------------
+        # Start fission source iterations
+        # ------------------------------------------------------------
+
         nit, converged = 0, False
         for nit in range(self.max_iterations):
 
-            # Set the fission source
+            # ------------------------------ compute the fission source
             self._b[:] = 0.0
             self._assemble_rhs(with_fission=True)
             self._b /= self.k_eff
 
-            # Solve the system
+            # ------------------------------ solve the system
             self.phi = spsolve(self._A[0], self._b)
-
-            # Update the k-eigenvalue
             production = self._compute_fission_production()
             self.k_eff *= production / production_ell
 
-            # Check convergence
+            # ------------------------------ check convergence
             k_change = abs(self.k_eff - k_ell) / self.k_eff
             phi_change = norm(self.phi - self.phi_ell, 1)
             converged = (k_change < self.tolerance and
                          phi_change < self.tolerance)
 
-            # Reset bookkeeping
+            # ------------------------------ finalize the iteration
             k_ell = self.k_eff
             production_ell = production
             self.phi_ell = np.copy(self.phi)
 
+            # ------------------------------ print summary
             msg = f"k-iteration  {nit:<4}"
             msg += f"k_eff  {self.k_eff:<10.6g}"
             msg += f"k change  {k_change:<14.6e}"
@@ -90,7 +90,10 @@ class KEigenvalueSolver(SteadyStateSolver):
             if converged:
                 break
 
-        # Compute precursors
+        # ------------------------------------------------------------
+        # Finalize the simulation
+        # ------------------------------------------------------------
+
         if self.use_precursors:
             self._compute_precursors()
             self.precursors /= self.k_eff
@@ -106,22 +109,17 @@ class KEigenvalueSolver(SteadyStateSolver):
     def _compute_fission_production(self) -> float:
         """
         Compute the total fission neutron production in the system.
-
-        Returns
-        -------
-        float
         """
         f = 0.0
         for cell in self.mesh.cells:
-            # Get cross-sections
+
             xs_id = self.matid_to_xs_map[cell.material_id]
             xs = self.material_xs[xs_id]
 
-            # Only proceed for fissile materials
+            # only proceed for fissile materials
             if xs.is_fissile:
+
                 uk_map = self.n_groups * cell.id
                 for g in range(self.n_groups):
-                    f += (xs.nu_sigma_f[g] *
-                          self.phi[uk_map + g] *
-                          cell.volume)
+                    f += xs.nu_sigma_f[g] * self.phi[uk_map + g] * cell.volume
         return f

@@ -68,12 +68,16 @@ class SteadyStateSolver:
         discretization and all other features such as boundary
         """
 
-        # ==================== Spatial Domain ==================== #
+        # ------------------------------------------------------------
+        # Spatial Domain
+        # ------------------------------------------------------------
 
         self.mesh: Mesh = discretization.mesh
         self.discretization: FiniteVolume = discretization
 
-        # ==================== Materials ====================#
+        # ------------------------------------------------------------
+        # Materials
+        # ------------------------------------------------------------
 
         self.materials: list[Material] = materials
         self.material_xs: list[CrossSections] = list()
@@ -83,14 +87,18 @@ class SteadyStateSolver:
         self.matid_to_xs_map: list[int] = list()
         self.matid_to_src_map: list[int] = list()
 
-        # ==================== Boundary Conditions ====================#
+        # ------------------------------------------------------------
+        # Boundary Conditions
+        # ------------------------------------------------------------
 
         self.boundary_info: list[tuple[str, int]] = boundary_info
         self.boundary_values: list[dict] = boundary_values
 
         self.boundaries: list[list[Boundary]] = list()
 
-        # ==================== Problem Information ====================#
+        # ------------------------------------------------------------
+        # Problem Data
+        # ------------------------------------------------------------
 
         self.n_groups: int = 0
 
@@ -108,46 +116,31 @@ class SteadyStateSolver:
 
     def initialize(self) -> None:
         """
-        Initialize the solver.
+        Initialize the multi-group diffusion solver.
         """
 
         msg = "Initializing the multi-group diffusion solver"
         msg = "\n".join(["", "*" * len(msg), msg, "*" * len(msg), ""])
         print(msg)
 
-        # ==================================================
-        # Check the mesh
-        # ==================================================
-
+        # ------------------------------ check the mesh
         if self.mesh.dimension > 2:
             msg = "Only 2D problems have been implemented."
             raise AssertionError(msg)
 
-        # ==================================================
-        # Check the discretization
-        # ==================================================
-
+        # ------------------------------ check the discretization
         if self.discretization.type not in ["FV"]:
             msg = "Only finite volume discretizations " \
                   "have been implemented."
             raise AssertionError(msg)
 
-        # ==================================================
-        # Initialize the material properties
-        # ==================================================
-
+        # ------------------------------ initialize materials
         self._initialize_materials()
 
-        # ==================================================
-        # Initialize the boundary conditions
-        # ==================================================
-
+        # ------------------------------ initialize boundaries
         self._initialize_boundaries()
 
-        # ==================================================
-        # Initialize data storage
-        # ==================================================
-
+        # ------------------------------ initialize storage
         n_phi_dofs = len(self.mesh.cells) * self.n_groups
         self.phi = np.zeros(n_phi_dofs)
         self.phi_ell = np.zeros(n_phi_dofs)
@@ -167,10 +160,15 @@ class SteadyStateSolver:
         msg = "\n".join(["", "*" * len(msg), msg, "*" * len(msg), ""])
         print(msg)
 
-        self._assemble_matrix(with_scattering=True,
-                              with_fission=True)
-        self._assemble_rhs(with_material_src=True,
-                           with_boundary_src=True)
+        # ------------------------------ assemble the system
+        self._assemble_matrix(
+            with_scattering=True, with_fission=True
+        )
+        self._assemble_rhs(
+            with_material_src=True, with_boundary_src=True
+        )
+
+        # ------------------------------ solve the system
         self.phi = spsolve(self._A[0], self._b)
         if self.use_precursors:
             self._compute_precursors()
@@ -184,18 +182,22 @@ class SteadyStateSolver:
 
         self.precursors[:] = 0.0
         for cell in self.mesh.cells:
+
             xs_id = self.matid_to_xs_map[cell.material_id]
             xs = self.material_xs[xs_id]
 
+            # precursors only live on fissile cells
             if xs.is_fissile:
                 uk_map_phi = self.n_groups * cell.id
                 uk_map_precursor = self.max_precursors * cell.id
 
                 for j in range(xs.n_precursors):
+
                     value = 0.0
                     for g in range(self.n_groups):
                         value += (xs.precursor_yield[j] /
                                   xs.precursor_lambda[j] *
                                   xs.nu_delayed_sigma_f[g] *
                                   self.phi[uk_map_phi + g])
+
                     self.precursors[uk_map_precursor + j] = value
