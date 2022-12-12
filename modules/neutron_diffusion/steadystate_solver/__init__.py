@@ -42,8 +42,7 @@ class SteadyStateSolver:
             boundary_values: list[dict] = None
     ) -> None:
         """
-        Construct the solver from a discretization, list of materials,
-        and boundary condition inputs.
+        Constructor.
 
         Parameters
         ----------
@@ -179,25 +178,29 @@ class SteadyStateSolver:
         """
         if not self.use_precursors:
             return
-
         self.precursors[:] = 0.0
+
+        # ------------------------------ loop over cells
         for cell in self.mesh.cells:
 
             xs_id = self.matid_to_xs_map[cell.material_id]
             xs = self.material_xs[xs_id]
 
-            # precursors only live on fissile cells
-            if xs.is_fissile:
+            # only stop on fissile cells (cells with precursors)
+            if not xs.is_fissile:
+
                 uk_map_phi = self.n_groups * cell.id
                 uk_map_precursor = self.max_precursors * cell.id
 
+                # ------------------------------ loop over precursors
                 for j in range(xs.n_precursors):
+                    coeff = xs.precursor_yield[j] / xs.precursor_lambda[j]
 
-                    value = 0.0
+                    # ------------------------------ delayed fission rate
+                    Sf_d = 0.0
                     for g in range(self.n_groups):
-                        value += (xs.precursor_yield[j] /
-                                  xs.precursor_lambda[j] *
-                                  xs.nu_delayed_sigma_f[g] *
-                                  self.phi[uk_map_phi + g])
+                        Sf_d += xs.nu_delayed_sigma_f[g] * \
+                                self.phi[uk_map_phi + g]
 
-                    self.precursors[uk_map_precursor + j] = value
+                    # ------------------------------ compute precursors
+                    self.precursors[uk_map_precursor + j] = coeff * Sf_d

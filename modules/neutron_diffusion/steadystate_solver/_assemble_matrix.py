@@ -24,7 +24,7 @@ def _assemble_matrix(
     iterative procedure.
     """
 
-    # ---------------------------------------- loop over cells
+    # ------------------------------ loop over cells
     rows, cols, data = [], [], []
     for cell in self.mesh.cells:
 
@@ -55,14 +55,14 @@ def _assemble_matrix(
             # ------------------------------ fission
             if with_fission and xs.is_fissile:
 
-                # -------------------- total
+                # ------------------------------ total
                 if not self.use_precursors:
                     chi = xs.chi[g]
                     nu_sigf = xs.nu_sigma_f
                     for gp in range(self.n_groups):
                         Aloc[g][gp] -= chi * nu_sigf[gp]
 
-                # -------------------- prompt + delayed
+                # ------------------------------ prompt + delayed
                 else:
                     chi_p = xs.chi_prompt[g]
                     chi_d = xs.chi_delayed[g]

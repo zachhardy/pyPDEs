@@ -48,13 +48,13 @@ def _solve_timestep_step(self: 'TransientSolver', step: int = 0) -> None:
     # ------------------------------ finalize the time-step
     if self.time_stepping_method != "BACKWARD_EULER" and step == 0:
 
-        # -------------------- scalar flux
+        # ------------------------------ scalar flux
         self.phi = 2.0 * self.phi - self.phi_old
 
-        # -------------------- temperature
+        # ------------------------------ temperature
         self.temperature = 2.0 * self.temperature - self.temperature_old
 
-        # -------------------- precursors
+        # ------------------------------ precursors
         if self.use_precursors:
             self.precursors = 2.0 * self.precursors - self.precursors_old
 

@@ -44,7 +44,7 @@ def _assemble_transient_matrix(
     """
     eff_dt = self.effective_dt(step)
 
-    # ---------------------------------------- loop over cells
+    # ------------------------------ loop over cells
     rows, cols, data = [], [], []
     for cell in self.mesh.cells:
 
@@ -86,22 +86,22 @@ def _assemble_transient_matrix(
             # ------------------------------ fission
             if with_fission and xs.is_fissile:
 
-                # -------------------- total
+                # ------------------------------ total
                 if not self.use_precursors:
                     chi = xs.chi[g]
                     nu_sigf = xs.nu_sigma_f
                     for gp in range(self.n_groups):
                         Aloc[g][gp] -= chi * nu_sigf[gp]
 
-                # -------------------- prompt + delayed
+                # ------------------------------ prompt + delayed
                 else:
-                    # -------------------- prompt
+                    # ------------------------------ prompt
                     chi_p = xs.chi_prompt[g]
                     nup_sigf = xs.nu_prompt_sigma_f
                     for gp in range(self.n_groups):
                         Aloc[g][gp] -= chi_p * nup_sigf[gp]
 
-                    # -------------------- delayed
+                    # ------------------------------ delayed
                     if not self.lag_precursors:
                         chi_d = xs.chi_delayed[g]
                         nud_sigf = xs.nu_delayed_sigma_f
@@ -114,6 +114,7 @@ def _assemble_transient_matrix(
                             coeff += chi_d[j] * decay[j] * gamma[j] * \
                                      eff_dt / (1.0 + eff_dt * decay[j])
 
+                        # compute precursor substitution term
                         for gp in range(self.n_groups):
                             Aloc[g][gp] -= coeff * nud_sigf[gp]
 

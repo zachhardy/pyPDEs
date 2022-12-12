@@ -14,7 +14,7 @@ def _update_precursors(
     """
     eff_dt = self.effective_dt(step)
 
-    # ---------------------------------------- loop over cells
+    # ------------------------------ loop over cells
     for cell in self.mesh.cells:
 
         xs_id = self.matid_to_xs_map[cell.material_id]
@@ -56,7 +56,7 @@ def _update_temperature(
     alpha = self.conversion_factor
     eff_dt = self.effective_dt(step)
 
-    # ---------------------------------------- loop over cells
+    # ------------------------------ loop over cells
     for cell in self.mesh.cells:
 
         xs_id = self.matid_to_xs_map[cell.material_id]
@@ -89,7 +89,7 @@ def _compute_bulk_properties(self: 'TransientSolver') -> None:
     """
     Ef = self.energy_per_fission
 
-    # ---------------------------------------- zero everything
+    # ------------------------------ zero everything
     n_fuel_cells = 0
     V_fuel = 0.0
 
@@ -99,7 +99,7 @@ def _compute_bulk_properties(self: 'TransientSolver') -> None:
     self.peak_fuel_temperature = 0.0
     self.average_fuel_temperature = 0.0
 
-    # ---------------------------------------- loop over cells
+    # ------------------------------ loop over cells
     for cell in self.mesh.cells:
 
         xs_id = self.matid_to_xs_map[cell.material_id]

@@ -234,18 +234,11 @@ class TransientSolver(KEigenvalueSolver):
             with_scattering=True, with_fission=True
         )
 
-        # ------------------------------------------------------------
-        # Time step until the final simulation time is reached
-        # ------------------------------------------------------------
-
+        # ------------------------------ start time-stepping
         step = 0
         dt_initial = self.dt
         self.time = self.t_start
         while self.time < self.t_end - eps:
-
-            # --------------------------------------------------
-            # Check the time-step configuration
-            # --------------------------------------------------
 
             # a flag for reconstructing the system matrix.
             reconstruct_matrices = False
@@ -260,24 +253,18 @@ class TransientSolver(KEigenvalueSolver):
                 self.dt = self.t_end - self.time
                 reconstruct_matrices = True
 
-            # --------------------------------------------------
-            # Solve time-step
-            # --------------------------------------------------
-
+            # ------------------------------ solve the time-step
             self._solve_timestep(reconstruct_matrices)
             self._compute_bulk_properties()
 
             if self.adaptive_time_stepping:
                 self._refine_timestep()
 
-            # --------------------------------------------------
-            # Finalize time-step
-            # --------------------------------------------------
-
+            # ------------------------------ increment time
             self.time += self.dt
             step += 1
 
-            # ------------------------------ output solutions
+            # ------------------------------ outputting
             if self.write_outputs:
                 if abs(self.time - next_output) < eps:
                     self.write_snapshot(output_num)

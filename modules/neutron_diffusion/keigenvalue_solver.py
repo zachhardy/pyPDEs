@@ -37,23 +37,20 @@ class KEigenvalueSolver(SteadyStateSolver):
         msg = "\n".join(["", "*" * len(msg), msg, "*" * len(msg), ""])
         print(msg)
 
-        # -------------------- initialize the system with unit flux
+        # ------------------------------ initialize the system with unit flux
         self.phi[:] = 1.0 / self.phi.size
         self.phi_ell[:] = self.phi
 
-        # -------------------- book-keeping
+        # ------------------------------ book-keeping
         production = self._compute_fission_production()
         production_ell = production
         k_ell = k_change = phi_change = 1.0
 
-        # -------------------- assemble the matrix
+        # ------------------------------ assemble the matrix
         self._assemble_matrix(with_scattering=True,
                               with_fission=False)
 
-        # ------------------------------------------------------------
-        # Start fission source iterations
-        # ------------------------------------------------------------
-
+        # ------------------------------ start fission source iterations
         nit, converged = 0, False
         for nit in range(self.max_iterations):
 
@@ -90,14 +87,12 @@ class KEigenvalueSolver(SteadyStateSolver):
             if converged:
                 break
 
-        # ------------------------------------------------------------
-        # Finalize the simulation
-        # ------------------------------------------------------------
-
+        # ------------------------------ compute precursors
         if self.use_precursors:
             self._compute_precursors()
             self.precursors /= self.k_eff
 
+        # ------------------------------ print simulation summary
         print("\n****** k-Eigenvalue Solver Converged! *****"
               if converged else
               "\n!!*!! WARNING: k-Eigenvalue Solver NOT Converged !!*!!")
