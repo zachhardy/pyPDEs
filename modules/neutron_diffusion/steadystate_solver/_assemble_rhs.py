@@ -90,49 +90,48 @@ def _assemble_rhs(
         # ------------------------------ boundary sources
         if with_boundary_src:
 
-            # -------------------- loop over faces
+            # ------------------------------ loop over faces
             for face in cell.faces:
 
-                # skip interior faces, only stop on boundaries
-                if face.has_neighbor:
-                    continue
+                # only stop on boundary faces
+                if not face.has_neighbor:
 
-                # get boundary info
-                bid = face.neighbor_id
-                btype = self.boundary_info[bid][0]
+                    # get boundary info
+                    bid = face.neighbor_id
+                    btype = self.boundary_info[bid][0]
 
-                # ------------------------------ Dirichlet source
-                if btype == "DIRICHLET":
-                    D = xs.diffusion_coeff
-                    d_pf = cell.centroid.distance(face.centroid)
-                    for g in range(self.n_groups):
-                        bc: DirichletBoundary = self.boundaries[bid][g]
+                    # ------------------------------ Dirichlet source
+                    if btype == "DIRICHLET":
+                        D = xs.diffusion_coeff
+                        d_pf = cell.centroid.distance(face.centroid)
+                        for g in range(self.n_groups):
+                            bc: DirichletBoundary = self.boundaries[bid][g]
 
-                        r, f = face.centroid, bc.value
-                        bc_val = f(r) if callable(f) else f
+                            r, f = face.centroid, bc.value
+                            bc_val = f(r) if callable(f) else f
 
-                        self._b[uk_map + g] += \
-                            D[g] / d_pf * bc_val * face.area
+                            self._b[uk_map + g] += \
+                                D[g] / d_pf * bc_val * face.area
 
-                # ------------------------------ Neumann source
-                elif btype == "NEUMANN":
-                    for g in range(self.n_groups):
-                        bc: NeumannBoundary = self.boundaries[bid][g]
+                    # ------------------------------ Neumann source
+                    elif btype == "NEUMANN":
+                        for g in range(self.n_groups):
+                            bc: NeumannBoundary = self.boundaries[bid][g]
 
-                        r, f = face.centroid, bc.value
-                        bc_val = f(r) if callable(f) else f
+                            r, f = face.centroid, bc.value
+                            bc_val = f(r) if callable(f) else f
 
-                        self._b[uk_map + g] += bc_val * face.area
+                            self._b[uk_map + g] += bc_val * face.area
 
-                # ------------------------------ Robin source
-                elif btype in ["MARSHAK", "ROBIN"]:
-                    D = xs.diffusion_coeff
-                    d_pf = cell.centroid.distance(face.centroid)
-                    for g in range(self.n_groups):
-                        bc: RobinBoundary = self.boundaries[bid][g]
+                    # ------------------------------ Robin source
+                    elif btype in ["MARSHAK", "ROBIN"]:
+                        D = xs.diffusion_coeff
+                        d_pf = cell.centroid.distance(face.centroid)
+                        for g in range(self.n_groups):
+                            bc: RobinBoundary = self.boundaries[bid][g]
 
-                        r, f = face.centroid, bc.value
-                        bc_val = f(r) if callable(f) else f
+                            r, f = face.centroid, bc.value
+                            bc_val = f(r) if callable(f) else f
 
-                        coeff = D[g] / (bc.b * D[g] + bc.a * d_pf)
-                        self._b[uk_map + g] += coeff * bc_val * face.area
+                            coeff = D[g] / (bc.b * D[g] + bc.a * d_pf)
+                            self._b[uk_map + g] += coeff * bc_val * face.area

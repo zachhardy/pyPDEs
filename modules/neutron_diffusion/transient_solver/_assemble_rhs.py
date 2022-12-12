@@ -37,7 +37,7 @@ def _assemble_transient_rhs(
     eff_dt = self.effective_dt(step)
     t = self.time + eff_dt
 
-    # ---------------------------------------- loop over cells
+    # ------------------------------ loop over cells
     for cell in self.mesh.cells:
 
         volume = cell.volume
@@ -93,7 +93,7 @@ def _assemble_transient_rhs(
             # ------------------------------ fission
             if with_fission and xs.is_fissile:
 
-                # -------------------- total
+                # ------------------------------ total
                 if not self.use_precursors:
                     chi = xs.chi[g]
                     nu_sigf = xs.nu_sigma_f
@@ -102,9 +102,10 @@ def _assemble_transient_rhs(
                         rhs += chi * nu_sigf[gp] * \
                                 self.phi[uk_map_g + gp]
 
-                # -------------------- prompt + delayed
+                # ------------------------------ prompt + delayed
                 else:
-                    # -------------------- prompt
+
+                    # ------------------------------ prompt
                     chi_p = xs.chi_prompt[g]
                     nup_sigf = xs.nu_prompt_sigma_f
 
@@ -112,7 +113,7 @@ def _assemble_transient_rhs(
                         rhs += chi_p * nup_sigf[gp] * \
                                self.phi[uk_map_g + gp]
 
-                    # -------------------- delayed
+                    # ------------------------------ delayed
                     if not self.lag_precursors:
                         chi_d = xs.chi_delayed[g]
                         nud_sigf = xs.nu_delayed_sigma_f
@@ -125,6 +126,7 @@ def _assemble_transient_rhs(
                             coeff += chi_d[j] * decay[j] * gamma[j] * \
                                      eff_dt / (1.0 + eff_dt * decay[j])
 
+                        # compute precursor substitution source
                         for gp in range(self.n_groups):
                             rhs += coeff * nud_sigf[gp] * \
                                    self.phi[uk_map_g + gp]
@@ -137,39 +139,38 @@ def _assemble_transient_rhs(
             # ------------------------------ loop over faces
             for face in cell.faces:
 
-                # skip interior faces
-                if face.has_neighbor:
-                    continue
+                # only stop on boundary faces
+                if not face.has_neighbor:
 
-                # get boundary info
-                bid = face.neighbor_id
-                btype = self.boundary_info[bid][0]
+                    # get boundary info
+                    bid = face.neighbor_id
+                    btype = self.boundary_info[bid][0]
 
-                # ------------------------------ Dirichlet sources
-                if btype == "DIRICHLET":
-                    D = xs.diffusion_coeff
-                    d_pf = cell.centroid.distance(face.centroid)
-                    for g in range(self.n_groups):
-                        bc: DirichletBoundary = self.boundaries[bid][g]
-                        bc_val = bc.boundary_value(face.centroid, t)
+                    # ------------------------------ Dirichlet sources
+                    if btype == "DIRICHLET":
+                        D = xs.diffusion_coeff
+                        d_pf = cell.centroid.distance(face.centroid)
+                        for g in range(self.n_groups):
+                            bc: DirichletBoundary = self.boundaries[bid][g]
+                            bc_val = bc.boundary_value(face.centroid, t)
 
-                        self._b[uk_map_g + g] += \
-                            D[g] / d_pf * bc_val * face.area
+                            self._b[uk_map_g + g] += \
+                                D[g] / d_pf * bc_val * face.area
 
-                # ------------------------------ Neumann sources
-                elif btype == "NEUMANN":
-                    for g in range(self.n_groups):
-                        bc: NeumannBoundary = self.boundaries[bid][g]
-                        bc_val = bc.boundary_value(face.centroid, t)
-                        self._b[uk_map_g + g] += bc_val * face.area
+                    # ------------------------------ Neumann sources
+                    elif btype == "NEUMANN":
+                        for g in range(self.n_groups):
+                            bc: NeumannBoundary = self.boundaries[bid][g]
+                            bc_val = bc.boundary_value(face.centroid, t)
+                            self._b[uk_map_g + g] += bc_val * face.area
 
-                # ------------------------------ Robin sources
-                elif btype in ["MARSHAK", "ROBIN"]:
-                    D = xs.diffusion_coeff
-                    d_pf = (cell.centroid - face.centroid).norm()
-                    for g in range(self.n_groups):
-                        bc: RobinBoundary = self.boundaries[bid][g]
-                        bc_val = bc.boundary_value(face.centroid, t)
+                    # ------------------------------ Robin sources
+                    elif btype in ["MARSHAK", "ROBIN"]:
+                        D = xs.diffusion_coeff
+                        d_pf = (cell.centroid - face.centroid).norm()
+                        for g in range(self.n_groups):
+                            bc: RobinBoundary = self.boundaries[bid][g]
+                            bc_val = bc.boundary_value(face.centroid, t)
 
-                        coeff = D[g] / (bc.b * D[g] + bc.a * d_pf)
-                        self._b[uk_map_g + g] += coeff * bc_val * face.area
+                            coeff = D[g] / (bc.b * D[g] + bc.a * d_pf)
+                            self._b[uk_map_g + g] += coeff * bc_val * face.area

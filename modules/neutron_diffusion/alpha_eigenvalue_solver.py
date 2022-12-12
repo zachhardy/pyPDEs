@@ -96,11 +96,7 @@ class AlphaEigenvalueSolver(SteadyStateSolver):
         Fit the alpha-eigenfunctions to the provided data.
         """
 
-        # ------------------------------------------------------------
-        # Evaluate initial conditions
-        # ------------------------------------------------------------
-
-        # ------------------------------ callable ICs
+        # ------------------------------ evaluate callable initial conditions
         phi = np.zeros(self.phi.shape)
         if isinstance(self._fit_data, dict):
 
@@ -116,7 +112,7 @@ class AlphaEigenvalueSolver(SteadyStateSolver):
                         dof = (cell.id * len(nodes) + i) * self.n_groups + g
                         phi[dof] = f(nodes[i])
 
-        # ------------------------------ vector ICs
+        # ------------------------------ set vector initial conditions
         elif isinstance(self._fit_data, np.ndarray):
             if len(self._fit_data) != len(phi):
                 raise AssertionError("Invalid initial condition vector.")
@@ -125,10 +121,7 @@ class AlphaEigenvalueSolver(SteadyStateSolver):
         else:
             raise TypeError("Unrecognized type for fit data.")
 
-        # ------------------------------------------------------------
-        # Compute amplitudes
-        # ------------------------------------------------------------
-
+        # ------------------------------ compute amplitudes
         evecs_l_star = self.adjoint_modes.conj().transpose()
         A = evecs_l_star @ self.modes
         b = evecs_l_star @ phi.reshape(-1, 1)
@@ -141,21 +134,15 @@ class AlphaEigenvalueSolver(SteadyStateSolver):
                 self.modes[:, m] *= -1.0
                 self.adjoint_modes[:, m] *= -1.0
 
-        # ------------------------------------------------------------
-        # Compute alpha-expansion fit
-        # ------------------------------------------------------------
-
+        # ------------------------------ compute alpha-expansion of ICs
         self.phi = self.modes @ self.amplitudes
         diff = np.linalg.norm(phi - self.phi) / np.linalg.norm(phi)
         print(f"Difference in fit:  {diff:.4g}")
         print(f"Number of modes:  {len(self.alphas)}")
 
+        # ------------------------------ get the dominant mode
         idx = np.argmax(self.amplitudes.real)
         print(f"Dominant mode:  {idx}, {self.amplitudes[idx]:.3e}\n")
-
-        # ------------------------------------------------------------
-        # Plotting
-        # ------------------------------------------------------------
 
         # ------------------------------ plot dominant mode
         plt.figure()
